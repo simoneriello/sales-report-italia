@@ -55,6 +55,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .exp-grp{display:flex;gap:6px;align-self:flex-end}
 .btn-exp{background:white;color:var(--wine);border:1.5px solid var(--wine);padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 .btn-exp:hover{background:var(--wine-light)}
+
+/* SEARCH BAR */
+.searchbar{background:var(--wine-light);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:10px;align-items:center}
+.search-wrap{flex:1;position:relative;max-width:500px}
+.search-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px 8px 36px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:white}
+.search-input:focus{outline:none;border-color:var(--wine)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)}
+.search-type{display:flex;gap:6px}
+.stype-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:white;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all 0.15s}
+.stype-btn.active{background:var(--wine);color:white;border-color:var(--wine)}
+#search-results{display:none;padding:16px 24px;background:var(--white);border-bottom:1px solid var(--border)}
+
 #rp{padding:18px 24px}
 #ph{padding:60px 24px;text-align:center;color:var(--muted);font-size:13px}
 #rw{display:none}
@@ -68,10 +80,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .kpi.primary{background:var(--wine);border-color:var(--wine)}
 .kpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
 .kpi.primary .kpi-lbl{color:rgba(255,255,255,0.6)}
-.kpi-val{font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:600;color:var(--ink);line-height:1}
+.kpi-val{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:600;color:var(--ink);line-height:1}
 .kpi.primary .kpi-val{color:white}
-.kpi-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 .kpi.primary .kpi-sub{color:rgba(255,255,255,0.55)}
+.kpi-var{font-size:11px;margin-top:3px}
 .up{color:#16a34a;font-weight:700}
 .dn{color:#dc2626;font-weight:700}
 .kpi.primary .up{color:#86efac}
@@ -85,9 +98,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .chart-legend{display:flex;gap:14px;margin-bottom:10px;font-size:11px;font-weight:600}
 .legend-item{display:flex;align-items:center;gap:5px}
 .legend-dot{width:9px;height:9px;border-radius:50%}
+
+/* RESIZABLE COLUMNS */
 .tbl-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:600px}
-th{padding:0;border-bottom:1px solid var(--border);background:#faf7f7;white-space:nowrap}
+table{width:100%;border-collapse:collapse;table-layout:auto}
+th{padding:0;border-bottom:1px solid var(--border);background:#faf7f7;white-space:nowrap;position:relative;min-width:60px}
 th .thi{display:flex;align-items:center;padding:7px 9px;gap:3px;cursor:pointer;user-select:none;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);transition:color 0.15s}
 th .thi:hover{color:var(--wine)}
 th.sa .thi,th.sd .thi{color:var(--wine)}
@@ -96,7 +111,9 @@ th.sa .si::after{content:'▲';opacity:1;color:var(--wine)}
 th.sd .si::after{content:'▼';opacity:1;color:var(--wine)}
 th:not(.sa):not(.sd) .si::after{content:'⇅'}
 .thr .thi{justify-content:flex-end}
-td{padding:8px 9px;border-bottom:1px solid #f5f0f0;color:var(--ink);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-resizer{position:absolute;right:0;top:0;width:4px;height:100%;cursor:col-resize;background:transparent;z-index:1}
+.col-resizer:hover{background:var(--wine);opacity:0.3}
+td{padding:8px 9px;border-bottom:1px solid #f5f0f0;color:var(--ink);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0}
 tr:last-child td{border-bottom:none}
 tr.dr:hover td{background:#fdf8f8}
 .r{text-align:right}
@@ -113,14 +130,29 @@ tr.dr:hover td{background:#fdf8f8}
 .xrow{display:none}
 .xrow.open{display:table-row}
 .xcell{padding:0!important;border-bottom:1px solid var(--wine-mid)!important;background:var(--wine-light)!important}
-.xinner{padding:8px 10px 8px 34px}
-.xinner table{background:transparent;min-width:0}
-.xinner th .thi{font-size:9px;color:var(--wine);cursor:default}
-.xinner td{padding:5px 7px;font-size:11.5px;border-bottom:1px solid #ece0e1;background:transparent}
+.xinner{padding:10px 12px 10px 34px}
+.xinner table{background:transparent;width:100%;table-layout:auto}
+.xinner th{background:var(--wine-light);min-width:0}
+.xinner th .thi{font-size:10px;font-weight:700;color:var(--wine);text-transform:uppercase;letter-spacing:0.5px;padding:6px 8px;justify-content:flex-start;cursor:default}
+.xinner td{padding:6px 8px;font-size:12px;border-bottom:1px solid #ece0e1;background:transparent;white-space:normal;max-width:none;overflow:visible}
 .xinner tr:last-child td{border-bottom:none}
 .acc-row td{color:var(--red);background:#fff8f8}
 .empty-row td{text-align:center;color:var(--muted);padding:18px;font-style:italic}
-#chat-toggle-bar{background:var(--wine-light);border-top:2px solid var(--wine-mid);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;position:sticky;bottom:0}
+
+/* SEARCH RESULTS */
+.sr-section{margin-bottom:16px}
+.sr-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.sr-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px}
+.sr-card h4{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.sr-meta{font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.sr-kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.sr-kpi{background:var(--wine-light);border-radius:6px;padding:6px 10px;font-size:11px}
+.sr-kpi strong{display:block;font-size:13px;color:var(--wine)}
+.sr-refs{margin-top:8px;font-size:12px;color:var(--muted)}
+.no-results{text-align:center;padding:24px;color:var(--muted);font-size:13px}
+
+/* CHAT */
+#chat-toggle-bar{background:var(--wine-light);border-top:2px solid var(--wine-mid);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;position:sticky;bottom:0;z-index:10}
 #chat-toggle-bar:hover{background:var(--wine-mid)}
 .ct-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ct-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
@@ -134,9 +166,6 @@ tr.dr:hover td{background:#fdf8f8}
 .msg{max-width:88%;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5}
 .msg.bot{background:var(--wine-light);color:var(--ink);align-self:flex-start;border-bottom-left-radius:3px}
 .msg.user{background:var(--wine);color:white;align-self:flex-end;border-bottom-right-radius:3px}
-.msg table{width:100%;border-collapse:collapse;margin-top:7px;font-size:11px}
-.msg table th{background:rgba(114,47,55,0.1);padding:4px 6px;text-align:left;font-weight:600}
-.msg table td{padding:4px 6px;border-bottom:1px solid rgba(114,47,55,0.08)}
 .chat-thinking{display:none;align-items:center;gap:6px;padding:8px 12px;font-size:12px;color:var(--muted)}
 .dot-anim span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--wine);animation:bounce 1.2s infinite;margin:0 1px}
 .dot-anim span:nth-child(2){animation-delay:.2s}
@@ -146,18 +175,7 @@ tr.dr:hover td{background:#fdf8f8}
 .chat-input{flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;font-family:'DM Sans',sans-serif;resize:none;height:36px}
 .chat-input:focus{outline:none;border-color:var(--wine)}
 .chat-send{background:var(--wine);color:white;border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:14px;font-weight:600}
-@media print{
-  .topbar,.filterbar,#chat-toggle-bar,#chat-body{display:none!important}
-  #rp{padding:6px}
-  .section,.kpi-row{break-inside:avoid}
-  .xrow{display:none!important}
-  body{font-size:11px}
-}
-@media(max-width:600px){
-  .drop-zone{padding:2rem 1.5rem}
-  .filterbar{padding:10px 14px}
-  #rp{padding:12px 14px}
-}
+@media print{.topbar,.filterbar,.searchbar,#chat-toggle-bar,#chat-body{display:none!important}#rp{padding:6px}.section,.kpi-row{break-inside:avoid}.xrow{display:none!important}}
 </style>
 </head>
 <body>
@@ -167,7 +185,7 @@ tr.dr:hover td{background:#fdf8f8}
   <div class="drop-zone" onclick="document.getElementById('fi').click()">
     <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
     <h3>Carica file vendite</h3>
-    <p>Seleziona il file Excel aggiornato<br>dal gestionale Maxi Data Uve</p>
+    <p>Seleziona il file Excel aggiornato dal gestionale<br><small style="color:#c0392b;font-weight:600">⚠ Prima di caricare: elimina le righe 35698 e 35702 dal file</small></p>
   </div>
   <input type="file" id="fi" accept=".xlsx,.xls">
   <div class="prog-wrap" id="pw">
@@ -235,6 +253,20 @@ tr.dr:hover td{background:#fdf8f8}
     </div>
   </div>
 
+  <!-- SEARCH BAR -->
+  <div class="searchbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Cerca cliente, agente o referenza..." oninput="doSearch()" autocomplete="off">
+    </div>
+    <div class="search-type">
+      <button class="stype-btn active" id="st-cliente" onclick="setSearchType('cliente')">Cliente</button>
+      <button class="stype-btn" id="st-agente" onclick="setSearchType('agente')">Agente</button>
+      <button class="stype-btn" id="st-referenza" onclick="setSearchType('referenza')">Referenza</button>
+    </div>
+  </div>
+  <div id="search-results"></div>
+
   <div id="rp">
     <div id="rw"></div>
     <div id="ph">Seleziona una vista e clicca <strong>Genera Report</strong></div>
@@ -250,9 +282,9 @@ tr.dr:hover td{background:#fdf8f8}
   </div>
   <div id="chat-body">
     <div class="chat-msgs" id="chat-msgs">
-      <div class="msg bot">Ciao! Genera un report e poi puoi chiedermi qualsiasi cosa sui dati. Esempi: <em>"clienti nuovi nel 2026"</em>, <em>"quale agente ha il prezzo medio più alto?"</em>, <em>"chi ha comprato solo Franciacorta?"</em></div>
+      <div class="msg bot">Ciao! Genera un report e poi chiedimi qualsiasi cosa. Es: <em>"clienti nuovi nel 2026"</em>, <em>"quale agente ha il prezzo medio più alto?"</em></div>
     </div>
-    <div class="chat-thinking" id="chat-thinking"><div class="dot-anim"><span></span><span></span><span></span></div><span>Analizzo i dati...</span></div>
+    <div class="chat-thinking" id="chat-thinking"><div class="dot-anim"><span></span><span></span><span></span></div><span>Analizzo...</span></div>
     <div class="chat-input-wrap">
       <textarea class="chat-input" id="chat-input" placeholder="Scrivi la tua domanda..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
       <button class="chat-send" onclick="sendChat()">→</button>
@@ -261,7 +293,7 @@ tr.dr:hover td{background:#fdf8f8}
 </div>
 
 <script>
-let D=[],LR=null,chatCtx=[];
+let D=[],LR=null,chatCtx=[],searchType='cliente';
 const MI=['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const EUR=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const NUM=n=>new Intl.NumberFormat('it-IT').format(Math.round(n||0));
@@ -281,9 +313,29 @@ function setPM(m){
 }
 function toggleChat(){
   const body=document.getElementById('chat-body'),arrow=document.getElementById('ct-arrow');
-  const open=body.classList.toggle('open');
-  arrow.classList.toggle('open',open);
+  const open=body.classList.toggle('open');arrow.classList.toggle('open',open);
 }
+
+// COLUMN RESIZE
+function initResize(th){
+  const resizer=document.createElement('div');
+  resizer.className='col-resizer';
+  th.appendChild(resizer);
+  let startX,startW;
+  resizer.addEventListener('mousedown',e=>{
+    startX=e.pageX;startW=th.offsetWidth;
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',()=>document.removeEventListener('mousemove',onMove),{once:true});
+    e.stopPropagation();e.preventDefault();
+  });
+  function onMove(e){th.style.width=(startW+e.pageX-startX)+'px';th.style.minWidth=(startW+e.pageX-startX)+'px';}
+}
+function addResizers(tblId){
+  const tbl=document.getElementById(tblId);if(!tbl)return;
+  tbl.querySelectorAll('th').forEach(th=>initResize(th));
+}
+
+// FILE LOAD
 document.getElementById('fi').addEventListener('change',function(e){
   const f=e.target.files[0];if(!f)return;
   document.getElementById('pw').style.display='block';
@@ -305,6 +357,7 @@ document.getElementById('fi').addEventListener('change',function(e){
   };
   r.readAsBinaryString(f);
 });
+
 function clean(raw){
   const XA=['PV','AUTOCONSUMO','VUOTO','WINE CLUB'],XC=['SCONTRINO','AUTOCONSUMO'],X22=['Fuori Mag.','Compon.'];
   return raw.filter(r=>{
@@ -327,6 +380,7 @@ function clean(raw){
       tipoRiga:['N.Acc.','F.Acc.'].includes(td)?'Nota Accredito':'Vendita',tipoDoc:td};
   });
 }
+
 function fillAgenti(fname){
   const ag=[...new Set(D.map(r=>r.agente))].filter(Boolean).sort();
   const s=document.getElementById('sa');
@@ -334,6 +388,7 @@ function fillAgenti(fname){
   ag.forEach(a=>{const o=document.createElement('option');o.value=o.textContent=a;s.appendChild(o);});
   document.getElementById('data-badge').textContent=fname.replace(/\.(xlsx|xls)$/i,'');
 }
+
 function getPeriod(){
   if(document.getElementById('pt-ytd').classList.contains('active'))
     return{from:1,to:parseInt(document.getElementById('sy-to').value)};
@@ -343,8 +398,14 @@ function fD(data,anno,from,to){return data.filter(r=>r.anno===parseInt(anno)&&r.
 function kpi(rows){
   const v=rows.filter(r=>r.tipoRiga==='Vendita'),a=rows.filter(r=>r.tipoRiga==='Nota Accredito');
   const fatt=v.reduce((s,r)=>s+r.importo,0),bott=v.reduce((s,r)=>s+r.pezzi,0);
-  return{fatt,bott,acc:a.reduce((s,r)=>s+r.importo,0),pm:bott>0?fatt/bott:0,clienti:new Set(v.map(r=>r.codCli)).size,nAcc:a.length};
+  // Prezzo medio: solo righe con importo > 0
+  const vConImporto=v.filter(r=>r.importo>0);
+  const fattPM=vConImporto.reduce((s,r)=>s+r.importo,0);
+  const bottPM=vConImporto.reduce((s,r)=>s+r.pezzi,0);
+  return{fatt,bott,acc:a.reduce((s,r)=>s+r.importo,0),pm:bottPM>0?fattPM/bottPM:0,clienti:new Set(v.map(r=>r.codCli)).size,nAcc:a.length};
 }
+
+// SORT
 const SS={};
 function sortTbl(id,ci,type){
   const tbl=document.getElementById(id);if(!tbl)return;
@@ -377,6 +438,7 @@ function toggle(id){
 function TH(label,tid,ci,type,right){
   return`<th class="${right?'thr':''}" onclick="sortTbl('${tid}',${ci},'${type}')"><div class="thi">${right?'<span class="si"></span>':''}<span>${label}</span>${!right?'<span class="si"></span>':''}</div></th>`;
 }
+
 function buildChart(dBase,anno,ap,from,to){
   const W=560,H=150,PL=38,PR=8,PT=8,PB=26;
   const months=[];for(let m=from;m<=to;m++)months.push(m);
@@ -386,29 +448,119 @@ function buildChart(dBase,anno,ap,from,to){
   const all=[...v1,...v2].filter(v=>v>0);if(!all.length)return'';
   const maxV=Math.max(...all)*1.15;
   const cW=W-PL-PR,cH=H-PT-PB;
-  const xP=i=>PL+cW/(months.length-1)*i;
+  const xP=i=>PL+cW/(months.length-1||1)*i;
   const yP=v=>PT+cH-(v/maxV*cH);
   const line=(vals,col)=>{
     const pts=vals.map((v,i)=>`${xP(i)},${yP(v)}`).join(' ');
     const area='M'+xP(0)+','+yP(vals[0])+vals.map((v,i)=>' L'+xP(i)+','+yP(v)).join('')+' L'+xP(vals.length-1)+','+(PT+cH)+' L'+xP(0)+','+(PT+cH)+' Z';
-    return`<path d="${area}" fill="${col}" fill-opacity="0.07"/>
-    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
-    ${vals.map((v,i)=>v>0?`<circle cx="${xP(i)}" cy="${yP(v)}" r="2.5" fill="${col}" stroke="white" stroke-width="1.5"/>`:'').join('')}`;
+    return`<path d="${area}" fill="${col}" fill-opacity="0.07"/><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>${vals.map((v,i)=>v>0?`<circle cx="${xP(i)}" cy="${yP(v)}" r="2.5" fill="${col}" stroke="white" stroke-width="1.5"/>`:'').join('')}`;
   };
-  const grid=[0.25,0.5,0.75,1].map(p=>{
-    const y=PT+cH-(p*cH),v=maxV*p;
-    return`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#ede9e9" stroke-width="0.5"/>
-    <text x="${PL-3}" y="${y+3.5}" text-anchor="end" font-size="8.5" fill="#bbb">${v>=1000?Math.round(v/1000)+'k':Math.round(v)}</text>`;
-  }).join('');
+  const grid=[0.25,0.5,0.75,1].map(p=>{const y=PT+cH-(p*cH),v=maxV*p;return`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#ede9e9" stroke-width="0.5"/><text x="${PL-3}" y="${y+3.5}" text-anchor="end" font-size="8.5" fill="#bbb">${v>=1000?Math.round(v/1000)+'k':Math.round(v)}</text>`;}).join('');
   const xL=months.map((m,i)=>`<text x="${xP(i)}" y="${H-3}" text-anchor="middle" font-size="8.5" fill="#bbb">${MI[m].substring(0,3)}</text>`).join('');
-  return`<div class="chart-legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#722F37"></div><span>${anno}</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#C9A84C"></div><span>${ap}</span></div>
-  </div>
-  <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" overflow="visible">
-    ${grid}${line(v1,'#722F37')}${line(v2,'#C9A84C')}${xL}
-  </svg>`;
+  return`<div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:#722F37"></div><span>${anno}</span></div><div class="legend-item"><div class="legend-dot" style="background:#C9A84C"></div><span>${ap}</span></div></div>
+  <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" overflow="visible">${grid}${line(v1,'#722F37')}${line(v2,'#C9A84C')}${xL}</svg>`;
 }
+
+// SEARCH
+function setSearchType(t){
+  searchType=t;
+  ['cliente','agente','referenza'].forEach(x=>document.getElementById('st-'+x).classList.toggle('active',x===t));
+  document.getElementById('search-input').placeholder=t==='cliente'?'Cerca cliente...':t==='agente'?'Cerca agente...':'Cerca referenza...';
+  doSearch();
+}
+
+function doSearch(){
+  const q=document.getElementById('search-input').value.trim().toLowerCase();
+  const sr=document.getElementById('search-results');
+  if(!q||q.length<2||!D.length){sr.style.display='none';sr.innerHTML='';return;}
+  sr.style.display='block';
+  if(searchType==='cliente') searchCliente(q,sr);
+  else if(searchType==='agente') searchAgente(q,sr);
+  else searchReferenza(q,sr);
+}
+
+function searchCliente(q,sr){
+  const matches=[...new Set(D.filter(r=>r.cliente.toLowerCase().includes(q)).map(r=>r.cliente))].slice(0,5);
+  if(!matches.length){sr.innerHTML='<div class="no-results">Nessun cliente trovato</div>';return;}
+  let html='<div class="sr-section"><div class="sr-title">Clienti trovati</div>';
+  matches.forEach(nome=>{
+    const rows=D.filter(r=>r.cliente===nome&&r.tipoRiga==='Vendita');
+    const agente=[...new Set(rows.map(r=>r.agente))].filter(Boolean).join(', ');
+    const citta=rows[0]?.citta||'';const prov=rows[0]?.prov||'';const cat=rows[0]?.cat||'';
+    const anni=[2024,2025,2026].filter(a=>rows.some(r=>r.anno===a));
+    const kpiPerAnno=anni.map(a=>{
+      const rv=rows.filter(r=>r.anno===a);
+      const fatt=rv.reduce((s,r)=>s+r.importo,0);
+      const bott=rv.reduce((s,r)=>s+r.pezzi,0);
+      const vPM=rv.filter(r=>r.importo>0);
+      const pm=vPM.reduce((s,r)=>s+r.pezzi,0)>0?vPM.reduce((s,r)=>s+r.importo,0)/vPM.reduce((s,r)=>s+r.pezzi,0):0;
+      return`<div class="sr-kpi"><strong>${EUR(fatt)}</strong>${a}: ${NUM(bott)} bt · PM: ${EUR(pm)}</div>`;
+    }).join('');
+    const refs={};rows.forEach(r=>{const k=r.tipologia||r.articolo||'N/D';if(!refs[k])refs[k]=0;refs[k]+=r.pezzi;});
+    const topRefs=Object.entries(refs).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${k}: ${NUM(v)} bt`).join(' · ');
+    html+=`<div class="sr-card">
+      <h4>${nome}</h4>
+      <div class="sr-meta"><span>👤 ${agente||'N/D'}</span><span>📍 ${citta}${prov?' ('+prov+')':''}</span><span>🏷 ${cat||'N/D'}</span></div>
+      <div class="sr-kpis">${kpiPerAnno}</div>
+      <div class="sr-refs">Referenze: ${topRefs||'N/D'}</div>
+    </div>`;
+  });
+  html+='</div>';sr.innerHTML=html;
+}
+
+function searchAgente(q,sr){
+  const matches=[...new Set(D.filter(r=>r.agente.toLowerCase().includes(q)).map(r=>r.agente))].slice(0,3);
+  if(!matches.length){sr.innerHTML='<div class="no-results">Nessun agente trovato</div>';return;}
+  let html='<div class="sr-section"><div class="sr-title">Agenti trovati</div>';
+  matches.forEach(ag=>{
+    const rows=D.filter(r=>r.agente===ag&&r.tipoRiga==='Vendita');
+    const clienti=[...new Set(rows.map(r=>r.cliente))];
+    const anni=[2024,2025,2026].filter(a=>rows.some(r=>r.anno===a));
+    const kpiPerAnno=anni.map(a=>{
+      const rv=rows.filter(r=>r.anno===a);
+      const fatt=rv.reduce((s,r)=>s+r.importo,0);
+      const bott=rv.reduce((s,r)=>s+r.pezzi,0);
+      return`<div class="sr-kpi"><strong>${EUR(fatt)}</strong>${a}: ${NUM(bott)} bt · ${new Set(rv.map(r=>r.codCli)).size} clienti</div>`;
+    }).join('');
+    // Top clienti agente
+    const mCli={};rows.forEach(r=>{if(!mCli[r.cliente])mCli[r.cliente]=0;mCli[r.cliente]+=r.importo;});
+    const topCli=Object.entries(mCli).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`${k} (${EUR(v)})`).join('<br>');
+    html+=`<div class="sr-card">
+      <h4>${ag}</h4>
+      <div class="sr-meta"><span>👥 ${clienti.length} clienti totali</span></div>
+      <div class="sr-kpis">${kpiPerAnno}</div>
+      <div class="sr-refs" style="margin-top:8px"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--wine)">Top clienti:</strong><br><span style="font-size:12px;line-height:1.8">${topCli}</span></div>
+    </div>`;
+  });
+  html+='</div>';sr.innerHTML=html;
+}
+
+function searchReferenza(q,sr){
+  const matches=[...new Set(D.filter(r=>r.tipologia.toLowerCase().includes(q)||r.articolo.toLowerCase().includes(q)).map(r=>r.tipologia||r.articolo))].filter(Boolean).slice(0,5);
+  if(!matches.length){sr.innerHTML='<div class="no-results">Nessuna referenza trovata</div>';return;}
+  let html='<div class="sr-section"><div class="sr-title">Referenze trovate</div>';
+  matches.forEach(ref=>{
+    const rows=D.filter(r=>(r.tipologia===ref||r.articolo===ref)&&r.tipoRiga==='Vendita');
+    const anni=[2024,2025,2026].filter(a=>rows.some(r=>r.anno===a));
+    const kpiPerAnno=anni.map(a=>{
+      const rv=rows.filter(r=>r.anno===a);
+      const bott=rv.reduce((s,r)=>s+r.pezzi,0);
+      const fatt=rv.reduce((s,r)=>s+r.importo,0);
+      const vPM=rv.filter(r=>r.importo>0);
+      const pm=vPM.reduce((s,r)=>s+r.pezzi,0)>0?vPM.reduce((s,r)=>s+r.importo,0)/vPM.reduce((s,r)=>s+r.pezzi,0):0;
+      return`<div class="sr-kpi"><strong>${NUM(bott)} bt</strong>${a}: ${EUR(fatt)} · PM: ${EUR(pm)}</div>`;
+    }).join('');
+    const mCli={};rows.forEach(r=>{if(!mCli[r.cliente])mCli[r.cliente]=0;mCli[r.cliente]+=r.pezzi;});
+    const topCli=Object.entries(mCli).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${k} (${NUM(v)} bt)`).join(' · ');
+    html+=`<div class="sr-card">
+      <h4>${ref}</h4>
+      <div class="sr-kpis">${kpiPerAnno}</div>
+      <div class="sr-refs">Top acquirenti: ${topCli}</div>
+    </div>`;
+  });
+  html+='</div>';sr.innerHTML=html;
+}
+
 function gen(){
   const sel=document.getElementById('sa').value;
   const anno=parseInt(document.getElementById('sy').value);
@@ -426,6 +578,7 @@ function gen(){
   const vend=dC.filter(r=>r.tipoRiga==='Vendita');
   const vendP=dP.filter(r=>r.tipoRiga==='Vendita');
   const accs=dC.filter(r=>r.tipoRiga==='Nota Accredito');
+
   const mCli={};
   vend.forEach(r=>{
     if(!mCli[r.cliente])mCli[r.cliente]={nome:r.cliente,citta:r.citta,prov:r.prov,cat:r.cat,agente:r.agente,imp:0,pz:0,refs:{}};
@@ -437,15 +590,22 @@ function gen(){
   const mCliP={};vendP.forEach(r=>{if(!mCliP[r.cliente])mCliP[r.cliente]=0;mCliP[r.cliente]+=r.importo;});
   const topCli=Object.values(mCli).sort((a,b)=>b.imp-a.imp).slice(0,20).map(c=>{
     const vp=mCliP[c.nome]||0;
+    const vPM=Object.values(c.refs);
     return{...c,impPrec:vp,delta:vp>0?((c.imp-vp)/vp)*100:null,pm:c.pz>0?c.imp/c.pz:0,refs:Object.values(c.refs).sort((a,b)=>b.pz-a.pz)};
   });
+
   const mPzP={},mPzC={};
   vendP.forEach(r=>{if(!mPzP[r.cliente])mPzP[r.cliente]=0;mPzP[r.cliente]+=r.pezzi;});
   vend.forEach(r=>{if(!mPzC[r.cliente])mPzC[r.cliente]=0;mPzC[r.cliente]+=r.pezzi;});
+  // Agente per clienti in calo
+  const mCliAgente={};vend.forEach(r=>{mCliAgente[r.cliente]=r.agente;});
+  vendP.forEach(r=>{if(!mCliAgente[r.cliente])mCliAgente[r.cliente]=r.agente;});
+
   const cali=Object.keys(mCliP).map(nome=>{
     const vp=mCliP[nome],vc=mCli[nome]?.imp||0,bP=mPzP[nome]||0,bC=mPzC[nome]||0;
-    return{nome,vp,vc,bP,bC,varBott:bC-bP,d:vc>0?((vc-vp)/vp)*100:-100};
+    return{nome,vp,vc,bP,bC,varBott:bC-bP,d:vc>0?((vc-vp)/vp)*100:-100,agente:mCliAgente[nome]||'—'};
   }).filter(r=>r.d<-10).sort((a,b)=>a.d-b.d).slice(0,15);
+
   const mRef={};
   vend.forEach(r=>{
     const k=r.tipologia||r.articolo||'N/D';
@@ -454,6 +614,7 @@ function gen(){
   });
   const topRef=Object.values(mRef).sort((a,b)=>b.pz-a.pz).slice(0,15);
   const maxRef=topRef[0]?.pz||1;
+
   let agentiHtml='';
   if(isItalia){
     const mAg={},mAgP={};
@@ -466,7 +627,6 @@ function gen(){
     agentiHtml=`<div class="section"><div class="card">
       <div class="card-head"><h3>Riepilogo per Agente</h3><span>${agList.length} agenti · clicca intestazione per ordinare</span></div>
       <div class="tbl-wrap"><table id="tbl-ag">
-        <colgroup><col style="width:22%"><col style="width:13%"><col style="width:9%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:11%"></colgroup>
         <thead><tr>${TH('Agente','tbl-ag',0,'str',false)}${TH(`Fatt. ${anno}`,'tbl-ag',1,'num',true)}${TH('Bott.','tbl-ag',2,'num',true)}${TH('Pr. Medio','tbl-ag',3,'num',true)}${TH(`Fatt. ${ap}`,'tbl-ag',4,'num',true)}${TH('Var €','tbl-ag',5,'num',true)}${TH('Var Bott.','tbl-ag',6,'num',true)}${TH('Var %','tbl-ag',7,'pct',true)}</tr></thead>
         <tbody>${agList.map(a=>`<tr class="dr">
           <td style="font-weight:600">${a.ag}</td>
@@ -481,63 +641,146 @@ function gen(){
       </table></div>
     </div></div>`;
   }
+
   const ds=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
   LR={label,anno,ap,pl,topCli,topRef,cali,accs,K,KP,isItalia,dBase,from,to};
-  chatCtx=[{role:'user',content:`Sei un analista commerciale esperto di Mosnel (azienda vinicola). Dati per ${label}, ${pl} ${anno} vs ${ap}:
-Fatturato ${anno}: ${EUR(K.fatt)} | ${ap}: ${EUR(KP.fatt)} | Var: ${dF!==null?PCT(dF):'n/d'}
-Bottiglie ${anno}: ${NUM(K.bott)} | ${ap}: ${NUM(KP.bott)} | Prezzo medio: ${EUR(K.pm)}
-Top clienti (max 10): ${topCli.slice(0,10).map(c=>`${c.nome} (${EUR(c.imp)}, ${c.delta!==null?PCT(c.delta):'nuovo'})`).join('; ')}
-Top referenze: ${topRef.slice(0,8).map(r=>`${r.tip}: ${NUM(r.pz)} bt, ${EUR(r.imp)}`).join('; ')}
-Clienti in calo: ${cali.slice(0,5).map(c=>`${c.nome} (${PCT(c.d)})`).join(', ')||'nessuno'}
-Rispondi in italiano, conciso e diretto. Usa tabelle HTML semplici quando utile.`},
+
+  chatCtx=[{role:'user',content:`Sei un analista commerciale esperto di Mosnel. Dati per ${label}, ${pl} ${anno} vs ${ap}: Fatturato ${anno}: ${EUR(K.fatt)} | ${ap}: ${EUR(KP.fatt)} | Var: ${dF!==null?PCT(dF):'n/d'}. Bottiglie: ${NUM(K.bott)} vs ${NUM(KP.bott)}. Prezzo medio: ${EUR(K.pm)}. Top clienti: ${topCli.slice(0,8).map(c=>`${c.nome} (${EUR(c.imp)})`).join('; ')}. Top referenze: ${topRef.slice(0,6).map(r=>`${r.tip}: ${NUM(r.pz)} bt`).join('; ')}. Clienti in calo: ${cali.slice(0,5).map(c=>`${c.nome} (${PCT(c.d)})`).join(', ')||'nessuno'}. Rispondi in italiano, conciso e diretto.`},
   {role:'assistant',content:`Perfetto, ho i dati di ${label} per ${pl} ${anno}. Cosa vuoi analizzare?`}];
+
   const trendHtml=buildChart(dBase,anno,ap,from,to);
+
+  // KPI con variazione numerica
+  const kpiHtml=`<div class="kpi-row">
+    <div class="kpi primary">
+      <div class="kpi-lbl">Fatturato ${anno}</div>
+      <div class="kpi-val">${EUR(K.fatt)}</div>
+      <div class="kpi-sub">${ap}: ${EUR(KP.fatt)}</div>
+      <div class="kpi-var">${dF!==null?`<span class="${dF>=0?'up':'dn'}">${PCT(dF)} · ${EURDIFF(K.fatt-KP.fatt)}</span>`:'&nbsp;'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Bottiglie ${anno}</div>
+      <div class="kpi-val">${NUM(K.bott)}</div>
+      <div class="kpi-sub">${ap}: ${NUM(KP.bott)}</div>
+      <div class="kpi-var">${dB!==null?`<span class="${dB>=0?'up':'dn'}">${PCT(dB)} · ${dB>=0?'+':''}${NUM(K.bott-KP.bott)} bt</span>`:'&nbsp;'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Prezzo Medio ${anno}</div>
+      <div class="kpi-val">${EUR(K.pm)}</div>
+      <div class="kpi-sub">${ap}: ${EUR(KP.pm)}</div>
+      <div class="kpi-var">${dPm!==null?`<span class="${dPm>=0?'up':'dn'}">${PCT(dPm)} · ${EURDIFF(K.pm-KP.pm)}</span>`:'&nbsp;'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Note di Accredito</div>
+      <div class="kpi-val" style="color:var(--red)">${EUR(K.acc)}</div>
+      <div class="kpi-sub">${K.nAcc} doc · ${K.clienti} clienti attivi</div>
+    </div>
+  </div>`;
+
   let h=`
   <div class="rpt-header">
     <div><h1>${label}</h1><p>${pl} &nbsp;·&nbsp; ${anno} vs ${ap}</p></div>
     <div class="rpt-meta">Generato il ${ds}<br>Mosnel Sales Intelligence</div>
   </div>
-  <div class="kpi-row">
-    <div class="kpi primary"><div class="kpi-lbl">Fatturato ${anno}</div><div class="kpi-val">${EUR(K.fatt)}</div>
-      <div class="kpi-sub">${dF!==null?`${ap}: ${EUR(KP.fatt)} <span class="${dF>=0?'up':'dn'}">${PCT(dF)}</span>`:`${ap}: n/d`}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Bottiglie ${anno}</div><div class="kpi-val">${NUM(K.bott)}</div>
-      <div class="kpi-sub">${dB!==null?`${ap}: ${NUM(KP.bott)} <span class="${dB>=0?'up':'dn'}">${PCT(dB)}</span>`:K.clienti+' clienti'}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Prezzo Medio ${anno}</div><div class="kpi-val">${EUR(K.pm)}</div>
-      <div class="kpi-sub">${dPm!==null?`${ap}: ${EUR(KP.pm)} <span class="${dPm>=0?'up':'dn'}">${PCT(dPm)}</span>`:'&nbsp;'}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Note di Accredito</div><div class="kpi-val" style="color:var(--red)">${EUR(K.acc)}</div>
-      <div class="kpi-sub">${K.nAcc} doc · ${K.clienti} clienti attivi</div></div>
-  </div>
+  ${kpiHtml}
   ${trendHtml?`<div class="section"><div class="card"><div class="card-head"><h3>Trend Mensile Fatturato</h3><span>${anno} vs ${ap}</span></div><div class="chart-wrap">${trendHtml}</div></div></div>`:''}
   ${agentiHtml}
   <div class="section"><div class="card">
-    <div class="card-head"><h3>Top Clienti — Fatturato ${anno}</h3><span>${topCli.length} clienti · clicca intestazione per ordinare · + per referenze</span></div>
+    <div class="card-head"><h3>Top Clienti — Fatturato ${anno}</h3><span>${topCli.length} clienti · clicca intestazione per ordinare · + per referenze · trascina bordo colonna per allargare</span></div>
     <div class="tbl-wrap"><table id="tbl-cli">
-      <colgroup><col style="width:24px"><col style="width:${isItalia?'19%':'21%'}"><col style="width:10%">${isItalia?'<col style="width:9%">':''}<col style="width:12%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:8%"><col style="width:6%"></colgroup>
-      <thead><tr><th><div class="thi"></div></th>${TH('Cliente','tbl-cli',1,'str',false)}${TH('Cat.','tbl-cli',2,'str',false)}${isItalia?TH('Agente','tbl-cli',3,'str',false):''}${TH(`Fatt. ${anno}`,'tbl-cli',isItalia?4:3,'num',true)}${TH('Bott.','tbl-cli',isItalia?5:4,'num',true)}${TH('Pr. Med.','tbl-cli',isItalia?6:5,'num',true)}${TH(`Fatt. ${ap}`,'tbl-cli',isItalia?7:6,'num',true)}${TH('Var %','tbl-cli',isItalia?8:7,'pct',true)}${TH('Ref.','tbl-cli',isItalia?9:8,'num',true)}</tr></thead>
-      <tbody>${topCli.length===0?`<tr class="empty-row"><td colspan="${isItalia?10:9}">Nessun dato</td></tr>`:
+      <thead><tr>
+        <th style="width:28px"><div class="thi"></div></th>
+        ${TH('Cliente','tbl-cli',1,'str',false)}
+        ${TH('Cat.','tbl-cli',2,'str',false)}
+        ${isItalia?TH('Agente','tbl-cli',3,'str',false):''}
+        ${TH(`Fatt. ${anno}`,'tbl-cli',isItalia?4:3,'num',true)}
+        ${TH('Bott.','tbl-cli',isItalia?5:4,'num',true)}
+        ${TH('Pr. Med.','tbl-cli',isItalia?6:5,'num',true)}
+        ${TH(`Fatt. ${ap}`,'tbl-cli',isItalia?7:6,'num',true)}
+        ${TH('Var %','tbl-cli',isItalia?8:7,'pct',true)}
+        ${TH('Ref.','tbl-cli',isItalia?9:8,'num',true)}
+      </tr></thead>
+      <tbody>
+      ${topCli.length===0?`<tr class="empty-row"><td colspan="${isItalia?10:9}">Nessun dato</td></tr>`:
       topCli.map((c,i)=>{
         const rid='c'+i;
         const dh=c.delta!==null?`<span class="badge ${c.delta>5?'b-up':c.delta<-5?'b-dn':'b-warn'}">${PCT(c.delta,1)}</span>`:'<span style="color:var(--muted);font-size:10px">nuovo</span>';
-        const rh=c.refs.length>0?`<table><colgroup><col style="width:42%"><col style="width:17%"><col style="width:23%"><col style="width:18%"></colgroup><thead><tr><th><div class="thi">Tipologia</div></th><th><div class="thi">Bott.</div></th><th><div class="thi">Fatturato</div></th><th><div class="thi">Pr. Medio</div></th></tr></thead><tbody>${c.refs.map(rf=>`<tr><td style="font-weight:600">${rf.nome}</td><td class="r">${NUM(rf.pz)}</td><td class="r">${EUR(rf.imp)}</td><td class="r">${EUR(rf.pz>0?rf.imp/rf.pz:0)}</td></tr>`).join('')}</tbody></table>`:'<em style="font-size:11px;color:var(--muted)">Nessuna referenza</em>';
-        return`<tr class="dr"><td class="c"><button class="xbtn" id="btn-${rid}" onclick="toggle('${rid}')">+</button></td><td><span class="cn">${c.nome}</span><span class="cs">${c.citta||''}${c.prov?' ('+c.prov+')':''}</span></td><td><span class="badge b-cat">${(c.cat||'N/D').substring(0,12)}</span></td>${isItalia?`<td style="font-size:10px;color:var(--muted)">${(c.agente||'').substring(0,18)}</td>`:''}<td class="r" style="font-weight:700">${EUR(c.imp)}</td><td class="r">${NUM(c.pz)}</td><td class="r">${EUR(c.pm)}</td><td class="r" style="color:${c.impPrec>0?'var(--ink)':'var(--muted)'}">${c.impPrec>0?EUR(c.impPrec):'—'}</td><td class="r">${dh}</td><td class="r" style="color:var(--muted);font-size:10px">${c.refs.length}</td></tr><tr class="xrow" id="dr-${rid}"><td colspan="${isItalia?10:9}" class="xcell"><div class="xinner">${rh}</div></td></tr>`;
-      }).join('')}</tbody>
+        const rh=c.refs.length>0?`<table style="width:100%">
+          <thead><tr>
+            <th style="width:40%"><div class="thi">Tipologia</div></th>
+            <th style="width:18%"><div class="thi" style="justify-content:center">Bott.</div></th>
+            <th style="width:22%"><div class="thi" style="justify-content:center">Fatturato</div></th>
+            <th style="width:20%"><div class="thi" style="justify-content:center">Pr. Medio</div></th>
+          </tr></thead>
+          <tbody>${c.refs.map(rf=>`<tr>
+            <td style="font-weight:600;white-space:normal">${rf.nome}</td>
+            <td style="text-align:center">${NUM(rf.pz)}</td>
+            <td style="text-align:center">${EUR(rf.imp)}</td>
+            <td style="text-align:center">${EUR(rf.pz>0?rf.imp/rf.pz:0)}</td>
+          </tr>`).join('')}</tbody>
+        </table>`:'<em style="font-size:11px;color:var(--muted)">Nessuna referenza</em>';
+        return`<tr class="dr">
+          <td class="c"><button class="xbtn" id="btn-${rid}" onclick="toggle('${rid}')">+</button></td>
+          <td><span class="cn">${c.nome}</span><span class="cs">${c.citta||''}${c.prov?' ('+c.prov+')':''}</span></td>
+          <td><span class="badge b-cat">${(c.cat||'N/D').substring(0,12)}</span></td>
+          ${isItalia?`<td style="font-size:11px;color:var(--muted)">${(c.agente||'').substring(0,20)}</td>`:''}
+          <td class="r" style="font-weight:700">${EUR(c.imp)}</td>
+          <td class="r">${NUM(c.pz)}</td>
+          <td class="r">${EUR(c.pm)}</td>
+          <td class="r" style="color:${c.impPrec>0?'var(--ink)':'var(--muted)'}">${c.impPrec>0?EUR(c.impPrec):'—'}</td>
+          <td class="r">${dh}</td>
+          <td class="r" style="color:var(--muted);font-size:10px">${c.refs.length}</td>
+        </tr><tr class="xrow" id="dr-${rid}"><td colspan="${isItalia?10:9}" class="xcell"><div class="xinner">${rh}</div></td></tr>`;
+      }).join('')}
+      </tbody>
     </table></div>
   </div></div>
+
   <div class="section"><div class="card">
-    <div class="card-head"><h3>Referenze — Rotazione Bottiglie</h3><span>${topRef.length} tipologie</span></div>
+    <div class="card-head"><h3>Referenze — Rotazione Bottiglie</h3><span>${topRef.length} tipologie · trascina bordo colonna per allargare</span></div>
     <div class="tbl-wrap"><table id="tbl-ref">
-      <colgroup><col style="width:30%"><col style="width:12%"><col style="width:14%"><col style="width:12%"><col style="width:8%"><col style="width:24%"></colgroup>
       <thead><tr>${TH('Tipologia','tbl-ref',0,'str',false)}${TH('Bottiglie','tbl-ref',1,'num',true)}${TH('Fatturato','tbl-ref',2,'num',true)}${TH('Pr. Medio','tbl-ref',3,'num',true)}${TH('Clienti','tbl-ref',4,'num',true)}<th><div class="thi">Rotazione</div></th></tr></thead>
-      <tbody>${topRef.length===0?'<tr class="empty-row"><td colspan="6">Nessun dato</td></tr>':topRef.map(r=>`<tr class="dr"><td style="font-weight:600">${r.tip}</td><td class="r">${NUM(r.pz)}</td><td class="r">${EUR(r.imp)}</td><td class="r">${EUR(r.pz>0?r.imp/r.pz:0)}</td><td class="r">${r.cli.size}</td><td><div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:5px;background:#ede9e9;border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--wine);border-radius:3px;width:${Math.round(r.pz/maxRef*100)}%"></div></div><span style="font-size:10px;color:var(--muted);min-width:24px">${Math.round(r.pz/maxRef*100)}%</span></div></td></tr>`).join('')}</tbody>
+      <tbody>${topRef.length===0?'<tr class="empty-row"><td colspan="6">Nessun dato</td></tr>':
+      topRef.map(r=>`<tr class="dr"><td style="font-weight:600">${r.tip}</td><td class="r">${NUM(r.pz)}</td><td class="r">${EUR(r.imp)}</td><td class="r">${EUR(r.pz>0?r.imp/r.pz:0)}</td><td class="r">${r.cli.size}</td>
+        <td><div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:5px;background:#ede9e9;border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--wine);border-radius:3px;width:${Math.round(r.pz/maxRef*100)}%"></div></div><span style="font-size:10px;color:var(--muted);min-width:24px">${Math.round(r.pz/maxRef*100)}%</span></div></td>
+      </tr>`).join('')}</tbody>
     </table></div>
   </div></div>
-  ${cali.length>0?`<div class="section"><div class="card"><div class="card-head"><h3>⚠ Clienti in Calo vs ${ap}</h3><span>Priorità riunione</span></div><div class="tbl-wrap"><table id="tbl-calo"><colgroup><col style="width:28%"><col style="width:13%"><col style="width:13%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup><thead><tr>${TH('Cliente','tbl-calo',0,'str',false)}${TH(String(ap),'tbl-calo',1,'num',true)}${TH(String(anno),'tbl-calo',2,'num',true)}${TH('Var %','tbl-calo',3,'pct',true)}${TH('Var €','tbl-calo',4,'num',true)}${TH(`Bott. ${ap}`,'tbl-calo',5,'num',true)}${TH('Var Bott.','tbl-calo',6,'num',true)}</tr></thead><tbody>${cali.map(r=>`<tr class="dr"><td style="font-weight:600">${r.nome}</td><td class="r">${EUR(r.vp)}</td><td class="r">${r.vc>0?EUR(r.vc):'<span style="color:var(--red);font-weight:700">assente</span>'}</td><td class="r"><span class="badge b-dn">${PCT(r.d)}</span></td><td class="r" style="color:var(--red);font-weight:700">${EURDIFF(r.vc-r.vp)}</td><td class="r">${NUM(r.bP)}</td><td class="r" style="color:${r.varBott>=0?'var(--green)':'var(--red)'};font-weight:600">${r.bP>0?(r.varBott>=0?'+':'')+NUM(r.varBott):'—'}</td></tr>`).join('')}</tbody></table></div></div></div>`:''}
-  ${accs.length>0?`<div class="section"><div class="card"><div class="card-head"><h3>Note di Accredito / Resi</h3><span>${accs.length} doc · Totale: ${EUR(K.acc)}</span></div><div class="tbl-wrap"><table id="tbl-acc"><colgroup><col style="width:36%"><col style="width:30%"><col style="width:10%"><col style="width:24%"></colgroup><thead><tr>${TH('Cliente','tbl-acc',0,'str',false)}${TH('Articolo','tbl-acc',1,'str',false)}${TH('Tipo','tbl-acc',2,'str',false)}${TH('Importo','tbl-acc',3,'num',true)}</tr></thead><tbody>${accs.map(r=>`<tr class="acc-row dr"><td style="font-weight:600">${r.cliente}</td><td>${r.articolo||'N/D'}</td><td>${r.tipoDoc}</td><td class="r" style="font-weight:700">${EUR(r.importo)}</td></tr>`).join('')}</tbody></table></div></div></div>`:''}
+
+  ${cali.length>0?`<div class="section"><div class="card">
+    <div class="card-head"><h3>⚠ Clienti in Calo vs ${ap}</h3><span>Priorità riunione · clicca per ordinare</span></div>
+    <div class="tbl-wrap"><table id="tbl-calo">
+      <thead><tr>${TH('Cliente','tbl-calo',0,'str',false)}${TH('Agente','tbl-calo',1,'str',false)}${TH(String(ap),'tbl-calo',2,'num',true)}${TH(String(anno),'tbl-calo',3,'num',true)}${TH('Var %','tbl-calo',4,'pct',true)}${TH('Var €','tbl-calo',5,'num',true)}${TH(`Bott. ${ap}`,'tbl-calo',6,'num',true)}${TH('Var Bott.','tbl-calo',7,'num',true)}</tr></thead>
+      <tbody>${cali.map(r=>`<tr class="dr">
+        <td style="font-weight:600">${r.nome}</td>
+        <td style="font-size:11px;color:var(--muted)">${r.agente}</td>
+        <td class="r">${EUR(r.vp)}</td>
+        <td class="r">${r.vc>0?EUR(r.vc):'<span style="color:var(--red);font-weight:700">assente</span>'}</td>
+        <td class="r"><span class="badge b-dn">${PCT(r.d)}</span></td>
+        <td class="r" style="color:var(--red);font-weight:700">${EURDIFF(r.vc-r.vp)}</td>
+        <td class="r">${NUM(r.bP)}</td>
+        <td class="r" style="color:${r.varBott>=0?'var(--green)':'var(--red)'};font-weight:600">${r.bP>0?(r.varBott>=0?'+':'')+NUM(r.varBott):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`:''}
+
+  ${accs.length>0?`<div class="section"><div class="card">
+    <div class="card-head"><h3>Note di Accredito / Resi</h3><span>${accs.length} doc · Totale: ${EUR(K.acc)}</span></div>
+    <div class="tbl-wrap"><table id="tbl-acc">
+      <thead><tr>${TH('Cliente','tbl-acc',0,'str',false)}${TH('Articolo','tbl-acc',1,'str',false)}${TH('Tipo','tbl-acc',2,'str',false)}${TH('Importo','tbl-acc',3,'num',true)}</tr></thead>
+      <tbody>${accs.map(r=>`<tr class="acc-row dr"><td style="font-weight:600">${r.cliente}</td><td>${r.articolo||'N/D'}</td><td>${r.tipoDoc}</td><td class="r" style="font-weight:700">${EUR(r.importo)}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`:''}
   `;
+
   document.getElementById('rw').innerHTML=h;
   document.getElementById('rw').style.display='block';
   document.getElementById('ph').style.display='none';
+
+  // Add resizers to all tables
+  setTimeout(()=>['tbl-ag','tbl-cli','tbl-ref','tbl-calo','tbl-acc'].forEach(addResizers),100);
 }
+
 async function sendChat(){
   const inp=document.getElementById('chat-input');
   const q=inp.value.trim();if(!q)return;
@@ -546,24 +789,17 @@ async function sendChat(){
   document.getElementById('chat-thinking').style.display='flex';
   chatCtx.push({role:'user',content:q});
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:chatCtx})
-    });
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:chatCtx})});
     const data=await res.json();
     const reply=data.content?.map(b=>b.text||'').join('')||'Nessuna risposta.';
     chatCtx.push({role:'assistant',content:reply});
     document.getElementById('chat-thinking').style.display='none';
     addMsg('bot',reply);
-  }catch(e){
-    document.getElementById('chat-thinking').style.display='none';
-    addMsg('bot','Errore connessione API.');
-  }
+  }catch(e){document.getElementById('chat-thinking').style.display='none';addMsg('bot','Errore connessione API.');}
 }
 function addMsg(role,html){
   const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;
-  const msgs=document.getElementById('chat-msgs');
-  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+  const msgs=document.getElementById('chat-msgs');msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
 }
 function doExcel(){
   if(!LR){alert('Genera prima un report');return;}
@@ -572,33 +808,22 @@ function doExcel(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['MOSNEL SALES INTELLIGENCE','','',''],['Vista',label,'',''],['Periodo',pl,'',''],['','','',''],['Indicatore',anno,ap,'Var %'],['Fatturato',K.fatt,KP.fatt,KP.fatt>0?PCT((K.fatt-KP.fatt)/KP.fatt*100):'n/d'],['Bottiglie',K.bott,KP.bott,KP.bott>0?PCT((K.bott-KP.bott)/KP.bott*100):'n/d'],['Prezzo Medio',K.pm,KP.pm,KP.pm>0?PCT((K.pm-KP.pm)/KP.pm*100):'n/d'],['Accrediti',K.acc,'','']]),'KPI');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente','Città','Prov','Categoria','Agente',`Fatt. ${anno}`,`Bott. ${anno}`,'Pr. Medio',`Fatt. ${ap}`,'Var %'],...topCli.map(c=>[c.nome,c.citta,c.prov,c.cat,c.agente||'',c.imp,c.pz,c.pm,c.impPrec,c.delta!==null?PCT(c.delta):'nuovo'])]),'Top Clienti');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tipologia','Bottiglie','Fatturato','Pr. Medio','Clienti'],...topRef.map(r=>[r.tip,r.pz,r.imp,r.pz>0?r.imp/r.pz:0,r.cli.size])]),'Referenze');
-  if(cali.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente',ap,anno,'Var %','Var €',`Bott. ${ap}`,'Var Bott.'],...cali.map(r=>[r.nome,r.vp,r.vc,PCT(r.d),r.vc-r.vp,r.bP,r.varBott])]),'Clienti in Calo');
+  if(cali.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente','Agente',ap,anno,'Var %','Var €',`Bott. ${ap}`,'Var Bott.'],...cali.map(r=>[r.nome,r.agente,r.vp,r.vc,PCT(r.d),r.vc-r.vp,r.bP,r.varBott])]),'Clienti in Calo');
   if(accs.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente','Articolo','Tipo','Importo'],...accs.map(r=>[r.cliente,r.articolo,r.tipoDoc,r.importo])]),'Accrediti');
-  try{
-    XLSX.writeFile(wb,`Mosnel_${label.replace(/[^a-zA-Z0-9]/g,'_')}_${anno}.xlsx`);
-  }catch(e){
-    const out=XLSX.write(wb,{bookType:'xlsx',type:'binary'});
-    const buf=new ArrayBuffer(out.length);const view=new Uint8Array(buf);
-    for(let i=0;i<out.length;i++)view[i]=out.charCodeAt(i)&0xFF;
-    const blob=new Blob([buf],{type:'application/octet-stream'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-    a.download=`Mosnel_${label.replace(/[^a-zA-Z0-9]/g,'_')}_${anno}.xlsx`;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
-  }
+  try{XLSX.writeFile(wb,`Mosnel_${label.replace(/[^a-zA-Z0-9]/g,'_')}_${anno}.xlsx`);}
+  catch(e){const out=XLSX.write(wb,{bookType:'xlsx',type:'binary'});const buf=new ArrayBuffer(out.length);const view=new Uint8Array(buf);for(let i=0;i<out.length;i++)view[i]=out.charCodeAt(i)&0xFF;const blob=new Blob([buf],{type:'application/octet-stream'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Mosnel_${label.replace(/[^a-zA-Z0-9]/g,'_')}_${anno}.xlsx`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
 }
 function doPdf(){if(!LR){alert('Genera prima un report');return;}window.print();}
 function resetApp(){
   D=[];LR=null;chatCtx=[];
   document.getElementById('upload-screen').style.display='flex';
   document.getElementById('app-screen').style.display='none';
-  document.getElementById('fi').value='';
-  document.getElementById('pw').style.display='none';
-  document.getElementById('pf').style.width='0';
-  document.getElementById('rw').style.display='none';
-  document.getElementById('ph').style.display='block';
+  document.getElementById('fi').value='';document.getElementById('pw').style.display='none';
+  document.getElementById('pf').style.width='0';document.getElementById('rw').style.display='none';
+  document.getElementById('ph').style.display='block';document.getElementById('search-input').value='';
+  document.getElementById('search-results').style.display='none';
   document.getElementById('chat-msgs').innerHTML='<div class="msg bot">Ciao! Genera un report e poi puoi chiedermi qualsiasi cosa sui dati.</div>';
-  document.getElementById('chat-body').classList.remove('open');
-  document.getElementById('ct-arrow').classList.remove('open');
+  document.getElementById('chat-body').classList.remove('open');document.getElementById('ct-arrow').classList.remove('open');
 }
 </script>
 </body>
