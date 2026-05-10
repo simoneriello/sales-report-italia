@@ -17,6 +17,8 @@
   --amber:#92400e;--amber-bg:#fffbeb;
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+
+/* UPLOAD */
 #upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center;background:linear-gradient(135deg,#fdf5f6,#f9f0e8)}
 .brand-hero{font-family:'Cormorant Garamond',serif;font-size:3rem;font-weight:600;color:var(--wine);letter-spacing:-1px}
 .brand-hero small{display:block;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);margin-top:6px}
@@ -31,6 +33,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .prog-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px}
 .prog-fill{height:100%;background:var(--wine);width:0;transition:width .3s}
 .prog-lbl{font-size:12px;color:var(--muted);text-align:center}
+
+/* APP */
 #app-screen{display:none}
 .topbar{background:var(--wine);padding:11px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .brand-top{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:white}
@@ -39,6 +43,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .btn-ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;padding:5px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif}
 .btn-ghost:hover{background:rgba(255,255,255,.2)}
 .data-badge{background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.4);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+
+/* FILTERS */
 .filterbar{background:var(--white);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap}
 .fg{display:flex;flex-direction:column;gap:3px}
 .fg label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
@@ -54,18 +60,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .btn-gen:hover{background:var(--wine-dark)}
 .exp-grp{display:flex;gap:6px;align-self:flex-end}
 .btn-exp{background:white;color:var(--wine);border:1.5px solid var(--wine);padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
-.searchbar{background:var(--wine-light);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:10px;align-items:center}
-.search-wrap{position:relative;max-width:420px;flex:1}
+.btn-exp:hover{background:var(--wine-light)}
+
+/* SEARCH */
+.searchbar{background:var(--wine-light);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:12px;align-items:center}
+.search-wrap{position:relative;max-width:400px;flex:1}
 .search-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 32px 8px 36px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:white}
 .search-input:focus{outline:none;border-color:var(--wine)}
-.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted);pointer-events:none}
-.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);cursor:pointer;background:none;border:none;line-height:1;display:none}
-.search-clear.show{display:block}
-.search-hint{font-size:11px;color:var(--muted)}
-#search-results{display:none;padding:16px 24px;background:var(--white);border-bottom:1px solid var(--border);max-height:380px;overflow-y:auto}
+.s-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted);pointer-events:none}
+.s-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:15px;color:var(--muted);cursor:pointer;display:none;line-height:1}
+.s-clear.show{display:block}
+.s-hint{font-size:11px;color:var(--muted)}
+#sr{display:none;padding:14px 24px;background:var(--white);border-bottom:1px solid var(--border);max-height:360px;overflow-y:auto}
+
+/* MAIN */
 #rp{padding:18px 24px}
 #ph{padding:60px 24px;text-align:center;color:var(--muted);font-size:13px}
 #rw{display:none}
+
+/* REPORT ELEMENTS */
 .rpt-header{background:linear-gradient(135deg,var(--wine),var(--wine-dark));border-radius:12px;padding:18px 22px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px}
 .rpt-header h1{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:white}
 .rpt-header p{font-size:12px;color:rgba(255,255,255,.6);margin-top:3px}
@@ -80,39 +93,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .kpi.primary .kpi-val{color:white}
 .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .kpi.primary .kpi-sub{color:rgba(255,255,255,.55)}
-.kpi-var{font-size:11px;margin-top:3px;font-weight:600}
+.kpi-var{font-size:11px;font-weight:600;margin-top:3px}
 .up{color:#16a34a;font-weight:700}
 .dn{color:#dc2626;font-weight:700}
 .kpi.primary .up{color:#86efac}
 .kpi.primary .dn{color:#fca5a5}
 .section{margin-bottom:13px}
 .card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-/* Collapsible card head */
-.card-head{padding:10px 15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#faf7f7;flex-wrap:wrap;gap:6px}
-.card-head.clickable{cursor:pointer;user-select:none}
-.card-head.clickable:hover{background:#f0eded}
+.card-head{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#faf7f7;flex-wrap:wrap;gap:6px}
 .card-head h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine)}
-.card-head .head-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-head .hr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card-head span{font-size:11px;color:var(--muted)}
-.collapse-arrow{font-size:11px;color:var(--wine);transition:transform .2s;flex-shrink:0}
-.collapse-arrow.open{transform:rotate(180deg)}
-.card-body{display:none}
-.card-body.open{display:block}
-/* Status badges */
-.badge-count{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.bc-green{background:var(--green-bg);color:var(--green);border:1px solid #86efac}
-.bc-red{background:var(--red-bg);color:var(--red);border:1px solid #fca5a5}
-.bc-amber{background:var(--amber-bg);color:var(--amber);border:1px solid #f0d090}
-.bc-wine{background:var(--wine-light);color:var(--wine);border:1px solid var(--wine-mid)}
-/* Pagination */
-.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:#faf7f7}
-.pag-info{font-size:12px;color:var(--muted)}
-.pag-btns{display:flex;gap:6px}
-.pag-btn{padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:white;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--ink)}
-.pag-btn:hover{border-color:var(--wine);color:var(--wine)}
-.pag-btn.active{background:var(--wine);color:white;border-color:var(--wine)}
-.pag-btn:disabled{opacity:.4;cursor:default}
-/* Tables */
+.cnt-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.cb-green{background:var(--green-bg);color:var(--green);border:1px solid #86efac}
+.cb-red{background:var(--red-bg);color:var(--red);border:1px solid #fca5a5}
+.cb-amber{background:var(--amber-bg);color:var(--amber);border:1px solid #f0d090}
+
+/* CHART */
+.chart-wrap{padding:14px 14px 8px;overflow-x:auto}
+.chart-legend{display:flex;gap:14px;margin-bottom:10px;font-size:11px;font-weight:600}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:9px;height:9px;border-radius:50%}
+
+/* TABLES */
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;table-layout:auto}
 th{padding:0;border-bottom:1px solid var(--border);background:#faf7f7;white-space:nowrap;position:relative;min-width:70px}
@@ -125,12 +128,12 @@ th.sd .si::after{content:'▼';opacity:1;color:var(--wine)}
 th:not(.sa):not(.sd) .si::after{content:'⇅'}
 .thr .thi{justify-content:flex-end}
 .col-resizer{position:absolute;right:0;top:0;width:5px;height:100%;cursor:col-resize;z-index:2}
-.col-resizer:hover,.col-resizer.dragging{background:var(--wine);opacity:.4}
+.col-resizer:hover,.col-resizer.drag{background:var(--wine);opacity:.4}
 td{padding:8px 9px;border-bottom:1px solid #f5f0f0;color:var(--ink);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr:last-child td{border-bottom:none}
 tr.dr:hover td{background:#fdf8f8}
-tr.click-row{cursor:pointer}
-tr.click-row:hover td{background:#fdf0f1!important}
+tr.clik{cursor:pointer}
+tr.clik:hover td{background:#fdf0f1!important}
 .r{text-align:right}
 .c{text-align:center}
 .cn{font-weight:600;font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis}
@@ -140,104 +143,115 @@ tr.click-row:hover td{background:#fdf0f1!important}
 .b-up{background:var(--green-bg);color:var(--green)}
 .b-dn{background:var(--red-bg);color:var(--red)}
 .b-warn{background:var(--amber-bg);color:var(--amber)}
-.b-absent{background:#f5f5f5;color:#888;font-style:italic}
-.xbtn{width:19px;height:19px;border-radius:4px;border:1px solid var(--border);background:var(--wine-light);color:var(--wine);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit;line-height:1}
+.b-abs{background:#f0f0f0;color:#888}
+.xbtn{width:20px;height:20px;border-radius:5px;border:1px solid var(--border);background:var(--wine-light);color:var(--wine);font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit;line-height:1}
 .xbtn:hover,.xbtn.open{background:var(--wine);color:white;border-color:var(--wine)}
 .xrow{display:none}
 .xrow.open{display:table-row}
 .xcell{padding:0!important;border-bottom:1px solid var(--wine-mid)!important;background:var(--wine-light)!important}
-.xinner{padding:10px 12px 10px 34px}
+.xinner{padding:10px 12px 10px 36px}
 .xinner table{background:transparent;width:100%;table-layout:auto}
 .xinner th{background:rgba(114,47,55,.07);min-width:0}
-.xinner th .thi{font-size:10px;font-weight:700;color:var(--wine);text-transform:uppercase;padding:5px 8px;cursor:default}
+.xinner th .thi{font-size:10px;font-weight:700;color:var(--wine);text-transform:uppercase;padding:5px 8px;cursor:default;justify-content:flex-start}
 .xinner td{padding:6px 8px;font-size:12px;border-bottom:1px solid #ece0e1;background:transparent;white-space:normal;overflow:visible}
 .xinner tr:last-child td{border-bottom:none}
 .acc-row td{color:var(--red);background:#fff8f8}
-.empty-row td{text-align:center;color:var(--muted);padding:18px;font-style:italic}
-.click-hint{font-size:10px;color:var(--wine);opacity:.5}
-/* CHART */
-.chart-wrap{padding:14px 14px 6px;overflow-x:auto}
-.chart-legend{display:flex;gap:14px;margin-bottom:10px;font-size:11px;font-weight:600}
-.legend-item{display:flex;align-items:center;gap:5px}
-.legend-dot{width:9px;height:9px;border-radius:50%}
+.empty-row td{text-align:center;color:var(--muted);padding:20px;font-style:italic}
+
+/* ABSENT STRIP */
+.absent-strip{padding:10px 16px;background:var(--red-bg);border-bottom:1px solid #fca5a5;font-size:12px;color:var(--red);line-height:1.9}
+.absent-strip strong{display:block;margin-bottom:4px;font-size:12px}
+.absent-strip span{cursor:pointer;text-decoration:underline;margin-right:10px}
+.absent-strip span:hover{color:var(--wine-dark)}
+
 /* SLIDE PANEL */
-.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none;opacity:0;transition:opacity .25s}
-.panel-overlay.open{display:block;opacity:1}
-.slide-panel{position:fixed;top:0;right:0;width:min(700px,95vw);height:100vh;background:var(--white);z-index:101;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:-8px 0 40px rgba(114,47,55,.15)}
-.slide-panel.open{transform:translateX(0)}
-.panel-topbar{background:var(--wine);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-.panel-breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.7)}
-.crumb{cursor:pointer;color:rgba(255,255,255,.7)}
-.crumb:hover{color:white;text-decoration:underline}
-.sep{opacity:.4}
-.current{color:white;font-weight:600}
-.panel-close{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.panel-close:hover{background:rgba(255,255,255,.25)}
-.panel-body{padding:20px}
-.panel-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:var(--wine);margin-bottom:4px}
-.panel-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
-.panel-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
-.pkpi{background:var(--wine-light);border:1px solid var(--wine-mid);border-radius:8px;padding:10px 12px}
-.pkpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--wine);margin-bottom:4px}
-.pkpi-val{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:600;color:var(--ink)}
-.pkpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
-.pkpi-var{font-size:11px;font-weight:700;margin-top:2px}
-.panel-section{margin-bottom:16px}
-.panel-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.panel-table{width:100%;border-collapse:collapse;font-size:12px}
-.panel-table th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--border);background:#faf7f7;white-space:nowrap;cursor:pointer}
-.panel-table th:hover{color:var(--wine)}
-.panel-table th.sa,.panel-table th.sd{color:var(--wine)}
-.panel-table th.sa::after{content:' ▲';font-size:9px}
-.panel-table th.sd::after{content:' ▼';font-size:9px}
-.panel-table td{padding:7px 8px;border-bottom:1px solid #f5f0f0;color:var(--ink)}
-.panel-table tr:last-child td{border-bottom:none}
-.panel-table tr:hover td{background:#fdf8f8}
-.panel-table .r{text-align:right}
-.ptrow{cursor:pointer}
-.ptrow:hover td{background:#fdf0f1!important}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none;opacity:0;transition:opacity .25s}
+.ov.open{display:block;opacity:1}
+.sp{position:fixed;top:0;right:0;width:min(720px,96vw);height:100vh;background:var(--white);z-index:101;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:-8px 0 40px rgba(114,47,55,.15);display:flex;flex-direction:column}
+.sp.open{transform:translateX(0)}
+.sp-topbar{background:var(--wine);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10}
+.sp-bc{display:flex;align-items:center;gap:6px;font-size:12px;flex-wrap:wrap}
+.bc-link{color:rgba(255,255,255,.65);cursor:pointer;text-decoration:underline}
+.bc-link:hover{color:white}
+.bc-sep{color:rgba(255,255,255,.35)}
+.bc-cur{color:white;font-weight:600}
+.sp-close{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sp-close:hover{background:rgba(255,255,255,.25)}
+.sp-body{padding:20px;flex:1}
+.sp-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:var(--wine);margin-bottom:3px}
+.sp-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+.sp-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.spk{background:var(--wine-light);border:1px solid var(--wine-mid);border-radius:8px;padding:10px 12px}
+.spk-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--wine);margin-bottom:4px}
+.spk-val{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;color:var(--ink)}
+.spk-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.spk-var{font-size:11px;font-weight:700;margin-top:2px}
+.sp-sec{margin-bottom:18px}
+.sp-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.sp-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.sp-tbl th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--border);background:#faf7f7;white-space:nowrap;cursor:pointer;user-select:none}
+.sp-tbl th.sa::after{content:' ▲';font-size:9px;color:var(--wine)}
+.sp-tbl th.sd::after{content:' ▼';font-size:9px;color:var(--wine)}
+.sp-tbl th:hover{color:var(--wine)}
+.sp-tbl td{padding:7px 8px;border-bottom:1px solid #f5f0f0;color:var(--ink)}
+.sp-tbl tr:last-child td{border-bottom:none}
+.sp-tbl tr:hover td{background:#fdf8f8}
+.sp-tbl .r{text-align:right}
+.sp-tbl tr.clik{cursor:pointer}
+.sp-tbl tr.clik:hover td{background:#fdf0f1!important}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.info-item{background:var(--bg);border-radius:7px;padding:8px 10px}
-.info-item label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);display:block;margin-bottom:3px}
-.info-item span{font-size:13px;font-weight:500;color:var(--ink)}
-/* Collapsible panel sections */
-.psec-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:8px}
-.psec-head:hover .panel-section-title{color:var(--wine-dark)}
-.psec-arrow{font-size:11px;color:var(--wine);transition:transform .2s}
-.psec-arrow.open{transform:rotate(180deg)}
-.psec-body{display:none}
-.psec-body.open{display:block}
-/* Order detail */
-.ord-detail{display:none;background:var(--wine-light)}
-.ord-detail.open{display:table-row}
+.ii{background:var(--bg);border-radius:7px;padding:8px 10px}
+.ii label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);display:block;margin-bottom:3px}
+.ii span{font-size:13px;font-weight:500;color:var(--ink)}
+/* Pagination inside panel */
+.sp-pag{display:flex;align-items:center;justify-content:space-between;padding:8px 0;margin-top:6px}
+.sp-pag-info{font-size:11px;color:var(--muted)}
+.sp-pag-btns{display:flex;gap:5px}
+.sp-pag-btn{padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:white;cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--ink)}
+.sp-pag-btn:hover{border-color:var(--wine);color:var(--wine)}
+.sp-pag-btn.act{background:var(--wine);color:white;border-color:var(--wine)}
+.sp-pag-btn:disabled{opacity:.35;cursor:default}
+/* Order expand */
+.ord-row{cursor:pointer}
+.ord-row:hover td{background:#fdf0f1!important}
+.ord-det{display:none}
+.ord-det.open{display:table-row}
+.ord-det td{background:var(--wine-light)!important;padding:0!important}
+.ord-det-inner{padding:8px 8px 8px 20px;font-size:11px}
+.ord-det-inner table{width:100%;font-size:11px}
+.ord-det-inner td{padding:4px 6px;border-bottom:1px solid #ece0e1;background:transparent;white-space:normal}
+.ord-det-inner tr:last-child td{border-bottom:none}
+
 /* CHAT */
-#chat-toggle-bar{background:var(--wine-light);border-top:2px solid var(--wine-mid);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;position:sticky;bottom:0;z-index:10}
-#chat-toggle-bar:hover{background:var(--wine-mid)}
-.ct-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.ct-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
-.ct-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine)}
-.ct-hint{font-size:11px;color:var(--muted)}
-.ct-arrow{font-size:12px;color:var(--wine);transition:transform .2s;flex-shrink:0}
-.ct-arrow.open{transform:rotate(180deg)}
-#chat-body{display:none;border-top:1px solid var(--border);background:var(--white);flex-direction:column;height:300px}
-#chat-body.open{display:flex}
+#chat-bar{background:var(--wine-light);border-top:2px solid var(--wine-mid);padding:9px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;position:sticky;bottom:0;z-index:10}
+#chat-bar:hover{background:var(--wine-mid)}
+.cb-left{display:flex;align-items:center;gap:8px}
+.cb-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.cb-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine)}
+.cb-hint{font-size:11px;color:var(--muted)}
+.cb-arr{font-size:12px;color:var(--wine);transition:transform .2s;flex-shrink:0}
+.cb-arr.open{transform:rotate(180deg)}
+#chat-panel{display:none;border-top:1px solid var(--border);background:var(--white);flex-direction:column;height:290px}
+#chat-panel.open{display:flex}
 .chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
 .msg{max-width:88%;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5}
 .msg.bot{background:var(--wine-light);color:var(--ink);align-self:flex-start;border-bottom-left-radius:3px}
 .msg.user{background:var(--wine);color:white;align-self:flex-end;border-bottom-right-radius:3px}
 .chat-thinking{display:none;align-items:center;gap:6px;padding:8px 12px;font-size:12px;color:var(--muted)}
-.dot-anim span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--wine);animation:bounce 1.2s infinite;margin:0 1px}
+.dot-anim span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--wine);animation:bn 1.2s infinite;margin:0 1px}
 .dot-anim span:nth-child(2){animation-delay:.2s}
 .dot-anim span:nth-child(3){animation-delay:.4s}
-@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
-.chat-input-wrap{padding:9px;border-top:1px solid var(--border);display:flex;gap:6px}
-.chat-input{flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;font-family:'DM Sans',sans-serif;resize:none;height:36px}
-.chat-input:focus{outline:none;border-color:var(--wine)}
+@keyframes bn{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+.chat-iw{padding:9px;border-top:1px solid var(--border);display:flex;gap:6px}
+.chat-inp{flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;font-family:'DM Sans',sans-serif;resize:none;height:36px}
+.chat-inp:focus{outline:none;border-color:var(--wine)}
 .chat-send{background:var(--wine);color:white;border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:14px;font-weight:600}
-@media print{.topbar,.filterbar,.searchbar,#chat-toggle-bar,#chat-body,.panel-overlay,.slide-panel{display:none!important}#rp{padding:6px}.section,.kpi-row{break-inside:avoid}.xrow{display:none!important}}
+
+@media print{.topbar,.filterbar,.searchbar,#chat-bar,#chat-panel,.ov,.sp{display:none!important}#rp{padding:6px}.section,.kpi-row{break-inside:avoid}.xrow{display:none!important}}
 </style>
 </head>
 <body>
+
 <div id="upload-screen">
   <div class="brand-hero">Mosnel<small>Sales Intelligence</small></div>
   <div class="drop-zone" onclick="document.getElementById('fi').click()">
@@ -259,6 +273,7 @@ tr.click-row:hover td{background:#fdf0f1!important}
       <button class="btn-ghost" onclick="resetApp()">↑ Nuovo file</button>
     </div>
   </div>
+
   <div class="filterbar">
     <div class="fg"><label>Vista</label><select id="sa"><option value="__ITALIA__">🇮🇹 Italia — Totale</option></select></div>
     <div class="fg"><label>Anno</label><select id="sy"><option value="2026" selected>2026</option><option value="2025">2025</option></select></div>
@@ -276,49 +291,49 @@ tr.click-row:hover td{background:#fdf0f1!important}
     <button class="btn-gen" onclick="gen()">Genera Report</button>
     <div class="exp-grp"><button class="btn-exp" onclick="doExcel()">📊 Excel</button><button class="btn-exp" onclick="doPdf()">🖨 PDF</button></div>
   </div>
+
   <div class="searchbar">
     <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" class="search-input" id="search-input" placeholder="Cerca un cliente..." oninput="doSearch(this.value)" autocomplete="off">
-      <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+      <span class="s-icon">🔍</span>
+      <input type="text" class="search-input" id="s-inp" placeholder="Cerca cliente..." oninput="doSearch(this.value)" autocomplete="off">
+      <button class="s-clear" id="s-clr" onclick="clearSearch()">✕</button>
     </div>
-    <span class="search-hint">Digita il nome di un cliente per la scheda completa</span>
+    <span class="s-hint">Digita il nome per aprire la scheda completa</span>
   </div>
-  <div id="search-results"></div>
+  <div id="sr"></div>
+
   <div id="rp"><div id="rw"></div><div id="ph">Seleziona una vista e clicca <strong>Genera Report</strong></div></div>
-  <div id="chat-toggle-bar" onclick="toggleChat()">
-    <div class="ct-left"><div class="ct-dot"></div><span class="ct-title">Analisi Live</span><span class="ct-hint">Fai una domanda sui dati</span></div>
-    <span class="ct-arrow" id="ct-arrow">▲</span>
+
+  <div id="chat-bar" onclick="toggleChat()">
+    <div class="cb-left"><div class="cb-dot"></div><span class="cb-title">Analisi Live</span><span class="cb-hint">Fai una domanda sui dati del report</span></div>
+    <span class="cb-arr" id="cb-arr">▲</span>
   </div>
-  <div id="chat-body">
-    <div class="chat-msgs" id="chat-msgs"><div class="msg bot">Ciao! Genera un report e poi chiedimi qualsiasi cosa.</div></div>
+  <div id="chat-panel">
+    <div class="chat-msgs" id="chat-msgs"><div class="msg bot">Ciao! Genera un report e poi chiedimi qualsiasi cosa sui dati.</div></div>
     <div class="chat-thinking" id="chat-thinking"><div class="dot-anim"><span></span><span></span><span></span></div><span>Analizzo...</span></div>
-    <div class="chat-input-wrap">
-      <textarea class="chat-input" id="chat-input" placeholder="Scrivi la tua domanda..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
-      <button class="chat-send" onclick="sendChat()">→</button>
-    </div>
+    <div class="chat-iw"><textarea class="chat-inp" id="chat-inp" placeholder="Scrivi la tua domanda..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea><button class="chat-send" onclick="sendChat()">→</button></div>
   </div>
 </div>
 
-<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
-<div class="slide-panel" id="slide-panel">
-  <div class="panel-topbar">
-    <div class="panel-breadcrumb" id="panel-breadcrumb"></div>
-    <button class="panel-close" onclick="closePanel()">✕</button>
+<!-- SLIDE PANEL -->
+<div class="ov" id="ov" onclick="closePanel()"></div>
+<div class="sp" id="sp">
+  <div class="sp-topbar">
+    <div class="sp-bc" id="sp-bc"></div>
+    <button class="sp-close" onclick="closePanel()">✕</button>
   </div>
-  <div class="panel-body" id="panel-body"></div>
+  <div class="sp-body" id="sp-body"></div>
 </div>
 
 <script>
 let D=[],LR=null,chatCtx=[];
-// Pagination state per table
-const PAG={};
-const PAGE_SIZE=20;
+let spStack=[];// panel navigation stack
 const MI=['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const EUR=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const NUM=n=>new Intl.NumberFormat('it-IT').format(Math.round(n||0));
 const PCT=(n,p=1)=>(n>=0?'+':'')+n.toFixed(p)+'%';
 const EURDIFF=n=>(n>=0?'+':'')+EUR(n);
+const ESC=s=>s.replace(/'/g,"\\'").replace(/"/g,'&quot;');
 
 const CM=new Date().getMonth()+1;
 document.getElementById('sy-to').value=CM;
@@ -332,43 +347,75 @@ function setPM(m){
   document.getElementById('period-custom').classList.toggle('show',!y);
 }
 function toggleChat(){
-  const b=document.getElementById('chat-body'),a=document.getElementById('ct-arrow');
-  const o=b.classList.toggle('open');a.classList.toggle('open',o);
+  const p=document.getElementById('chat-panel'),a=document.getElementById('cb-arr');
+  const o=p.classList.toggle('open');a.classList.toggle('open',o);
 }
 
-// PANEL
-function openPanel(html,bc){
-  document.getElementById('panel-body').innerHTML=html;
-  document.getElementById('panel-breadcrumb').innerHTML=bc;
-  document.getElementById('panel-overlay').classList.add('open');
-  document.getElementById('slide-panel').classList.add('open');
+// ── PANEL SYSTEM ──
+function openPanel(buildFn,...args){
+  spStack=[{buildFn,args}];
+  renderPanel();
+}
+function pushPanel(buildFn,...args){
+  spStack.push({buildFn,args});
+  renderPanel();
+}
+function popPanel(){
+  if(spStack.length>1){spStack.pop();renderPanel();}
+  else closePanel();
+}
+function renderPanel(){
+  const frame=spStack[spStack.length-1];
+  const html=frame.buildFn(...frame.args);
+  document.getElementById('sp-body').innerHTML=html;
+  // build breadcrumb
+  const bcEl=document.getElementById('sp-bc');
+  if(spStack.length===1){
+    bcEl.innerHTML=`<span class="bc-cur">${frame.args[0]||''}</span>`;
+  } else {
+    const parts=spStack.map((f,i)=>{
+      const lbl=f.args[0]||'';
+      if(i<spStack.length-1) return`<span class="bc-link" onclick="popToLevel(${i})">${lbl}</span>`;
+      return`<span class="bc-cur">${lbl}</span>`;
+    });
+    bcEl.innerHTML=parts.join('<span class="bc-sep"> › </span>');
+  }
+  document.getElementById('ov').classList.add('open');
+  document.getElementById('sp').classList.add('open');
   document.body.style.overflow='hidden';
 }
+function popToLevel(idx){
+  spStack=spStack.slice(0,idx+1);
+  renderPanel();
+}
 function closePanel(){
-  document.getElementById('panel-overlay').classList.remove('open');
-  document.getElementById('slide-panel').classList.remove('open');
+  document.getElementById('ov').classList.remove('open');
+  document.getElementById('sp').classList.remove('open');
   document.body.style.overflow='';
+  spStack=[];
 }
 
-// COLUMN RESIZE
-function initResize(th){
-  const r=document.createElement('div');r.className='col-resizer';th.appendChild(r);
-  let sx,sw;
-  r.addEventListener('mousedown',e=>{
-    sx=e.pageX;sw=th.offsetWidth;r.classList.add('dragging');
-    const mm=e2=>{th.style.minWidth=(Math.max(60,sw+e2.pageX-sx))+'px';};
-    const mu=()=>{r.classList.remove('dragging');document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
-    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
-    e.stopPropagation();e.preventDefault();
+// ── RESIZE COLUMNS ──
+function addResizers(id){
+  const t=document.getElementById(id);if(!t)return;
+  t.querySelectorAll('th').forEach(th=>{
+    const r=document.createElement('div');r.className='col-resizer';th.appendChild(r);
+    let sx,sw;
+    r.addEventListener('mousedown',e=>{
+      sx=e.pageX;sw=th.offsetWidth;r.classList.add('drag');
+      const mm=e2=>th.style.minWidth=Math.max(60,sw+e2.pageX-sx)+'px';
+      const mu=()=>{r.classList.remove('drag');document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+      document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+      e.stopPropagation();e.preventDefault();
+    });
   });
 }
-function addResizers(id){const t=document.getElementById(id);if(t)t.querySelectorAll('th').forEach(initResize);}
 
-// FILE LOAD
+// ── FILE LOAD ──
 document.getElementById('fi').addEventListener('change',function(e){
   const f=e.target.files[0];if(!f)return;
   document.getElementById('pw').style.display='block';
-  document.getElementById('pl').textContent='Lettura: '+f.name+'...';
+  document.getElementById('pl').textContent='Lettura: '+f.name;
   let w=0;const iv=setInterval(()=>{w=Math.min(w+10,85);document.getElementById('pf').style.width=w+'%';},180);
   const r=new FileReader();
   r.onload=function(ev){
@@ -401,9 +448,10 @@ function clean(raw){
     else if(typeof d==='string'){const p=new Date(d);if(!isNaN(p)){mese=p.getMonth()+1;dataStr=p.toLocaleDateString('it-IT');}}
     else if(typeof d==='number'){const b=new Date(1899,11,30);b.setDate(b.getDate()+Math.floor(d));mese=b.getMonth()+1;dataStr=b.toLocaleDateString('it-IT');}
     const td=(r.Tipo_Doc||'').trim();
-    return{anno:parseInt(r.Anno),mese,data:dataStr,agente:(r.Nome_Agente||'').trim(),cliente:(r.Ragione_Sociale||'').trim(),
-      codCli:String(r.Cod_Cli||''),citta:(r.Citta||'').trim(),prov:(r.Prov||'').trim(),cat:(r.Descr_Cat_Cli||'').trim(),
-      articolo:(r.Descr_Articolo||'').trim(),tipologia:(r.Descr_Merceologica||'').trim(),formato:(r.Descr_Vuoto||'').trim(),
+    return{anno:parseInt(r.Anno),mese,data:dataStr,agente:(r.Nome_Agente||'').trim(),
+      cliente:(r.Ragione_Sociale||'').trim(),codCli:String(r.Cod_Cli||''),
+      citta:(r.Citta||'').trim(),prov:(r.Prov||'').trim(),cat:(r.Descr_Cat_Cli||'').trim(),
+      articolo:(r.Descr_Articolo||'').trim(),tipologia:(r.Descr_Merceologica||'').trim(),
       numDoc:(r.Num_Doc||'').toString().trim(),
       pezzi:parseFloat(r.Qta_Pezzi)||0,importo:parseFloat(r.Importo_Netto)||0,
       tipoRiga:['N.Acc.','F.Acc.'].includes(td)?'Nota Accredito':'Vendita',tipoDoc:td};
@@ -423,122 +471,69 @@ function getPeriod(){
   return{from:parseInt(document.getElementById('cm-from').value),to:parseInt(document.getElementById('cm-to').value)};
 }
 function fD(data,anno,from,to){return data.filter(r=>r.anno===parseInt(anno)&&r.mese>=from&&r.mese<=to);}
-function kpi(rows){
+function kpiCalc(rows){
   const v=rows.filter(r=>r.tipoRiga==='Vendita'),a=rows.filter(r=>r.tipoRiga==='Nota Accredito');
   const fatt=v.reduce((s,r)=>s+r.importo,0),bott=v.reduce((s,r)=>s+r.pezzi,0);
   const vPM=v.filter(r=>r.importo>0);
-  const fattPM=vPM.reduce((s,r)=>s+r.importo,0),bottPM=vPM.reduce((s,r)=>s+r.pezzi,0);
-  return{fatt,bott,acc:a.reduce((s,r)=>s+r.importo,0),pm:bottPM>0?fattPM/bottPM:0,clienti:new Set(v.map(r=>r.codCli)).size,nAcc:a.length};
+  return{fatt,bott,acc:a.reduce((s,r)=>s+r.importo,0),
+    pm:vPM.reduce((s,r)=>s+r.pezzi,0)>0?vPM.reduce((s,r)=>s+r.importo,0)/vPM.reduce((s,r)=>s+r.pezzi,0):0,
+    clienti:new Set(v.map(r=>r.codCli)).size,nAcc:a.length};
 }
 
-// SORT for main tables
+// ── TABLE SORT ──
 const SS={};
-function sortTbl(id,ci,type){
+function sortT(id,ci,type){
   const tbl=document.getElementById(id);if(!tbl)return;
-  const key=id+'-'+ci,prev=SS[key],asc=prev==='desc';
+  const key=id+ci,prev=SS[key],asc=prev==='desc';
   SS[key]=asc?'asc':'desc';
   tbl.querySelectorAll('th').forEach((th,i)=>{th.classList.remove('sa','sd');if(i===ci)th.classList.add(asc?'sa':'sd');});
   const tbody=tbl.querySelector('tbody');
   const rows=[...tbody.querySelectorAll('tr.dr')];
   const pairs=rows.map(dr=>{const xr=dr.nextElementSibling;return{dr,xr:xr&&xr.classList.contains('xrow')?xr:null};});
-  pairs.sort((a,b)=>{
-    const va=gv(a.dr,ci,type),vb=gv(b.dr,ci,type);
+  pairs.sort((a,b)=>{const va=getV(a.dr,ci,type),vb=getV(b.dr,ci,type);
     if(va===null&&vb===null)return 0;if(va===null)return 1;if(vb===null)return -1;
-    const c=va<vb?-1:va>vb?1:0;return asc?c:-c;
-  });
+    return(asc?1:-1)*(va<vb?-1:va>vb?1:0);});
   pairs.forEach(p=>{tbody.appendChild(p.dr);if(p.xr)tbody.appendChild(p.xr);});
 }
-// Sort for panel tables (no xrow pairs)
-function sortPanelTbl(tbl,ci,type){
-  if(!tbl)return;
-  const prev=tbl.dataset['sort'+ci],asc=prev==='desc';
-  tbl.dataset['sort'+ci]=asc?'asc':'desc';
-  tbl.querySelectorAll('th').forEach((th,i)=>{th.classList.remove('sa','sd');if(i===ci)th.classList.add(asc?'sa':'sd');});
+function sortSP(th,ci,type){
+  const tbl=th.closest('table');if(!tbl)return;
+  const key='sp'+tbl.id+ci,prev=SS[key],asc=prev==='desc';
+  SS[key]=asc?'asc':'desc';
+  tbl.querySelectorAll('th').forEach((t,i)=>{t.classList.remove('sa','sd');if(i===ci)t.classList.add(asc?'sa':'sd');});
   const tbody=tbl.querySelector('tbody');
-  const rows=[...tbody.querySelectorAll('tr')].filter(r=>!r.classList.contains('ord-detail'));
-  rows.sort((a,b)=>{
-    const va=gv(a,ci,type),vb=gv(b,ci,type);
+  const rows=[...tbody.querySelectorAll('tr:not(.ord-det)')];
+  rows.sort((a,b)=>{const va=getV(a,ci,type),vb=getV(b,ci,type);
     if(va===null&&vb===null)return 0;if(va===null)return 1;if(vb===null)return -1;
-    const c=va<vb?-1:va>vb?1:0;return asc?c:-c;
-  });
-  rows.forEach(r=>{
-    tbody.appendChild(r);
-    const next=r.nextElementSibling;
-    if(next&&next.classList.contains('ord-detail'))tbody.appendChild(next);
-  });
+    return(asc?1:-1)*(va<vb?-1:va>vb?1:0);});
+  rows.forEach(r=>{tbody.appendChild(r);const next=r.nextElementSibling;if(next&&next.classList.contains('ord-det'))tbody.appendChild(next);});
 }
-function gv(row,ci,type){
+function getV(row,ci,type){
   const cells=row.querySelectorAll('td');if(!cells[ci])return null;
   const txt=cells[ci].textContent.trim();
-  if(!txt||txt==='-'||txt==='—'||txt==='nuovo'||txt==='n/d'||txt==='assente')return null;
+  if(!txt||txt==='-'||txt==='—'||txt==='nuovo'||txt==='assente')return null;
   if(type==='num'){const n=parseFloat(txt.replace(/[€%+\s]/g,'').replace(/\./g,'').replace(',','.'));return isNaN(n)?null:n;}
   if(type==='pct'){const n=parseFloat(txt.replace(/[%+]/g,'').replace(',','.'));return isNaN(n)?null:n;}
   return txt.toLowerCase();
 }
+function TH(lbl,id,ci,type,right){
+  return`<th class="${right?'thr':''}" onclick="sortT('${id}',${ci},'${type}')"><div class="thi">${right?'<span class="si"></span>':''}<span>${lbl}</span>${!right?'<span class="si"></span>':''}</div></th>`;
+}
 function toggle(id){
   const dr=document.getElementById('dr-'+id),btn=document.getElementById('btn-'+id);
   if(!dr||!btn)return;
-  const open=dr.classList.toggle('open');btn.classList.toggle('open',open);btn.textContent=open?'−':'+';
+  const o=dr.classList.toggle('open');btn.classList.toggle('open',o);btn.textContent=o?'−':'+';
 }
-function TH(label,tid,ci,type,right){
-  return`<th class="${right?'thr':''}" onclick="sortTbl('${tid}',${ci},'${type}')"><div class="thi">${right?'<span class="si"></span>':''}<span>${label}</span>${!right?'<span class="si"></span>':''}</div></th>`;
-}
+function toggleOrd(id){document.getElementById('od-'+id)?.classList.toggle('open');}
 
-// COLLAPSIBLE CARD
-function toggleCard(bodyId,arrowId){
-  document.getElementById(bodyId)?.classList.toggle('open');
-  document.getElementById(arrowId)?.classList.toggle('open');
-}
-
-// PAGINATION
-function renderPage(tblId,allRows,page){
-  PAG[tblId]={rows:allRows,page};
-  const total=allRows.length,pages=Math.ceil(total/PAGE_SIZE);
-  const start=(page-1)*PAGE_SIZE,end=Math.min(start+PAGE_SIZE,total);
-  const tbl=document.getElementById(tblId);if(!tbl)return;
-  const tbody=tbl.querySelector('tbody');
-  tbody.innerHTML=allRows.slice(start,end).join('');
-  // Update pagination controls
-  const pagEl=document.getElementById('pag-'+tblId);
-  if(pagEl){
-    pagEl.querySelector('.pag-info').textContent=`${start+1}–${end} di ${total}`;
-    const btns=pagEl.querySelectorAll('.pag-btn[data-page]');
-    btns.forEach(b=>{
-      const p=parseInt(b.dataset.page);
-      b.classList.toggle('active',p===page);
-      b.disabled=p<1||p>pages;
-    });
-  }
-  setTimeout(()=>addResizers(tblId),50);
-}
-function goPage(tblId,delta){
-  const s=PAG[tblId];if(!s)return;
-  const pages=Math.ceil(s.rows.length/PAGE_SIZE);
-  const np=Math.max(1,Math.min(pages,s.page+delta));
-  renderPage(tblId,s.rows,np);
-}
-function makePagination(tblId,total){
-  const pages=Math.ceil(total/PAGE_SIZE);
-  if(pages<=1)return'';
-  return`<div class="pagination" id="pag-${tblId}">
-    <span class="pag-info">1–${Math.min(PAGE_SIZE,total)} di ${total}</span>
-    <div class="pag-btns">
-      <button class="pag-btn" data-page="0" onclick="goPage('${tblId}',-1)">‹ Prec</button>
-      <button class="pag-btn active" data-page="1">1</button>
-      <button class="pag-btn" data-page="2" onclick="goPage('${tblId}',1)">Succ ›</button>
-    </div>
-  </div>`;
-}
-
+// ── CHART ──
 function buildChart(dBase,anno,ap,from,to){
-  const W=520,H=140,PL=36,PR=8,PT=8,PB=24;
+  const W=520,H=138,PL=36,PR=8,PT=8,PB=24;
   const months=[];for(let m=from;m<=to;m++)months.push(m);
   if(months.length<2)return'';
   const get=(yr,m)=>dBase.filter(r=>r.anno===yr&&r.mese===m&&r.tipoRiga==='Vendita').reduce((s,r)=>s+r.importo,0);
   const v1=months.map(m=>get(anno,m)),v2=months.map(m=>get(ap,m));
   const all=[...v1,...v2].filter(v=>v>0);if(!all.length)return'';
-  const maxV=Math.max(...all)*1.15;
-  const cW=W-PL-PR,cH=H-PT-PB;
+  const maxV=Math.max(...all)*1.15,cW=W-PL-PR,cH=H-PT-PB;
   const xP=i=>PL+cW/(months.length-1||1)*i,yP=v=>PT+cH-(v/maxV*cH);
   const line=(vals,col)=>{
     const pts=vals.map((v,i)=>`${xP(i)},${yP(v)}`).join(' ');
@@ -547,289 +542,202 @@ function buildChart(dBase,anno,ap,from,to){
   };
   const grid=[.25,.5,.75,1].map(p=>{const y=PT+cH-(p*cH),v=maxV*p;return`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#ede9e9" stroke-width=".5"/><text x="${PL-3}" y="${y+3.5}" text-anchor="end" font-size="8.5" fill="#bbb">${v>=1000?Math.round(v/1000)+'k':Math.round(v)}</text>`;}).join('');
   const xL=months.map((m,i)=>`<text x="${xP(i)}" y="${H-3}" text-anchor="middle" font-size="8.5" fill="#bbb">${MI[m].substring(0,3)}</text>`).join('');
-  return`<div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:#722F37"></div><span>${anno}</span></div><div class="legend-item"><div class="legend-dot" style="background:#C9A84C"></div><span>${ap}</span></div></div>
-  <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" overflow="visible">${grid}${line(v1,'#722F37')}${line(v2,'#C9A84C')}${xL}</svg>`;
+  return`<div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:#722F37"></div><span>${anno}</span></div><div class="legend-item"><div class="legend-dot" style="background:#C9A84C"></div><span>${ap}</span></div></div><svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" overflow="visible">${grid}${line(v1,'#722F37')}${line(v2,'#C9A84C')}${xL}</svg>`;
 }
 
-// SCHEDA CLIENTE
-function buildClientePanel(nome,bc){
-  const esc=nome.replace(/'/g,"\\'");
-  const rows=D.filter(r=>r.cliente===nome);
-  const vend=rows.filter(r=>r.tipoRiga==='Vendita');
-  if(!vend.length){alert('Nessun dato per questo cliente');return;}
+// ── PANEL BUILDERS ──
+function buildClienteHTML(nome){
+  const vend=D.filter(r=>r.cliente===nome&&r.tipoRiga==='Vendita');
+  if(!vend.length)return`<div style="padding:20px;color:var(--muted)">Nessun dato per questo cliente.</div>`;
   const agente=[...new Set(vend.map(r=>r.agente))].filter(Boolean).join(', ');
   const citta=vend[0]?.citta||'',prov=vend[0]?.prov||'',cat=vend[0]?.cat||'';
-  // Only 2025 and 2026
-  const anni=[2025,2026].filter(a=>vend.some(r=>r.anno===a));
-  const kpiHtml=anni.map(a=>{
-    const rv=vend.filter(r=>r.anno===a);
-    const fatt=rv.reduce((s,r)=>s+r.importo,0),bott=rv.reduce((s,r)=>s+r.pezzi,0);
-    const vPM=rv.filter(r=>r.importo>0),fattPM=vPM.reduce((s,r)=>s+r.importo,0),bottPM=vPM.reduce((s,r)=>s+r.pezzi,0);
-    const pm=bottPM>0?fattPM/bottPM:0;
-    const prec=a===2026?vend.filter(r=>r.anno===2025).reduce((s,r)=>s+r.importo,0):null;
-    const varHtml=prec!==null&&prec>0?`<div class="pkpi-var"><span class="${fatt>=prec?'up':'dn'}">${PCT(((fatt-prec)/prec)*100)} · ${EURDIFF(fatt-prec)}</span></div>`:'';
-    return`<div class="pkpi"><div class="pkpi-lbl">${a}</div><div class="pkpi-val">${EUR(fatt)}</div><div class="pkpi-sub">${NUM(bott)} bt · PM ${EUR(pm)}</div>${varHtml}</div>`;
-  }).join('');
 
-  // Referenze
-  const mRef={};vend.forEach(r=>{const k=r.tipologia||r.articolo||'N/D';if(!mRef[k])mRef[k]={pz:0,imp:0};mRef[k].pz+=r.pezzi;mRef[k].imp+=r.importo;});
-  const refRows=Object.entries(mRef).sort((a,b)=>b[1].pz-a[1].pz);
-
-  // Ordini
-  const ordMap={};
-  vend.forEach(r=>{
-    const key=r.data+'||'+r.numDoc+'||'+r.anno;
-    if(!ordMap[key])ordMap[key]={data:r.data,numDoc:r.numDoc,anno:r.anno,imp:0,pz:0,refs:[]};
-    ordMap[key].imp+=r.importo;ordMap[key].pz+=r.pezzi;
-    ordMap[key].refs.push({tip:r.tipologia||r.articolo||'N/D',pz:r.pezzi,imp:r.importo});
-  });
-  const ordini=Object.values(ordMap).sort((a,b)=>{
-    const da=a.data.split('/').reverse().join('-'),db=b.data.split('/').reverse().join('-');
-    return db.localeCompare(da);
-  });
-
-  const breadcrumb=bc||`<span class="crumb" onclick="closePanel()">Ricerca</span><span class="sep">›</span><span class="current">${nome}</span>`;
-
-  const html=`
-  <div class="panel-title">${nome}</div>
-  <div class="panel-sub">${agente?'Agente: '+agente+' · ':''} ${citta}${prov?' ('+prov+')':''} · ${cat||'N/D'}</div>
-  <div class="info-grid">
-    <div class="info-item"><label>Agente</label><span>${agente||'N/D'}</span></div>
-    <div class="info-item"><label>Categoria</label><span>${cat||'N/D'}</span></div>
-    <div class="info-item"><label>Città</label><span>${citta||'N/D'}${prov?' ('+prov+')':''}</span></div>
-    <div class="info-item"><label>Anni attivo</label><span>${anni.join(', ')||'N/D'}</span></div>
-  </div>
-  <div class="panel-kpis">${kpiHtml}</div>
-
-  <div class="panel-section">
-    <div class="psec-head" onclick="togglePSec('ref-${nome.replace(/[^a-zA-Z0-9]/g,'_')}')">
-      <div class="panel-section-title" style="margin:0;border:none;padding:0">Referenze acquistate (${refRows.length})</div>
-      <span class="psec-arrow open" id="parr-ref-${nome.replace(/[^a-zA-Z0-9]/g,'_')}">▲</span>
-    </div>
-    <div class="psec-body open" id="psec-ref-${nome.replace(/[^a-zA-Z0-9]/g,'_')}">
-      <table class="panel-table" id="ptbl-ref-${nome.replace(/[^a-zA-Z0-9]/g,'_')}">
-        <thead><tr>
-          <th onclick="sortPanelTbl(this.closest('table'),0,'str')">Tipologia</th>
-          <th class="r" onclick="sortPanelTbl(this.closest('table'),1,'num')">Bottiglie</th>
-          <th class="r" onclick="sortPanelTbl(this.closest('table'),2,'num')">Fatturato</th>
-          <th class="r" onclick="sortPanelTbl(this.closest('table'),3,'num')">Pr. Medio</th>
-        </tr></thead>
-        <tbody>${refRows.map(([k,v])=>`<tr><td style="font-weight:600">${k}</td><td class="r">${NUM(v.pz)}</td><td class="r">${EUR(v.imp)}</td><td class="r">${EUR(v.pz>0?v.imp/v.pz:0)}</td></tr>`).join('')}</tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel-section">
-    <div class="psec-head" onclick="togglePSec('ord-${nome.replace(/[^a-zA-Z0-9]/g,'_')}')">
-      <div class="panel-section-title" style="margin:0;border:none;padding:0">Storico ordini (${ordini.length}) — clicca per dettaglio</div>
-      <span class="psec-arrow open" id="parr-ord-${nome.replace(/[^a-zA-Z0-9]/g,'_')}">▲</span>
-    </div>
-    <div class="psec-body open" id="psec-ord-${nome.replace(/[^a-zA-Z0-9]/g,'_')}">
-      <table class="panel-table">
-        <thead><tr><th>Data</th><th>Anno</th><th class="r">Importo</th><th class="r">Bottiglie</th><th style="text-align:center">▼</th></tr></thead>
-        <tbody>${ordini.map((o,i)=>{
-          const oid='o'+Math.random().toString(36).slice(2,7);
-          const det=o.refs.map(rf=>`<tr><td colspan="2" style="padding-left:20px;color:var(--muted)">${rf.tip}</td><td class="r">${NUM(rf.pz)} bt</td><td class="r">${EUR(rf.imp)}</td><td></td></tr>`).join('');
-          return`<tr class="ptrow" onclick="this.nextElementSibling.classList.toggle('open')">
-            <td>${o.data}</td><td>${o.anno}</td><td class="r" style="font-weight:600">${EUR(o.imp)}</td><td class="r">${NUM(o.pz)} bt</td><td style="text-align:center;color:var(--wine);font-size:11px">▼</td>
-          </tr>
-          <tr class="ord-detail"><td colspan="5" style="padding:0">
-            <table style="width:100%;font-size:11px;background:var(--wine-light)">
-              <thead><tr><th colspan="2" style="padding:5px 12px;color:var(--wine);font-size:10px">Referenza</th><th style="padding:5px 8px;text-align:right;font-size:10px;color:var(--wine)">Bottiglie</th><th style="padding:5px 8px;text-align:right;font-size:10px;color:var(--wine)">Importo</th><th></th></tr></thead>
-              <tbody>${det}</tbody>
-            </table>
-          </td></tr>`;
-        }).join('')}</tbody>
-      </table>
-    </div>
-  </div>`;
-  openPanel(html,breadcrumb);
-}
-
-function togglePSec(id){
-  document.getElementById('psec-'+id)?.classList.toggle('open');
-  document.getElementById('parr-'+id)?.classList.toggle('open');
-}
-
-// SCHEDA AGENTE
-function buildAgentePanel(agente){
-  const esc=agente.replace(/'/g,"\\'");
-  const rows=D.filter(r=>r.agente===agente);
-  const vend=rows.filter(r=>r.tipoRiga==='Vendita');
-  if(!vend.length){alert('Nessun dato per questo agente');return;}
-  const v25=vend.filter(r=>r.anno===2025),v26=vend.filter(r=>r.anno===2026);
-  const f25=v25.reduce((s,r)=>s+r.importo,0),f26=v26.reduce((s,r)=>s+r.importo,0);
-  const b25=v25.reduce((s,r)=>s+r.pezzi,0),b26=v26.reduce((s,r)=>s+r.pezzi,0);
-  const vPM25=v25.filter(r=>r.importo>0),vPM26=v26.filter(r=>r.importo>0);
-  const pm25=vPM25.reduce((s,r)=>s+r.pezzi,0)>0?vPM25.reduce((s,r)=>s+r.importo,0)/vPM25.reduce((s,r)=>s+r.pezzi,0):0;
+  // KPI 2026 vs 2025 — same period as current report
+  const {from,to}=LR?{from:LR.from,to:LR.to}:{from:1,to:CM};
+  const ap=2025;
+  const v26=fD(vend,2026,from,to),v25=fD(vend,2025,from,to);
+  const f26=v26.reduce((s,r)=>s+r.importo,0),f25=v25.reduce((s,r)=>s+r.importo,0);
+  const b26=v26.reduce((s,r)=>s+r.pezzi,0),b25=v25.reduce((s,r)=>s+r.pezzi,0);
+  const vPM26=v26.filter(r=>r.importo>0),vPM25=v25.filter(r=>r.importo>0);
   const pm26=vPM26.reduce((s,r)=>s+r.pezzi,0)>0?vPM26.reduce((s,r)=>s+r.importo,0)/vPM26.reduce((s,r)=>s+r.pezzi,0):0;
-  const cli25=new Set(v25.map(r=>r.codCli)).size,cli26=new Set(v26.map(r=>r.codCli)).size;
-  const dF=f25>0?((f26-f25)/f25)*100:null;
-  const dB=b25>0?((b26-b25)/b25)*100:null;
-  const dPm=pm25>0?((pm26-pm25)/pm25)*100:null;
+  const pm25=vPM25.reduce((s,r)=>s+r.pezzi,0)>0?vPM25.reduce((s,r)=>s+r.importo,0)/vPM25.reduce((s,r)=>s+r.pezzi,0):0;
+  const dF=f25>0?((f26-f25)/f25)*100:null,dB=b25>0?((b26-b25)/b25)*100:null,dPm=pm25>0?((pm26-pm25)/pm25)*100:null;
 
-  const kpiHtml=`
-  <div class="pkpi"><div class="pkpi-lbl">Fatturato 2026</div><div class="pkpi-val">${EUR(f26)}</div><div class="pkpi-sub">2025: ${EUR(f25)}</div><div class="pkpi-var">${dF!==null?`<span class="${dF>=0?'up':'dn'}">${PCT(dF)} · ${EURDIFF(f26-f25)}</span>`:'&nbsp;'}</div></div>
-  <div class="pkpi"><div class="pkpi-lbl">Bottiglie 2026</div><div class="pkpi-val">${NUM(b26)}</div><div class="pkpi-sub">2025: ${NUM(b25)}</div><div class="pkpi-var">${dB!==null?`<span class="${dB>=0?'up':'dn'}">${PCT(dB)} · ${dB>=0?'+':''}${NUM(b26-b25)} bt</span>`:'&nbsp;'}</div></div>
-  <div class="pkpi"><div class="pkpi-lbl">Prezzo Medio 2026</div><div class="pkpi-val">${EUR(pm26)}</div><div class="pkpi-sub">2025: ${EUR(pm25)}</div><div class="pkpi-var">${dPm!==null?`<span class="${dPm>=0?'up':'dn'}">${PCT(dPm)} · ${EURDIFF(pm26-pm25)}</span>`:'&nbsp;'}</div></div>
-  <div class="pkpi"><div class="pkpi-lbl">Clienti attivi 2026</div><div class="pkpi-val">${cli26}</div><div class="pkpi-sub">2025: ${cli25}</div></div>`;
+  const kpiHtml=`<div class="sp-kpis">
+    <div class="spk"><div class="spk-lbl">Fatturato 2026</div><div class="spk-val">${EUR(f26)}</div><div class="spk-sub">2025: ${EUR(f25)}</div><div class="spk-var">${dF!==null?`<span class="${dF>=0?'up':'dn'}">${PCT(dF)} · ${EURDIFF(f26-f25)}</span>`:'&nbsp;'}</div></div>
+    <div class="spk"><div class="spk-lbl">Bottiglie 2026</div><div class="spk-val">${NUM(b26)}</div><div class="spk-sub">2025: ${NUM(b25)}</div><div class="spk-var">${dB!==null?`<span class="${dB>=0?'up':'dn'}">${PCT(dB)} · ${dB>=0?'+':''}${NUM(b26-b25)} bt</span>`:'&nbsp;'}</div></div>
+    <div class="spk"><div class="spk-lbl">Prezzo Medio 2026</div><div class="spk-val">${EUR(pm26)}</div><div class="spk-sub">2025: ${EUR(pm25)}</div><div class="spk-var">${dPm!==null?`<span class="${dPm>=0?'up':'dn'}">${PCT(dPm)} · ${EURDIFF(pm26-pm25)}</span>`:'&nbsp;'}</div></div>
+    <div class="spk"><div class="spk-lbl">Clienti attivi</div><div class="spk-val">${agente||'N/D'}</div><div class="spk-sub">${cat||'N/D'}</div></div>
+  </div>`;
 
-  // Referenze
-  const mRef={};vend.forEach(r=>{const k=r.tipologia||r.articolo||'N/D';if(!mRef[k])mRef[k]={pz:0,imp:0};mRef[k].pz+=r.pezzi;mRef[k].imp+=r.importo;});
-  const refRows=Object.entries(mRef).sort((a,b)=>b[1].pz-a[1].pz).slice(0,10);
+  // Referenze 2026 (same period)
+  const mRef={};v26.forEach(r=>{const k=r.tipologia||r.articolo||'N/D';if(!mRef[k])mRef[k]={pz:0,imp:0};mRef[k].pz+=r.pezzi;mRef[k].imp+=r.importo;});
+  const refRows=Object.entries(mRef).sort((a,b)=>b[1].pz-a[1].pz);
+  const refHtml=refRows.length?`<table class="sp-tbl" id="sptbl-ref-${nome.replace(/\W/g,'_')}">
+    <thead><tr><th onclick="sortSP(this,0,'str')">Tipologia</th><th class="r" onclick="sortSP(this,1,'num')">Bottiglie</th><th class="r" onclick="sortSP(this,2,'num')">Fatturato</th><th class="r" onclick="sortSP(this,3,'num')">Pr. Medio</th></tr></thead>
+    <tbody>${refRows.map(([k,v])=>`<tr><td style="font-weight:600">${k}</td><td class="r">${NUM(v.pz)}</td><td class="r">${EUR(v.imp)}</td><td class="r">${EUR(v.pz>0?v.imp/v.pz:0)}</td></tr>`).join('')}</tbody>
+  </table>`:'<p style="font-size:12px;color:var(--muted);padding:8px 0">Nessun acquisto nel periodo 2026</p>';
 
-  // Tutti i clienti
+  // Storico ordini 2026 (same period)
+  const ordMap={};
+  v26.forEach(r=>{
+    const key=r.data+'|'+r.numDoc;
+    if(!ordMap[key])ordMap[key]={data:r.data,numDoc:r.numDoc,imp:0,pz:0,refs:[]};
+    ordMap[key].imp+=r.importo;ordMap[key].pz+=r.pezzi;
+    ordMap[key].refs.push({tip:r.tipologia||r.articolo||'N/D',pz:r.pezzi,imp:r.importo,fmt:r.formato});
+  });
+  const ordini=Object.values(ordMap).sort((a,b)=>b.data.split('/').reverse().join('').localeCompare(a.data.split('/').reverse().join('')));
+  const ordHtml=ordini.length?`<table class="sp-tbl">
+    <thead><tr><th onclick="sortSP(this,0,'str')">Data</th><th class="r" onclick="sortSP(this,2,'num')">Importo</th><th class="r" onclick="sortSP(this,3,'num')">Bottiglie</th><th style="text-align:center;width:30px">+</th></tr></thead>
+    <tbody>${ordini.map((o,i)=>{
+      const oid='o'+i+nome.replace(/\W/g,'');
+      const det=o.refs.map(rf=>`<tr><td style="color:var(--muted)">${rf.tip}${rf.fmt?' — '+rf.fmt:''}</td><td class="r">${NUM(rf.pz)} bt</td><td class="r">${EUR(rf.imp)}</td></tr>`).join('');
+      return`<tr class="ord-row" onclick="toggleOrd('${oid}')">
+        <td>${o.data}</td><td class="r" style="font-weight:600">${EUR(o.imp)}</td><td class="r">${NUM(o.pz)} bt</td>
+        <td style="text-align:center;color:var(--wine);font-size:11px">▼</td>
+      </tr>
+      <tr class="ord-det" id="od-${oid}"><td colspan="4" style="padding:0">
+        <div class="ord-det-inner"><table><thead><tr><th>Referenza</th><th class="r">Bt</th><th class="r">Importo</th></tr></thead><tbody>${det}</tbody></table></div>
+      </td></tr>`;
+    }).join('')}</tbody>
+  </table>`:'<p style="font-size:12px;color:var(--muted);padding:8px 0">Nessun ordine nel periodo 2026</p>';
+
+  return`<div class="sp-title">${nome}</div>
+  <div class="sp-sub">${agente?'Agente: '+agente+' &nbsp;·&nbsp; ':''} ${citta}${prov?' ('+prov+')':''} &nbsp;·&nbsp; ${cat||'N/D'}</div>
+  ${kpiHtml}
+  <div class="info-grid">
+    <div class="ii"><label>Agente</label><span>${agente||'N/D'}</span></div>
+    <div class="ii"><label>Categoria</label><span>${cat||'N/D'}</span></div>
+    <div class="ii"><label>Città</label><span>${citta||'N/D'}${prov?' ('+prov+')':''}</span></div>
+    <div class="ii"><label>Periodo analizzato</label><span>YTD ${LR?MI[LR.to]:'corrente'} 2026 vs 2025</span></div>
+  </div>
+  <div class="sp-sec"><div class="sp-sec-title">Referenze acquistate — ${LR?'Gen – '+MI[LR.to]+' 2026':'2026'} (${refRows.length} tipologie)</div>${refHtml}</div>
+  <div class="sp-sec"><div class="sp-sec-title">Ordini ${LR?'Gen – '+MI[LR.to]+' 2026':'2026'} (${ordini.length} ordini) — clicca per dettaglio referenze</div>${ordHtml}</div>`;
+}
+
+function buildAgenteHTML(agente,from,to){
+  const vend=D.filter(r=>r.agente===agente&&r.tipoRiga==='Vendita');
+  if(!vend.length)return`<div style="padding:20px;color:var(--muted)">Nessun dato.</div>`;
+  const v26=fD(vend,2026,from,to),v25=fD(vend,2025,from,to);
+  const f26=v26.reduce((s,r)=>s+r.importo,0),f25=v25.reduce((s,r)=>s+r.importo,0);
+  const b26=v26.reduce((s,r)=>s+r.pezzi,0),b25=v25.reduce((s,r)=>s+r.pezzi,0);
+  const vPM26=v26.filter(r=>r.importo>0),vPM25=v25.filter(r=>r.importo>0);
+  const pm26=vPM26.reduce((s,r)=>s+r.pezzi,0)>0?vPM26.reduce((s,r)=>s+r.importo,0)/vPM26.reduce((s,r)=>s+r.pezzi,0):0;
+  const pm25=vPM25.reduce((s,r)=>s+r.pezzi,0)>0?vPM25.reduce((s,r)=>s+r.importo,0)/vPM25.reduce((s,r)=>s+r.pezzi,0):0;
+  const cli26=new Set(v26.map(r=>r.codCli)).size,cli25=new Set(v25.map(r=>r.codCli)).size;
+  const dF=f25>0?((f26-f25)/f25)*100:null,dB=b25>0?((b26-b25)/b25)*100:null,dPm=pm25>0?((pm26-pm25)/pm25)*100:null;
+
+  const kpiHtml=`<div class="sp-kpis">
+    <div class="spk"><div class="spk-lbl">Fatturato 2026</div><div class="spk-val">${EUR(f26)}</div><div class="spk-sub">2025: ${EUR(f25)}</div><div class="spk-var">${dF!==null?`<span class="${dF>=0?'up':'dn'}">${PCT(dF)} · ${EURDIFF(f26-f25)}</span>`:'&nbsp;'}</div></div>
+    <div class="spk"><div class="spk-lbl">Bottiglie 2026</div><div class="spk-val">${NUM(b26)}</div><div class="spk-sub">2025: ${NUM(b25)}</div><div class="spk-var">${dB!==null?`<span class="${dB>=0?'up':'dn'}">${PCT(dB)} · ${dB>=0?'+':''}${NUM(b26-b25)} bt</span>`:'&nbsp;'}</div></div>
+    <div class="spk"><div class="spk-lbl">Prezzo Medio 2026</div><div class="spk-val">${EUR(pm26)}</div><div class="spk-sub">2025: ${EUR(pm25)}</div><div class="spk-var">${dPm!==null?`<span class="${dPm>=0?'up':'dn'}">${PCT(dPm)} · ${EURDIFF(pm26-pm25)}</span>`:'&nbsp;'}</div></div>
+    <div class="spk"><div class="spk-lbl">Clienti attivi 2026</div><div class="spk-val">${cli26}</div><div class="spk-sub">2025: ${cli25}</div></div>
+  </div>`;
+
+  // All clients with 2025 vs 2026
   const mCli25={},mCli26={};
   v25.forEach(r=>{if(!mCli25[r.cliente])mCli25[r.cliente]=0;mCli25[r.cliente]+=r.importo;});
   v26.forEach(r=>{if(!mCli26[r.cliente])mCli26[r.cliente]=0;mCli26[r.cliente]+=r.importo;});
-  const allCliNames=[...new Set([...Object.keys(mCli25),...Object.keys(mCli26)])];
-  const allCli=allCliNames.map(c=>({nome:c,v25:mCli25[c]||0,v26:mCli26[c]||0})).sort((a,b)=>(b.v26||b.v25)-(a.v26||a.v25));
+  const allNames=[...new Set([...Object.keys(mCli25),...Object.keys(mCli26)])];
+  const allCli=allNames.map(c=>({nome:c,v25:mCli25[c]||0,v26:mCli26[c]||0})).sort((a,b)=>(b.v26||b.v25)-(a.v26||a.v25));
+
+  // pagination state
+  const PG_SIZE=20;
+  let pg=1;
+  const totalPages=Math.ceil(allCli.length/PG_SIZE);
+
+  function renderCliPage(p){
+    pg=p;
+    const start=(p-1)*PG_SIZE,end=Math.min(start+PG_SIZE,allCli.length);
+    const slice=allCli.slice(start,end);
+    const tbody=document.getElementById('ag-cli-tbody');
+    if(!tbody)return;
+    tbody.innerHTML=slice.map(c=>{
+      const d=c.v25>0&&c.v26>0?((c.v26-c.v25)/c.v25)*100:null;
+      const stato=!c.v26?'<span class="badge b-abs">assente</span>':d!==null?`<span class="badge ${d>5?'b-up':d<-5?'b-dn':'b-warn'}">${PCT(d,1)}</span>`:'<span class="badge b-up">nuovo</span>';
+      return`<tr class="clik" onclick="pushPanel(buildClienteHTML,'${ESC(c.nome)}')">
+        <td style="font-weight:600">${c.nome}</td>
+        <td class="r">${c.v25>0?EUR(c.v25):'—'}</td>
+        <td class="r">${c.v26>0?EUR(c.v26):'<span style="color:var(--red)">—</span>'}</td>
+        <td class="r">${stato}</td>
+      </tr>`;
+    }).join('');
+    // update pagination
+    const pi=document.getElementById('ag-pag-info');
+    const pprev=document.getElementById('ag-pag-prev');
+    const pnext=document.getElementById('ag-pag-next');
+    if(pi)pi.textContent=`${start+1}–${end} di ${allCli.length}`;
+    if(pprev)pprev.disabled=p<=1;
+    if(pnext)pnext.disabled=p>=totalPages;
+  }
+  window._agCliPage=renderCliPage;
+
   const assenti=allCli.filter(c=>c.v25>0&&!c.v26);
   const inCalo=allCli.filter(c=>c.v25>0&&c.v26>0&&((c.v26-c.v25)/c.v25)*100<-10);
 
-  // Assenti table rows
-  const assentiRows=assenti.map(c=>{
-    const ce=c.nome.replace(/'/g,"\\'");
-    const bc=`<span class="crumb" onclick="closePanel()">Report</span><span class="sep">›</span><span class="crumb" onclick="buildAgentePanel('${esc}')">${agente}</span><span class="sep">›</span><span class="current">${c.nome}</span>`;
-    return`<tr class="ptrow click-row" onclick="buildClientePanel('${ce}','${bc.replace(/'/g,"\\'")}')">
-      <td style="font-weight:600">${c.nome}</td>
-      <td class="r">${EUR(c.v25)}</td>
-      <td class="r" style="color:var(--red)">—</td>
-      <td class="r"><span class="badge b-absent">assente</span></td>
-      <td class="click-hint">→</td>
-    </tr>`;
-  });
+  const assentiHtml=assenti.length?`<div class="absent-strip"><strong>⚠ ${assenti.length} clienti non hanno ancora ordinato nel 2026</strong>${assenti.map(c=>`<span onclick="pushPanel(buildClienteHTML,'${ESC(c.nome)}')">${c.nome} (${EUR(c.v25)})</span>`).join('')}</div>`:'';
+  const inCaloHtml=inCalo.length?`<div class="absent-strip" style="background:var(--amber-bg);border-color:#f0d090;color:var(--amber)"><strong>📉 ${inCalo.length} clienti in calo</strong>${inCalo.map(c=>`<span onclick="pushPanel(buildClienteHTML,'${ESC(c.nome)}')">${c.nome} (${PCT(((c.v26-c.v25)/c.v25)*100,1)})</span>`).join('')}</div>`:'';
 
-  // In calo table rows
-  const inCaloRows=inCalo.map(c=>{
-    const ce=c.nome.replace(/'/g,"\\'");
-    const d=((c.v26-c.v25)/c.v25)*100;
-    const bc=`<span class="crumb" onclick="closePanel()">Report</span><span class="sep">›</span><span class="crumb" onclick="buildAgentePanel('${esc}')">${agente}</span><span class="sep">›</span><span class="current">${c.nome}</span>`;
-    return`<tr class="ptrow click-row" onclick="buildClientePanel('${ce}','${bc.replace(/'/g,"\\'")}')">
-      <td style="font-weight:600">${c.nome}</td>
-      <td class="r">${EUR(c.v25)}</td>
-      <td class="r">${EUR(c.v26)}</td>
-      <td class="r"><span class="badge b-dn">${PCT(d,1)}</span></td>
-      <td class="click-hint">→</td>
-    </tr>`;
-  });
-
-  // All clients rows
-  const allCliRows=allCli.map(c=>{
-    const ce=c.nome.replace(/'/g,"\\'");
-    const d=c.v25>0&&c.v26>0?((c.v26-c.v25)/c.v25)*100:null;
-    const stato=!c.v26?'<span class="badge b-absent">assente</span>':d!==null?`<span class="badge ${d>5?'b-up':d<-5?'b-dn':'b-warn'}">${PCT(d,1)}</span>`:'<span class="badge b-up">nuovo</span>';
-    const bc=`<span class="crumb" onclick="closePanel()">Report</span><span class="sep">›</span><span class="crumb" onclick="buildAgentePanel('${esc}')">${agente}</span><span class="sep">›</span><span class="current">${c.nome}</span>`;
-    return`<tr class="ptrow click-row" onclick="buildClientePanel('${ce}','${bc.replace(/'/g,"\\'")}')">
-      <td style="font-weight:600">${c.nome}</td>
-      <td class="r">${c.v25>0?EUR(c.v25):'—'}</td>
-      <td class="r">${c.v26>0?EUR(c.v26):'<span style="color:var(--red)">—</span>'}</td>
-      <td class="r">${stato}</td>
-      <td class="click-hint">→</td>
-    </tr>`;
-  });
-
-  const bc=`<span class="crumb" onclick="closePanel()">Report</span><span class="sep">›</span><span class="current">${agente}</span>`;
-
-  const html=`
-  <div class="panel-title">${agente}</div>
-  <div class="panel-sub">2026 vs 2025 — stesso periodo YTD</div>
-  <div class="panel-kpis">${kpiHtml}</div>
-
-  ${assenti.length>0?`
-  <div class="section">
-    <div class="card">
-      <div class="card-head clickable" onclick="toggleCard('ab-body-${esc.replace(/\s/g,'_')}','ab-arr-${esc.replace(/\s/g,'_')}')">
-        <h3>⚠ Clienti non ancora attivi nel 2026</h3>
-        <div class="head-right">
-          <span class="badge-count bc-red">${assenti.length} clienti</span>
-          <span class="collapse-arrow" id="ab-arr-${esc.replace(/\s/g,'_')}">▼</span>
-        </div>
-      </div>
-      <div class="card-body" id="ab-body-${esc.replace(/\s/g,'_')}">
-        <div class="tbl-wrap"><table>
-          <thead><tr><th onclick="sortPanelTbl(this.closest('table'),0,'str')"><div class="thi"><span>Cliente</span><span class="si"></span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),1,'num')"><div class="thi"><span class="si"></span><span>2025</span></div></th><th class="thr"><div class="thi"><span>2026</span></div></th><th class="thr"><div class="thi"><span>Stato</span></div></th><th></th></tr></thead>
-          <tbody>${assentiRows.join('')}</tbody>
-        </table></div>
-      </div>
-    </div>
-  </div>`:''}
-
-  ${inCalo.length>0?`
-  <div class="section">
-    <div class="card">
-      <div class="card-head clickable" onclick="toggleCard('ic-body-${esc.replace(/\s/g,'_')}','ic-arr-${esc.replace(/\s/g,'_')}')">
-        <h3>📉 Clienti in calo nel 2026</h3>
-        <div class="head-right">
-          <span class="badge-count bc-amber">${inCalo.length} clienti</span>
-          <span class="collapse-arrow" id="ic-arr-${esc.replace(/\s/g,'_')}">▼</span>
-        </div>
-      </div>
-      <div class="card-body" id="ic-body-${esc.replace(/\s/g,'_')}">
-        <div class="tbl-wrap"><table>
-          <thead><tr><th onclick="sortPanelTbl(this.closest('table'),0,'str')"><div class="thi"><span>Cliente</span><span class="si"></span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),1,'num')"><div class="thi"><span class="si"></span><span>2025</span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),2,'num')"><div class="thi"><span class="si"></span><span>2026</span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),3,'pct')"><div class="thi"><span class="si"></span><span>Var %</span></div></th><th></th></tr></thead>
-          <tbody>${inCaloRows.join('')}</tbody>
-        </table></div>
-      </div>
-    </div>
-  </div>`:''}
-
-  <div class="panel-section">
-    <div class="psec-head" onclick="togglePSec('ref-ag-${esc.replace(/\s/g,'_')}')">
-      <div class="panel-section-title" style="margin:0;border:none;padding:0">Top Referenze</div>
-      <span class="psec-arrow open" id="parr-ref-ag-${esc.replace(/\s/g,'_')}">▲</span>
-    </div>
-    <div class="psec-body open" id="psec-ref-ag-${esc.replace(/\s/g,'_')}">
-      <table class="panel-table">
-        <thead><tr><th onclick="sortPanelTbl(this.closest('table'),0,'str')">Tipologia</th><th class="r" onclick="sortPanelTbl(this.closest('table'),1,'num')">Bottiglie</th><th class="r" onclick="sortPanelTbl(this.closest('table'),2,'num')">Fatturato</th><th class="r" onclick="sortPanelTbl(this.closest('table'),3,'num')">Pr. Medio</th></tr></thead>
-        <tbody>${refRows.map(([k,v])=>`<tr><td style="font-weight:600">${k}</td><td class="r">${NUM(v.pz)}</td><td class="r">${EUR(v.imp)}</td><td class="r">${EUR(v.pz>0?v.imp/v.pz:0)}</td></tr>`).join('')}</tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel-section">
-    <div class="psec-head" onclick="togglePSec('all-cli-${esc.replace(/\s/g,'_')}')">
-      <div class="panel-section-title" style="margin:0;border:none;padding:0">Tutti i clienti (${allCli.length}) — clicca per scheda</div>
-      <span class="psec-arrow open" id="parr-all-cli-${esc.replace(/\s/g,'_')}">▲</span>
-    </div>
-    <div class="psec-body open" id="psec-all-cli-${esc.replace(/\s/g,'_')}">
-      <table class="panel-table">
-        <thead><tr><th onclick="sortPanelTbl(this.closest('table'),0,'str')">Cliente</th><th class="r" onclick="sortPanelTbl(this.closest('table'),1,'num')">2025</th><th class="r" onclick="sortPanelTbl(this.closest('table'),2,'num')">2026</th><th class="r" onclick="sortPanelTbl(this.closest('table'),3,'pct')">Var</th><th></th></tr></thead>
-        <tbody>${allCliRows.join('')}</tbody>
-      </table>
-    </div>
+  return`<div class="sp-title">${agente}</div>
+  <div class="sp-sub">2026 vs 2025 — stesso periodo YTD</div>
+  ${kpiHtml}
+  ${assentiHtml}${inCaloHtml}
+  <div class="sp-sec">
+    <div class="sp-sec-title">Tutti i clienti (${allCli.length}) — clicca per scheda cliente</div>
+    <table class="sp-tbl" id="ag-cli-tbl">
+      <thead><tr>
+        <th onclick="sortSP(this,0,'str')">Cliente</th>
+        <th class="r" onclick="sortSP(this,1,'num')">2025</th>
+        <th class="r" onclick="sortSP(this,2,'num')">2026</th>
+        <th class="r" onclick="sortSP(this,3,'pct')">Var</th>
+      </tr></thead>
+      <tbody id="ag-cli-tbody"></tbody>
+    </table>
+    ${totalPages>1?`<div class="sp-pag"><span class="sp-pag-info" id="ag-pag-info"></span><div class="sp-pag-btns"><button class="sp-pag-btn" id="ag-pag-prev" onclick="window._agCliPage(${pg}-1)" disabled>‹</button><button class="sp-pag-btn" id="ag-pag-next" onclick="window._agCliPage(${pg}+1)">›</button></div></div>`:''}
   </div>`;
-  openPanel(html,bc);
 }
 
-// SEARCH
+// call renderCliPage after DOM is set
+function openAgentePanel(agente){
+  const {from,to}=LR?{from:LR.from,to:LR.to}:{from:1,to:CM};
+  openPanel(buildAgenteHTML,agente,from,to);
+  setTimeout(()=>window._agCliPage&&window._agCliPage(1),50);
+}
+function openClientePanel(nome){
+  openPanel(buildClienteHTML,nome);
+}
+function pushClientePanel(nome){
+  pushPanel(buildClienteHTML,nome);
+  // no deferred call needed for cliente
+}
+
+// ── SEARCH ──
 function clearSearch(){
-  document.getElementById('search-input').value='';
-  document.getElementById('search-clear').classList.remove('show');
-  const sr=document.getElementById('search-results');sr.style.display='none';sr.innerHTML='';
+  document.getElementById('s-inp').value='';
+  document.getElementById('s-clr').classList.remove('show');
+  const sr=document.getElementById('sr');sr.style.display='none';sr.innerHTML='';
 }
 function doSearch(q){
-  document.getElementById('search-clear').classList.toggle('show',q.length>0);
-  const sr=document.getElementById('search-results');
+  document.getElementById('s-clr').classList.toggle('show',q.length>0);
+  const sr=document.getElementById('sr');
   if(!q||q.length<2||!D.length){sr.style.display='none';sr.innerHTML='';return;}
   const matches=[...new Set(D.filter(r=>r.cliente.toLowerCase().includes(q.toLowerCase())).map(r=>r.cliente))].slice(0,8);
-  if(!matches.length){sr.style.display='block';sr.innerHTML='<div style="padding:14px;text-align:center;color:var(--muted);font-size:13px">Nessun cliente trovato</div>';return;}
+  if(!matches.length){sr.style.display='block';sr.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Nessun cliente trovato</div>';return;}
   sr.style.display='block';
-  sr.innerHTML='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine);margin-bottom:8px">Clienti trovati — clicca per la scheda completa</div>'+
+  sr.innerHTML='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--wine);margin-bottom:8px">Clienti trovati — clicca per la scheda</div>'+
     matches.map(nome=>{
-      const esc=nome.replace(/'/g,"\\'");
       const rv=D.filter(r=>r.cliente===nome&&r.tipoRiga==='Vendita');
       const ag=[...new Set(rv.map(r=>r.agente))].filter(Boolean).join(', ');
       const f26=rv.filter(r=>r.anno===2026).reduce((s,r)=>s+r.importo,0);
       const f25=rv.filter(r=>r.anno===2025).reduce((s,r)=>s+r.importo,0);
-      return`<div onclick="buildClientePanel('${esc}',null)" style="cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:white;transition:background .15s" onmouseover="this.style.background='var(--wine-light)'" onmouseout="this.style.background='white'">
+      return`<div onclick="openClientePanel('${ESC(nome)}')" style="cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:white" onmouseover="this.style.background='var(--wine-light)'" onmouseout="this.style.background='white'">
         <div style="font-weight:600;font-size:13px">${nome}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">${ag?'Agente: '+ag+' · ':''} 2026: ${f26>0?EUR(f26):'non ancora'} · 2025: ${f25>0?EUR(f25):'n/d'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${ag?'Agente: '+ag+' · ':''} 2026: ${f26>0?EUR(f26):'non ancora ordinato'} · 2025: ${f25>0?EUR(f25):'n/d'}</div>
       </div>`;
     }).join('');
 }
 
-// MAIN REPORT
+// ── MAIN REPORT ──
 function gen(){
   const sel=document.getElementById('sa').value;
   const anno=parseInt(document.getElementById('sy').value);
@@ -840,7 +748,7 @@ function gen(){
   const label=isItalia?'Italia — Totale':sel;
   const dBase=isItalia?D:D.filter(r=>r.agente===sel);
   const dC=fD(dBase,anno,from,to),dP=fD(dBase,ap,from,to);
-  const K=kpi(dC),KP=kpi(dP);
+  const K=kpiCalc(dC),KP=kpiCalc(dP);
   const dF=KP.fatt>0?((K.fatt-KP.fatt)/KP.fatt)*100:null;
   const dPm=KP.pm>0?((K.pm-KP.pm)/KP.pm)*100:null;
   const dB=KP.bott>0?((K.bott-KP.bott)/KP.bott)*100:null;
@@ -848,7 +756,7 @@ function gen(){
   const vendP=dP.filter(r=>r.tipoRiga==='Vendita');
   const accs=dC.filter(r=>r.tipoRiga==='Nota Accredito');
 
-  // Top clienti — tutti, paginati
+  // Clienti attivi
   const mCli={};
   vend.forEach(r=>{
     if(!mCli[r.cliente])mCli[r.cliente]={nome:r.cliente,citta:r.citta,prov:r.prov,cat:r.cat,agente:r.agente,imp:0,pz:0,refs:{}};
@@ -863,17 +771,17 @@ function gen(){
     return{...c,impPrec:vp,delta:vp>0?((c.imp-vp)/vp)*100:null,pm:c.pz>0?c.imp/c.pz:0,refs:Object.values(c.refs).sort((a,b)=>b.pz-a.pz)};
   });
 
-  // Clienti assenti (presenti ap, non in anno)
+  // Assenti
   const clientiInAnno=new Set(Object.keys(mCli));
   const assenti=Object.keys(mCliP).filter(c=>!clientiInAnno.has(c));
 
-  // Clienti in calo — tutti
-  const mPzP={},mPzC={},mCliAgente={};
-  vendP.forEach(r=>{if(!mPzP[r.cliente])mPzP[r.cliente]=0;mPzP[r.cliente]+=r.pezzi;mCliAgente[r.cliente]=r.agente;});
-  vend.forEach(r=>{if(!mPzC[r.cliente])mPzC[r.cliente]=0;mPzC[r.cliente]+=r.pezzi;mCliAgente[r.cliente]=r.agente;});
+  // Clienti in calo / assenti — TUTTI
+  const mPzP={},mPzC={},mCliAg={};
+  vendP.forEach(r=>{if(!mPzP[r.cliente])mPzP[r.cliente]=0;mPzP[r.cliente]+=r.pezzi;mCliAg[r.cliente]=r.agente;});
+  vend.forEach(r=>{if(!mPzC[r.cliente])mPzC[r.cliente]=0;mPzC[r.cliente]+=r.pezzi;mCliAg[r.cliente]=r.agente;});
   const cali=Object.keys(mCliP).map(nome=>{
     const vp=mCliP[nome],vc=mCli[nome]?.imp||0,bP=mPzP[nome]||0,bC=mPzC[nome]||0;
-    return{nome,vp,vc,bP,bC,varBott:bC-bP,d:vc>0?((vc-vp)/vp)*100:-100,agente:mCliAgente[nome]||'—',assente:!clientiInAnno.has(nome)};
+    return{nome,vp,vc,bP,bC,varBott:bC-bP,d:vc>0?((vc-vp)/vp)*100:-100,agente:mCliAg[nome]||'—',assente:!clientiInAnno.has(nome)};
   }).filter(r=>r.d<0).sort((a,b)=>a.d-b.d);
 
   // Referenze
@@ -886,7 +794,7 @@ function gen(){
   const topRef=Object.values(mRef).sort((a,b)=>b.pz-a.pz).slice(0,15);
   const maxRef=topRef[0]?.pz||1;
 
-  // AGENTI (Italia)
+  // Agenti
   let agentiHtml='';
   if(isItalia){
     const mAg={},mAgP={};
@@ -897,94 +805,219 @@ function gen(){
       return{...a,impP:p.imp,pzP:p.pz,varEur:a.imp-p.imp,varBott:a.pz-p.pz,varPct:p.imp>0?((a.imp-p.imp)/p.imp)*100:null,pm:a.pz>0?a.imp/a.pz:0};
     });
     // Agenti assenti e in calo
-    const agentiPrecNomi=Object.keys(mAgP);
-    const agAssentiFull=agentiPrecNomi.filter(ag=>!mAg[ag]).map(ag=>({ag,impP:mAgP[ag]?.imp||0,pzP:mAgP[ag]?.pz||0}));
-    const agCaloFull=agentiPrecNomi.filter(ag=>mAg[ag]&&mAgP[ag]&&((mAg[ag].imp-mAgP[ag].imp)/mAgP[ag].imp)*100<0).map(ag=>{
-      const d=((mAg[ag].imp-mAgP[ag].imp)/mAgP[ag].imp)*100;
-      return{ag,imp:mAg[ag].imp,impP:mAgP[ag].imp,d};
-    }).sort((a,b)=>a.d-b.d);
+    const agPrec=Object.keys(mAgP);
+    const agAssenti=agPrec.filter(ag=>!mAg[ag]);
+    const agCalo=agPrec.filter(ag=>mAg[ag]&&mAgP[ag]&&((mAg[ag].imp-mAgP[ag].imp)/mAgP[ag].imp)*100<0);
 
-    const agAsRow=agAssentiFull.map(a=>`<tr class="ptrow click-row" onclick="buildAgentePanel('${a.ag.replace(/'/g,"\\'")}')">
-      <td style="font-weight:600">${a.ag}</td><td class="r">${EUR(a.impP)}</td><td class="r" style="color:var(--red)">—</td><td class="r"><span class="badge b-absent">assente</span></td><td class="click-hint">→</td>
-    </tr>`).join('');
-    const agCaloRow=agCaloFull.map(a=>`<tr class="ptrow click-row" onclick="buildAgentePanel('${a.ag.replace(/'/g,"\\'")}')">
-      <td style="font-weight:600">${a.ag}</td><td class="r">${EUR(a.impP)}</td><td class="r">${EUR(a.imp)}</td><td class="r"><span class="badge b-dn">${PCT(a.d,1)}</span></td><td class="click-hint">→</td>
-    </tr>`).join('');
+    const agAssRow=agAssenti.map(ag=>`<tr class="dr clik" onclick="openAgentePanel('${ESC(ag)}')">
+      <td style="font-weight:600">${ag}</td><td class="r" style="color:var(--muted)">${EUR(mAgP[ag]?.imp||0)}</td>
+      <td class="r" style="color:var(--red)">—</td><td class="r"><span class="badge b-abs">assente</span></td></tr>`).join('');
+    const agCaloRow=agCalo.map(ag=>{
+      const d=((mAg[ag].imp-mAgP[ag].imp)/mAgP[ag].imp)*100;
+      return`<tr class="dr clik" onclick="openAgentePanel('${ESC(ag)}')">
+        <td style="font-weight:600">${ag}</td><td class="r">${EUR(mAgP[ag].imp)}</td>
+        <td class="r">${EUR(mAg[ag].imp)}</td><td class="r"><span class="badge b-dn">${PCT(d,1)}</span></td></tr>`;}).join('');
 
     agentiHtml=`<div class="section"><div class="card">
-      <div class="card-head clickable" onclick="toggleCard('ag-main-body','ag-main-arr')">
-        <h3>Riepilogo per Agente</h3>
-        <div class="head-right">
-          <span class="badge-count bc-wine">${agList.length} agenti</span>
-          <span style="font-size:11px;color:var(--muted)">clicca riga per scheda</span>
-          <span class="collapse-arrow open" id="ag-main-arr">▼</span>
-        </div>
-      </div>
-      <div class="card-body open" id="ag-main-body">
-        <div class="tbl-wrap"><table id="tbl-ag">
-          <thead><tr>${TH('Agente','tbl-ag',0,'str',false)}${TH(`Fatt. ${anno}`,'tbl-ag',1,'num',true)}${TH('Bott.','tbl-ag',2,'num',true)}${TH('Pr. Medio','tbl-ag',3,'num',true)}${TH(`Fatt. ${ap}`,'tbl-ag',4,'num',true)}${TH('Var €','tbl-ag',5,'num',true)}${TH('Var Bott.','tbl-ag',6,'num',true)}${TH('Var %','tbl-ag',7,'pct',true)}</tr></thead>
-          <tbody>${agList.map(a=>`<tr class="dr click-row" onclick="buildAgentePanel('${a.ag.replace(/'/g,"\\'")}')">
-            <td style="font-weight:600">${a.ag}</td>
-            <td class="r" style="font-weight:700">${EUR(a.imp)}</td>
-            <td class="r">${NUM(a.pz)}</td>
-            <td class="r">${EUR(a.pm)}</td>
-            <td class="r" style="color:var(--muted)">${a.impP>0?EUR(a.impP):'—'}</td>
-            <td class="r" style="color:${a.varEur>=0?'var(--green)':'var(--red)'};font-weight:600">${a.impP>0?EURDIFF(a.varEur):'—'}</td>
-            <td class="r" style="color:${a.varBott>=0?'var(--green)':'var(--red)'};font-weight:600">${a.pzP>0?(a.varBott>=0?'+':'')+NUM(a.varBott):'—'}</td>
-            <td class="r">${a.varPct!==null?`<span class="badge ${a.varPct>5?'b-up':a.varPct<-5?'b-dn':'b-warn'}">${PCT(a.varPct,1)}</span>`:'<span style="color:var(--muted);font-size:11px">nuovo</span>'}</td>
-          </tr>`).join('')}</tbody>
-        </table></div>
-      </div>
+      <div class="card-head"><h3>Riepilogo per Agente</h3><div class="hr"><span>${agList.length} agenti · clicca riga per scheda agente</span></div></div>
+      <div class="tbl-wrap"><table id="tbl-ag">
+        <thead><tr>${TH('Agente','tbl-ag',0,'str',false)}${TH(`Fatt. ${anno}`,'tbl-ag',1,'num',true)}${TH('Bott.','tbl-ag',2,'num',true)}${TH('Pr. Medio','tbl-ag',3,'num',true)}${TH(`Fatt. ${ap}`,'tbl-ag',4,'num',true)}${TH('Var €','tbl-ag',5,'num',true)}${TH('Var Bott.','tbl-ag',6,'num',true)}${TH('Var %','tbl-ag',7,'pct',true)}</tr></thead>
+        <tbody>${agList.map(a=>`<tr class="dr clik" onclick="openAgentePanel('${ESC(a.ag)}')">
+          <td style="font-weight:600">${a.ag}</td>
+          <td class="r" style="font-weight:700">${EUR(a.imp)}</td><td class="r">${NUM(a.pz)}</td><td class="r">${EUR(a.pm)}</td>
+          <td class="r" style="color:var(--muted)">${a.impP>0?EUR(a.impP):'—'}</td>
+          <td class="r" style="color:${a.varEur>=0?'var(--green)':'var(--red)'};font-weight:600">${a.impP>0?EURDIFF(a.varEur):'—'}</td>
+          <td class="r" style="color:${a.varBott>=0?'var(--green)':'var(--red)'};font-weight:600">${a.pzP>0?(a.varBott>=0?'+':'')+NUM(a.varBott):'—'}</td>
+          <td class="r">${a.varPct!==null?`<span class="badge ${a.varPct>5?'b-up':a.varPct<-5?'b-dn':'b-warn'}">${PCT(a.varPct,1)}</span>`:'<span style="color:var(--muted);font-size:11px">nuovo</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
     </div></div>
 
-    ${agAssentiFull.length>0?`<div class="section"><div class="card">
-      <div class="card-head clickable" onclick="toggleCard('ag-ass-body','ag-ass-arr')">
-        <h3>⚠ Agenti non ancora attivi nel ${anno}</h3>
-        <div class="head-right"><span class="badge-count bc-red">${agAssentiFull.length} agenti</span><span class="collapse-arrow" id="ag-ass-arr">▼</span></div>
+    ${agAssenti.length>0||agCalo.length>0?`<div class="section"><div class="card">
+      <div class="card-head">
+        <h3>Agenti in Calo / Assenti vs ${ap}</h3>
+        <div class="hr">
+          ${agAssenti.length>0?`<span class="cnt-badge cb-red">⚠ ${agAssenti.length} assenti</span>`:''}
+          ${agCalo.length>0?`<span class="cnt-badge cb-amber">📉 ${agCalo.length} in calo</span>`:''}
+          <span>clicca per scheda agente</span>
+        </div>
       </div>
-      <div class="card-body" id="ag-ass-body">
-        <div class="tbl-wrap"><table>
-          <thead><tr><th onclick="sortPanelTbl(this.closest('table'),0,'str')"><div class="thi"><span>Agente</span><span class="si"></span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),1,'num')"><div class="thi"><span class="si"></span><span>${ap}</span></div></th><th class="thr"><div class="thi"><span>${anno}</span></div></th><th class="thr"><div class="thi"><span>Stato</span></div></th><th></th></tr></thead>
-          <tbody>${agAsRow}</tbody>
-        </table></div>
-      </div>
-    </div></div>`:''}
-
-    ${agCaloFull.length>0?`<div class="section"><div class="card">
-      <div class="card-head clickable" onclick="toggleCard('ag-calo-body','ag-calo-arr')">
-        <h3>📉 Agenti in calo nel ${anno}</h3>
-        <div class="head-right"><span class="badge-count bc-amber">${agCaloFull.length} agenti</span><span class="collapse-arrow" id="ag-calo-arr">▼</span></div>
-      </div>
-      <div class="card-body" id="ag-calo-body">
-        <div class="tbl-wrap"><table>
-          <thead><tr><th onclick="sortPanelTbl(this.closest('table'),0,'str')"><div class="thi"><span>Agente</span><span class="si"></span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),1,'num')"><div class="thi"><span class="si"></span><span>${ap}</span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),2,'num')"><div class="thi"><span class="si"></span><span>${anno}</span></div></th><th class="thr" onclick="sortPanelTbl(this.closest('table'),3,'pct')"><div class="thi"><span class="si"></span><span>Var %</span></div></th><th></th></tr></thead>
-          <tbody>${agCaloRow}</tbody>
-        </table></div>
-      </div>
+      <div class="tbl-wrap"><table id="tbl-ag-calo">
+        <thead><tr>${TH('Agente','tbl-ag-calo',0,'str',false)}${TH(String(ap),'tbl-ag-calo',1,'num',true)}${TH(String(anno),'tbl-ag-calo',2,'num',true)}${TH('Var','tbl-ag-calo',3,'pct',true)}</tr></thead>
+        <tbody>${agAssRow}${agCaloRow}</tbody>
+      </table></div>
     </div></div>`:''}`;
   }
 
   const ds=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
   LR={label,anno,ap,pl,topCli,topRef,cali,accs,K,KP,isItalia,dBase,from,to};
-  chatCtx=[{role:'user',content:`Analista commerciale Mosnel. Dati: ${label}, ${pl} ${anno} vs ${ap}. Fatt: ${EUR(K.fatt)} vs ${EUR(KP.fatt)}. Bott: ${NUM(K.bott)} vs ${NUM(KP.bott)}. PM: ${EUR(K.pm)}. Top clienti: ${topCli.slice(0,6).map(c=>c.nome+'('+EUR(c.imp)+')').join('; ')}. Rispondi in italiano, conciso.`},{role:'assistant',content:`Dati caricati per ${label} ${pl} ${anno}. Cosa analizzo?`}];
+  chatCtx=[{role:'user',content:`Analista Mosnel. ${label}, ${pl} ${anno} vs ${ap}. Fatt: ${EUR(K.fatt)} vs ${EUR(KP.fatt)}. Bott: ${NUM(K.bott)}. PM: ${EUR(K.pm)}. Top clienti: ${topCli.slice(0,6).map(c=>c.nome+' '+EUR(c.imp)).join('; ')}. Rispondi in italiano.`},{role:'assistant',content:`Dati caricati per ${label}. Cosa analizzo?`}];
 
   const trendHtml=buildChart(dBase,anno,ap,from,to);
   const nAttivi=topCli.length,nAssenti=assenti.length;
 
-  // Build client rows HTML
-  const cliRowsHtml=topCli.map((c,i)=>{
+  // Client rows HTML
+  const cliRows=topCli.map((c,i)=>{
     const rid='c'+i;
-    const esc=c.nome.replace(/'/g,"\\'");
-    const bc=`<span class="crumb" onclick="closePanel()">Report</span><span class="sep">›</span><span class="current">${c.nome}</span>`;
     const dh=c.delta!==null?`<span class="badge ${c.delta>5?'b-up':c.delta<-5?'b-dn':'b-warn'}">${PCT(c.delta,1)}</span>`:'<span style="color:var(--muted);font-size:10px">nuovo</span>';
-    const rh=c.refs.length>0?`<table style="width:100%">
+    const rh=c.refs.length?`<table style="width:100%"><thead><tr>
+      <th style="width:40%"><div class="thi">Tipologia</div></th>
+      <th style="width:20%"><div class="thi" style="justify-content:center">Bottiglie</div></th>
+      <th style="width:22%"><div class="thi" style="justify-content:center">Fatturato</div></th>
+      <th style="width:18%"><div class="thi" style="justify-content:center">Pr. Medio</div></th>
+    </tr></thead><tbody>${c.refs.map(rf=>`<tr><td style="font-weight:600;white-space:normal">${rf.nome}</td><td style="text-align:center">${NUM(rf.pz)}</td><td style="text-align:center">${EUR(rf.imp)}</td><td style="text-align:center">${EUR(rf.pz>0?rf.imp/rf.pz:0)}</td></tr>`).join('')}</tbody></table>`
+    :'<em style="font-size:11px;color:var(--muted)">Nessuna referenza</em>';
+    return`<tr class="dr clik" onclick="if(!event.target.closest('.xbtn'))openClientePanel('${ESC(c.nome)}')">
+      <td class="c" onclick="event.stopPropagation()"><button class="xbtn" id="btn-${rid}" onclick="toggle('${rid}')">+</button></td>
+      <td><span class="cn">${c.nome}</span><span class="cs">${c.citta||''}${c.prov?' ('+c.prov+')':''}</span></td>
+      <td><span class="badge b-cat">${(c.cat||'N/D').substring(0,12)}</span></td>
+      ${isItalia?`<td style="font-size:11px;color:var(--muted)">${(c.agente||'').substring(0,20)}</td>`:''}
+      <td class="r" style="font-weight:700">${EUR(c.imp)}</td>
+      <td class="r">${NUM(c.pz)}</td>
+      <td class="r">${EUR(c.pm)}</td>
+      <td class="r" style="color:${c.impPrec>0?'var(--ink)':'var(--muted)'}">${c.impPrec>0?EUR(c.impPrec):'—'}</td>
+      <td class="r">${dh}</td>
+      <td class="r" style="color:var(--muted);font-size:10px">${c.refs.length}</td>
+    </tr><tr class="xrow" id="dr-${rid}"><td colspan="${isItalia?10:9}" class="xcell"><div class="xinner">${rh}</div></td></tr>`;
+  }).join('');
+
+  const caloRows=cali.map(r=>`<tr class="dr clik" onclick="openClientePanel('${ESC(r.nome)}')">
+    <td style="font-weight:600">${r.nome}${r.assente?'<span class="badge b-abs" style="margin-left:6px">assente</span>':''}</td>
+    <td style="font-size:11px;color:var(--muted)">${r.agente}</td>
+    <td class="r">${EUR(r.vp)}</td>
+    <td class="r">${r.vc>0?EUR(r.vc):'<span style="color:var(--red);font-weight:700">—</span>'}</td>
+    <td class="r"><span class="badge ${r.assente?'b-abs':'b-dn'}">${r.assente?'assente':PCT(r.d)}</span></td>
+    <td class="r" style="color:var(--red);font-weight:700">${EURDIFF(r.vc-r.vp)}</td>
+    <td class="r">${NUM(r.bP)}</td>
+    <td class="r" style="color:${r.varBott>=0?'var(--green)':'var(--red)'};font-weight:600">${r.bP>0?(r.varBott>=0?'+':'')+NUM(r.varBott):'—'}</td>
+  </tr>`).join('');
+
+  const kpiHtml=`<div class="kpi-row">
+    <div class="kpi primary"><div class="kpi-lbl">Fatturato ${anno}</div><div class="kpi-val">${EUR(K.fatt)}</div><div class="kpi-sub">${ap}: ${EUR(KP.fatt)}</div><div class="kpi-var">${dF!==null?`<span class="${dF>=0?'up':'dn'}">${PCT(dF)} · ${EURDIFF(K.fatt-KP.fatt)}</span>`:'&nbsp;'}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Bottiglie ${anno}</div><div class="kpi-val">${NUM(K.bott)}</div><div class="kpi-sub">${ap}: ${NUM(KP.bott)}</div><div class="kpi-var">${dB!==null?`<span class="${dB>=0?'up':'dn'}">${PCT(dB)} · ${dB>=0?'+':''}${NUM(K.bott-KP.bott)} bt</span>`:'&nbsp;'}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Prezzo Medio ${anno}</div><div class="kpi-val">${EUR(K.pm)}</div><div class="kpi-sub">${ap}: ${EUR(KP.pm)}</div><div class="kpi-var">${dPm!==null?`<span class="${dPm>=0?'up':'dn'}">${PCT(dPm)} · ${EURDIFF(K.pm-KP.pm)}</span>`:'&nbsp;'}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Note di Accredito</div><div class="kpi-val" style="color:var(--red)">${EUR(K.acc)}</div><div class="kpi-sub">${K.nAcc} doc · ${K.clienti} clienti attivi</div></div>
+  </div>`;
+
+  let h=`
+  <div class="rpt-header">
+    <div><h1>${label}</h1><p>${pl} &nbsp;·&nbsp; ${anno} vs ${ap} — YTD stesso periodo</p></div>
+    <div class="rpt-meta">Generato il ${ds}<br>Mosnel Sales Intelligence</div>
+  </div>
+  ${kpiHtml}
+  ${trendHtml?`<div class="section"><div class="card"><div class="card-head"><h3>Trend Mensile Fatturato</h3><span>${anno} vs ${ap}</span></div><div class="chart-wrap">${trendHtml}</div></div></div>`:''}
+  ${agentiHtml}
+  <div class="section"><div class="card">
+    <div class="card-head">
+      <h3>Clienti Attivi — Fatturato ${anno}</h3>
+      <div class="hr">
+        <span class="cnt-badge cb-green">✓ ${nAttivi} attivi</span>
+        ${nAssenti>0?`<span class="cnt-badge cb-red">⚠ ${nAssenti} non ancora attivi</span>`:''}
+        <span>clicca riga per scheda · + per referenze · trascina bordo per allargare</span>
+      </div>
+    </div>
+    ${nAssenti>0?`<div class="absent-strip"><strong>⚠ ${nAssenti} clienti presenti nel ${ap} non hanno ancora ordinato nel ${anno}</strong>${assenti.map(c=>`<span onclick="openClientePanel('${ESC(c)}')">${c}</span>`).join('')}</div>`:''}
+    <div class="tbl-wrap"><table id="tbl-cli">
       <thead><tr>
-        <th style="width:40%"><div class="thi">Tipologia</div></th>
-        <th style="width:20%"><div class="thi" style="justify-content:center">Bottiglie</div></th>
-        <th style="width:22%"><div class="thi" style="justify-content:center">Fatturato</div></th>
-        <th style="width:18%"><div class="thi" style="justify-content:center">Pr. Medio</div></th>
+        <th style="min-width:28px"><div class="thi"></div></th>
+        ${TH('Cliente','tbl-cli',1,'str',false)}
+        ${TH('Cat.','tbl-cli',2,'str',false)}
+        ${isItalia?TH('Agente','tbl-cli',3,'str',false):''}
+        ${TH(`Fatt. ${anno}`,'tbl-cli',isItalia?4:3,'num',true)}
+        ${TH('Bott.','tbl-cli',isItalia?5:4,'num',true)}
+        ${TH('Pr. Med.','tbl-cli',isItalia?6:5,'num',true)}
+        ${TH(`Fatt. ${ap}`,'tbl-cli',isItalia?7:6,'num',true)}
+        ${TH('Var %','tbl-cli',isItalia?8:7,'pct',true)}
+        ${TH('Ref.','tbl-cli',isItalia?9:8,'num',true)}
       </tr></thead>
-      <tbody>${c.refs.map(rf=>`<tr><td style="font-weight:600;white-space:normal">${rf.nome}</td><td style="text-align:center">${NUM(rf.pz)}</td><td style="text-align:center">${EUR(rf.imp)}</td><td style="text-align:center">${EUR(rf.pz>0?rf.imp/rf.pz:0)}</td></tr>`).join('')}</tbody>
-    </table>`:'<em style="font-size:11px;color:var(--muted)">Nessuna referenza</em>';
-    return`<tr class="dr click-row" onclick="if(!event.target.closest('.xbtn'))buildClientePanel('${esc}','${bc.replace(/'/g,"\\'")}')">
-      <td class="c" onclick="event.sto
+      <tbody>${cliRows}</tbody>
+    </table></div>
+  </div></div>
+
+  <div class="section"><div class="card">
+    <div class="card-head"><h3>Referenze — Rotazione Bottiglie</h3><span>${topRef.length} tipologie · trascina bordo per allargare</span></div>
+    <div class="tbl-wrap"><table id="tbl-ref">
+      <thead><tr>${TH('Tipologia','tbl-ref',0,'str',false)}${TH('Bottiglie','tbl-ref',1,'num',true)}${TH('Fatturato','tbl-ref',2,'num',true)}${TH('Pr. Medio','tbl-ref',3,'num',true)}${TH('Clienti','tbl-ref',4,'num',true)}<th><div class="thi">Rotazione</div></th></tr></thead>
+      <tbody>${topRef.map(r=>`<tr class="dr"><td style="font-weight:600">${r.tip}</td><td class="r">${NUM(r.pz)}</td><td class="r">${EUR(r.imp)}</td><td class="r">${EUR(r.pz>0?r.imp/r.pz:0)}</td><td class="r">${r.cli.size}</td>
+        <td><div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:5px;background:#ede9e9;border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--wine);border-radius:3px;width:${Math.round(r.pz/maxRef*100)}%"></div></div><span style="font-size:10px;color:var(--muted);min-width:24px">${Math.round(r.pz/maxRef*100)}%</span></div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>
+
+  ${cali.length>0?`<div class="section"><div class="card">
+    <div class="card-head">
+      <h3>Clienti in Calo / Assenti vs ${ap}</h3>
+      <div class="hr">
+        <span class="cnt-badge cb-red">${cali.filter(r=>r.assente).length} assenti</span>
+        <span class="cnt-badge cb-amber">${cali.filter(r=>!r.assente).length} in calo</span>
+        <span>tutti i clienti · clicca riga per scheda</span>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table id="tbl-calo">
+      <thead><tr>${TH('Cliente','tbl-calo',0,'str',false)}${TH('Agente','tbl-calo',1,'str',false)}${TH(String(ap),'tbl-calo',2,'num',true)}${TH(String(anno),'tbl-calo',3,'num',true)}${TH('Var %','tbl-calo',4,'pct',true)}${TH('Var €','tbl-calo',5,'num',true)}${TH(`Bott. ${ap}`,'tbl-calo',6,'num',true)}${TH('Var Bott.','tbl-calo',7,'num',true)}</tr></thead>
+      <tbody>${caloRows}</tbody>
+    </table></div>
+  </div></div>`:''}
+
+  ${accs.length>0?`<div class="section"><div class="card">
+    <div class="card-head"><h3>Note di Accredito / Resi</h3><span>${accs.length} documenti · Totale: ${EUR(K.acc)}</span></div>
+    <div class="tbl-wrap"><table id="tbl-acc">
+      <thead><tr>${TH('Cliente','tbl-acc',0,'str',false)}${TH('Articolo','tbl-acc',1,'str',false)}${TH('Tipo','tbl-acc',2,'str',false)}${TH('Importo','tbl-acc',3,'num',true)}</tr></thead>
+      <tbody>${accs.map(r=>`<tr class="acc-row dr"><td style="font-weight:600">${r.cliente}</td><td>${r.articolo||'N/D'}</td><td>${r.tipoDoc}</td><td class="r" style="font-weight:700">${EUR(r.importo)}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>`:''}
+  `;
+
+  document.getElementById('rw').innerHTML=h;
+  document.getElementById('rw').style.display='block';
+  document.getElementById('ph').style.display='none';
+  setTimeout(()=>['tbl-ag','tbl-cli','tbl-ref','tbl-calo','tbl-acc','tbl-ag-calo'].forEach(addResizers),100);
+}
+
+async function sendChat(){
+  const inp=document.getElementById('chat-inp');
+  const q=inp.value.trim();if(!q)return;
+  if(!LR){addMsg('bot','Prima genera un report.');return;}
+  inp.value='';addMsg('user',q);
+  document.getElementById('chat-thinking').style.display='flex';
+  chatCtx.push({role:'user',content:q});
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:chatCtx})});
+    const data=await res.json();
+    const reply=data.content?.map(b=>b.text||'').join('')||'Nessuna risposta.';
+    chatCtx.push({role:'assistant',content:reply});
+    document.getElementById('chat-thinking').style.display='none';
+    addMsg('bot',reply);
+  }catch(e){document.getElementById('chat-thinking').style.display='none';addMsg('bot','Errore connessione API.');}
+}
+function addMsg(role,html){
+  const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;
+  const m=document.getElementById('chat-msgs');m.appendChild(d);m.scrollTop=m.scrollHeight;
+}
+function doExcel(){
+  if(!LR){alert('Genera prima un report');return;}
+  const {label,anno,ap,pl,topCli,topRef,cali,accs,K,KP}=LR;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['MOSNEL SALES INTELLIGENCE','',''],['Vista',label,''],['Periodo',pl+' — YTD stesso periodo',''],['','',''],['',anno,ap,'Var %'],['Fatturato',K.fatt,KP.fatt,KP.fatt>0?PCT((K.fatt-KP.fatt)/KP.fatt*100):'n/d'],['Bottiglie',K.bott,KP.bott,KP.bott>0?PCT((K.bott-KP.bott)/KP.bott*100):'n/d'],['Prezzo Medio',K.pm,KP.pm,KP.pm>0?PCT((K.pm-KP.pm)/KP.pm*100):'n/d'],['Accrediti',K.acc,'','']]),'KPI');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente','Città','Prov','Categoria','Agente',`Fatt. ${anno}`,`Bott. ${anno}`,'Pr. Medio',`Fatt. ${ap}`,'Var %'],...topCli.map(c=>[c.nome,c.citta,c.prov,c.cat,c.agente||'',c.imp,c.pz,c.pm,c.impPrec,c.delta!==null?PCT(c.delta):'nuovo'])]),'Clienti Attivi');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tipologia','Bottiglie','Fatturato','Pr. Medio','N° Clienti'],...topRef.map(r=>[r.tip,r.pz,r.imp,r.pz>0?r.imp/r.pz:0,r.cli.size])]),'Referenze');
+  if(cali.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente','Agente','Stato',ap,anno,'Var %','Var €',`Bott. ${ap}`,'Var Bott.'],...cali.map(r=>[r.nome,r.agente,r.assente?'Assente':'In calo',r.vp,r.vc,r.assente?'assente':PCT(r.d),r.vc-r.vp,r.bP,r.varBott])]),'Clienti in Calo');
+  if(accs.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Cliente','Articolo','Tipo','Importo'],...accs.map(r=>[r.cliente,r.articolo,r.tipoDoc,r.importo])]),'Accrediti');
+  try{XLSX.writeFile(wb,`Mosnel_${label.replace(/[^a-zA-Z0-9]/g,'_')}_${anno}.xlsx`);}
+  catch(e){const o=XLSX.write(wb,{bookType:'xlsx',type:'binary'});const buf=new ArrayBuffer(o.length);const v=new Uint8Array(buf);for(let i=0;i<o.length;i++)v[i]=o.charCodeAt(i)&0xFF;const blob=new Blob([buf],{type:'application/octet-stream'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Mosnel_${label.replace(/[^a-zA-Z0-9]/g,'_')}_${anno}.xlsx`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
+}
+function doPdf(){if(!LR){alert('Genera prima un report');return;}window.print();}
+function resetApp(){
+  D=[];LR=null;chatCtx=[];spStack=[];
+  document.getElementById('upload-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('fi').value='';document.getElementById('pw').style.display='none';
+  document.getElementById('pf').style.width='0';document.getElementById('rw').style.display='none';
+  document.getElementById('ph').style.display='block';clearSearch();
+  document.getElementById('chat-msgs').innerHTML='<div class="msg bot">Ciao! Genera un report e poi chiedimi qualsiasi cosa sui dati.</div>';
+  document.getElementById('chat-panel').classList.remove('open');document.getElementById('cb-arr').classList.remove('open');
+  closePanel();
+}
+</script>
+</body>
+</html>
