@@ -770,6 +770,13 @@ function buildAgenteHTML(agente){
   const percCalo=agAttiviData.length>0?Math.round(agCaloData.length/agAttiviData.length*100):0;
   const perdita=agCaloData.reduce((s,c)=>s+(c.v26-c.v25),0);
 
+  // Store globally BEFORE returning HTML so onclick works immediately
+  window._agAttivi=agAttiviData;
+  window._agCalo=agCaloData;
+  window._agAssenti=agAssentiData;
+  window._agAll=agAllData;
+  window._agNome=agente;
+
   return`<div class="sp-title">${agente}</div>
   <div class="sp-sub">2026 vs 2025 — ${LR?MI[LR.from]+' – '+MI[LR.to]:'YTD corrente'}</div>
   <div class="sp-kpis">
@@ -778,9 +785,8 @@ function buildAgenteHTML(agente){
     <div class="spk"><div class="spk-lbl">Prezzo Medio 2026</div><div class="spk-val">${EUR(pm26)}</div><div class="spk-sub">2025: ${EUR(pm25)}</div><div class="spk-var">${dPm!==null?`<span class="${dPm>=0?'up':'dn'}">${PCT(dPm)} · ${EURDIFF(pm26-pm25)}</span>`:'&nbsp;'}</div></div>
     <div class="spk"><div class="spk-lbl">Clienti attivi 2026</div><div class="spk-val">${cli26}</div><div class="spk-sub">2025: ${cli25}</div></div>
   </div>
-
   <div class="summary-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:16px">
-    <div class="summ-block green" onclick="pushPanel('Clienti Attivi — ${ESC(agente)}',()=>buildListHTML('attivi',window._agAttivi,'Clienti Attivi'))">
+    <div class="summ-block green" onclick="pushPanel('Clienti Attivi',()=>buildListHTML('attivi',window._agAttivi,'Clienti Attivi'))">
       <div class="summ-left">
         <h4>✓ Clienti Attivi</h4>
         <div class="summ-num">${agAttiviData.length}</div>
@@ -788,23 +794,23 @@ function buildAgenteHTML(agente){
       </div>
       <span class="summ-arrow">›</span>
     </div>
-    <div class="summ-block ${agCaloData.length>0?'red':'green'}" ${agCaloData.length>0?`onclick="pushPanel('Clienti in Calo — ${ESC(agente)}',()=>buildListHTML('calo',window._agCalo,'Clienti in Calo'))"`:''}>
+    <div class="summ-block ${agCaloData.length>0?'red':'green'}" ${agCaloData.length>0?`onclick="pushPanel('Clienti in Calo',()=>buildListHTML('calo',window._agCalo,'Clienti in Calo'))"`:''}>
       <div class="summ-left">
         <h4>${agCaloData.length>0?'↓ Clienti in Calo':'✓ Nessuno in Calo'}</h4>
         <div class="summ-num">${agCaloData.length}</div>
-        <div class="summ-sub">${agCaloData.length>0?EURDIFF(perdita)+' · '+percCalo+'% dei clienti · Clicca':'Tutti stabili o in crescita'}</div>
+        <div class="summ-sub">${agCaloData.length>0?EURDIFF(perdita)+' · '+percCalo+'% · Clicca':'Tutti stabili o in crescita'}</div>
       </div>
       ${agCaloData.length>0?'<span class="summ-arrow">›</span>':''}
     </div>
-    <div class="summ-block ${agAssentiData.length>0?'amber':'green'}" ${agAssentiData.length>0?`onclick="pushPanel('Non ancora attivi — ${ESC(agente)}',()=>buildListHTML('assenti',window._agAssenti,'Non ancora attivi'))"`:''}>
+    <div class="summ-block ${agAssentiData.length>0?'amber':'green'}" ${agAssentiData.length>0?`onclick="pushPanel('Non ancora attivi',()=>buildListHTML('assenti',window._agAssenti,'Non ancora attivi'))"`:''}>
       <div class="summ-left">
         <h4>${agAssentiData.length>0?'⚠ Non ancora attivi':'✓ Tutti attivi'}</h4>
         <div class="summ-num">${agAssentiData.length}</div>
-        <div class="summ-sub">${agAssentiData.length>0?'Presenti nel 2025 · Clicca per lista':'Tutti i clienti hanno già ordinato'}</div>
+        <div class="summ-sub">${agAssentiData.length>0?'Presenti nel 2025 · Clicca per lista':'Tutti hanno già ordinato'}</div>
       </div>
       ${agAssentiData.length>0?'<span class="summ-arrow">›</span>':''}
     </div>
-    <div class="summ-block green" onclick="pushPanel('Tutti i Clienti — ${ESC(agente)}',()=>buildListHTML('attivi',window._agAll,'Tutti i Clienti'))">
+    <div class="summ-block green" onclick="pushPanel('Tutti i Clienti',()=>buildListHTML('attivi',window._agAll,'Tutti i Clienti'))">
       <div class="summ-left">
         <h4>≡ Tutti i Clienti</h4>
         <div class="summ-num">${agAllData.length}</div>
@@ -812,13 +818,7 @@ function buildAgenteHTML(agente){
       </div>
       <span class="summ-arrow">›</span>
     </div>
-  </div>
-  <script>
-    window._agAttivi=${JSON.stringify(agAttiviData)};
-    window._agCalo=${JSON.stringify(agCaloData)};
-    window._agAssenti=${JSON.stringify(agAssentiData)};
-    window._agAll=${JSON.stringify(agAllData)};
-  <\/script>`;
+  </div>`;
 }
 
 // ── SEARCH ──
@@ -958,30 +958,48 @@ function gen(){
   // Summary blocks — compact, clickable
   const percCalo=attiviData.length>0?Math.round(caloData.length/attiviData.length*100):0;
   const perdita=caloData.reduce((s,c)=>s+(c.v26-c.v25),0);
-  const summaryHtml=`<div class="summary-grid">
-    <div class="summ-block green" onclick="openListPanel('attivi',attiviData,'Clienti Attivi')">
+  // Store data globally so onclick can access it
+  window._mainAttivi=attiviData;
+  window._mainCalo=caloData;
+  window._mainAssenti=assentiData;
+  // All clients = attivi + assenti merged
+  const allCliData=[...attiviData];
+  assentiData.forEach(c=>{if(!allCliData.find(x=>x.nome===c.nome))allCliData.push({nome:c.nome,v26:0,v25:c.v25,b26:0,b25:c.bP,pm:0,agente:c.agente});});
+  allCliData.sort((a,b)=>(b.v26||b.v25)-(a.v26||a.v25));
+  window._mainAll=allCliData;
+
+  const summaryHtml=`<div class="summary-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="summ-block green" onclick="openListPanel('attivi',window._mainAttivi,'Clienti Attivi')">
       <div class="summ-left">
         <h4>✓ Clienti Attivi</h4>
         <div class="summ-num">${attiviData.length}</div>
-        <div class="summ-sub">${EUR(K.fatt)} fatturato · Clicca per lista completa</div>
+        <div class="summ-sub">${EUR(K.fatt)} · Clicca per lista</div>
       </div>
       <span class="summ-arrow">›</span>
     </div>
-    <div class="summ-block ${caloData.length>0?'red':'green'}" onclick="${caloData.length>0?`openListPanel('calo',caloData,'Clienti in Calo')`:'void(0)'}">
+    <div class="summ-block ${caloData.length>0?'red':'green'}" onclick="${caloData.length>0?`openListPanel('calo',window._mainCalo,'Clienti in Calo')`:'void(0)'}">
       <div class="summ-left">
-        <h4>${caloData.length>0?'↓ Clienti in Calo':'✓ Nessun Cliente in Calo'}</h4>
+        <h4>${caloData.length>0?'↓ Clienti in Calo':'✓ Nessuno in Calo'}</h4>
         <div class="summ-num">${caloData.length}</div>
-        <div class="summ-sub">${caloData.length>0?EURDIFF(perdita)+' · '+percCalo+'% dei clienti · Clicca per lista':'Tutti i clienti sono stabili o in crescita'}</div>
+        <div class="summ-sub">${caloData.length>0?EURDIFF(perdita)+' · '+percCalo+'% · Clicca per lista':'Tutti stabili o in crescita'}</div>
       </div>
       ${caloData.length>0?'<span class="summ-arrow">›</span>':''}
     </div>
-    <div class="summ-block ${assentiData.length>0?'amber':'green'}" onclick="${assentiData.length>0?`openListPanel('assenti',assentiData,'Clienti non ancora attivi')`:'void(0)'}">
+    <div class="summ-block ${assentiData.length>0?'amber':'green'}" onclick="${assentiData.length>0?`openListPanel('assenti',window._mainAssenti,'Non ancora attivi')`:'void(0)'}">
       <div class="summ-left">
-        <h4>${assentiData.length>0?'⚠ Non ancora attivi 2026':'✓ Tutti attivi nel 2026'}</h4>
+        <h4>${assentiData.length>0?'⚠ Non ancora attivi':'✓ Tutti attivi'}</h4>
         <div class="summ-num">${assentiData.length}</div>
         <div class="summ-sub">${assentiData.length>0?'Presenti nel '+ap+' · Clicca per lista':'Tutti i clienti hanno già ordinato'}</div>
       </div>
       ${assentiData.length>0?'<span class="summ-arrow">›</span>':''}
+    </div>
+    <div class="summ-block green" onclick="openListPanel('attivi',window._mainAll,'Tutti i Clienti')">
+      <div class="summ-left">
+        <h4>≡ Tutti i Clienti</h4>
+        <div class="summ-num">${allCliData.length}</div>
+        <div class="summ-sub">2025 + 2026 · Clicca per lista completa</div>
+      </div>
+      <span class="summ-arrow">›</span>
     </div>
   </div>`;
 
