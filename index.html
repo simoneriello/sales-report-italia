@@ -6,6 +6,8 @@
 <title>Mosnel Sales Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--wine:#722F37;--wine-dark:#4a1a20;--wine-light:#fdf5f6;--gold:#C9A84C;--ink:#1a1a1a;--muted:#7a6b6c;--bg:#f9f5f5;--white:#fff;--border:#e8dede;--green:#15803d;--red:#b91c1c;--amber:#92400e;--blue:#1e40af}
@@ -41,6 +43,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .filter-group select:focus,.filter-group input:focus{outline:none;border-color:var(--wine)}
 .btn-gen{background:var(--wine);color:white;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 .btn-gen:hover{background:var(--wine-dark)}
+.btn-exp{background:white;color:var(--wine);border:1.5px solid var(--wine);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:6px}
+.btn-exp:hover{background:var(--wine);color:white}
 
 .searchbar{background:var(--wine-light);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:12px;align-items:center}
 .search-wrapper{position:relative;flex:1;max-width:500px}
@@ -64,6 +68,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .report-header{background:linear-gradient(135deg,var(--wine),var(--wine-dark));border-radius:12px;padding:22px 24px;margin-bottom:20px;color:white;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
 .report-header h1{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;margin-bottom:4px}
 .report-header p{font-size:12px;opacity:0.85}
+.report-actions{display:flex;gap:8px}
+.report-actions button{background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif}
+.report-actions button:hover{background:rgba(255,255,255,0.25)}
 
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
@@ -77,24 +84,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .badge-flat{background:#f3f4f6;color:var(--muted)}
 
 .section{margin-bottom:24px}
-.section-title{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--wine);margin-bottom:12px;letter-spacing:1px}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--wine);margin-bottom:12px;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
 
 .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
 @media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
-.summ-block{border-radius:10px;padding:16px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent;display:flex;align-items:center;justify-content:space-between}
+.summ-block{border-radius:10px;padding:16px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent}
 .summ-block.blue{background:#eff6ff;border-color:#bfdbfe}
 .summ-block.green{background:#f0fdf4;border-color:#dcfce7}
 .summ-block.red{background:#fef2f2;border-color:#fee2e2}
 .summ-block.amber{background:#fffbeb;border-color:#fcd34d}
 .summ-block:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.08)}
 .summ-block.disabled{cursor:default;opacity:0.7}
-.summ-icon{font-size:24px;margin-bottom:4px}
-.summ-left h4{font-size:13px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.summ-num{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:600;color:var(--wine);line-height:1}
-.summ-arrow{font-size:22px;opacity:0.4}
+.summ-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.summ-top h4{font-size:13px;font-weight:600}
+.summ-arrow{font-size:18px;opacity:0.4}
+.summ-num{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:var(--wine);line-height:1;margin-bottom:4px}
+.summ-delta{font-size:11px;color:var(--muted);font-weight:600}
+.summ-delta .delta-val{color:var(--ink);font-weight:700}
+
+.chart-wrap{background:white;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:24px}
+.chart-title{font-size:13px;font-weight:600;color:var(--wine);margin-bottom:16px}
+.chart-legend{display:flex;gap:20px;font-size:11px;color:var(--muted);margin-bottom:14px}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+.ref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.ref-card{background:#faf7f7;border:1px solid var(--border);border-radius:8px;padding:12px}
+.ref-name{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;letter-spacing:0.5px}
+.ref-val{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--wine);line-height:1.1}
+.ref-meta{font-size:11px;color:var(--muted);margin-top:4px}
 
 .table-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.table-scroll{overflow-x:auto;overflow-y:auto;max-height:none}
+.table-scroll{overflow-x:auto;overflow-y:auto}
 table{width:100%;border-collapse:collapse;table-layout:auto}
 thead{background:#faf7f7;position:sticky;top:0;z-index:5}
 th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;position:relative}
@@ -121,11 +142,17 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 .fv-back{background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px}
 .fv-back:hover{background:rgba(255,255,255,0.3)}
 .fv-bc{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fv-bar-right{display:flex;gap:8px}
 .fv-bar button.fv-exp{background:white;color:var(--wine);border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif}
 .fv-bar button.fv-exp:hover{background:#f9f0e8}
 #fv-body{flex:1;overflow-y:auto;padding:24px}
 .fv-title{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;color:var(--wine);margin-bottom:4px}
 .fv-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+
+.invoice-list{margin-top:16px}
+.invoice-row{display:grid;grid-template-columns:120px 1fr 100px 120px;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.invoice-row:hover{background:#fdfafa}
+.invoice-row strong{font-weight:600}
 </style>
 </head>
 <body>
@@ -200,7 +227,10 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
       <button class="fv-back" onclick="closeFV()">← Torna</button>
       <div class="fv-bc" id="fv-bc">Lista</div>
     </div>
-    <button class="fv-exp" onclick="exportFV()">Export Excel</button>
+    <div class="fv-bar-right">
+      <button class="fv-exp" onclick="exportFVExcel()">Excel</button>
+      <button class="fv-exp" onclick="exportFVPdf()">PDF</button>
+    </div>
   </div>
   <div id="fv-body"></div>
 </div>
@@ -209,10 +239,25 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 var D = [];
 var lastReport = null;
 var sortStates = {};
+var fvStack = [];
 
-function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0}).format(n); }
+var REFERENZE = [
+  { name: 'Brut', keys: ['brut'], exclude: ['nature', 'pas dos', 'dosage'] },
+  { name: 'Pas Dosé', keys: ['pas dos', 'pas dose', 'dosage zero'], exclude: [] },
+  { name: 'Brut Nature', keys: ['brut nature'], exclude: [] },
+  { name: 'Rosé', keys: ['rose', 'rosé'], exclude: ['pas'] },
+  { name: 'Pas Rosé', keys: ['pas ros'], exclude: [] },
+  { name: 'Satèn', keys: ['saten', 'satèn'], exclude: [] },
+  { name: 'EBB', keys: ['ebb'], exclude: [] },
+  { name: 'Parosé', keys: ['parose', 'parosé'], exclude: [] },
+  { name: 'Millesimato', keys: ['millesim'], exclude: [] }
+];
+
+function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
+function EUR0(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0}).format(n); }
 function NUM(n) { return new Intl.NumberFormat('it-IT').format(Math.round(n)); }
-function PCT(n) { if (!isFinite(n)) return '0%'; var v = Math.round(n); return (v>0?'+':'') + v + '%'; }
+function PCT(n) { if (!isFinite(n)) return '0,00%'; return new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n) + '%'; }
+function PCTsign(n) { if (!isFinite(n)) return '0,00%'; var s = n>=0?'+':''; return s + new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n) + '%'; }
 function PM(tot, btl) { return btl > 0 ? tot / btl : 0; }
 function escapeHTML(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
@@ -269,9 +314,10 @@ function cleanData(raw) {
     
     var mese = 0;
     var d = r.Data_Doc;
-    if (d instanceof Date) mese = d.getMonth() + 1;
-    else if (typeof d === 'string') { var p = new Date(d); if (!isNaN(p.getTime())) mese = p.getMonth() + 1; }
-    else if (typeof d === 'number') { var b = new Date(1899, 11, 30); b.setDate(b.getDate() + Math.floor(d)); mese = b.getMonth() + 1; }
+    var dataStr = '';
+    if (d instanceof Date) { mese = d.getMonth() + 1; dataStr = formatDate(d); }
+    else if (typeof d === 'string') { var p = new Date(d); if (!isNaN(p.getTime())) { mese = p.getMonth() + 1; dataStr = formatDate(p); } }
+    else if (typeof d === 'number') { var b = new Date(1899, 11, 30); b.setDate(b.getDate() + Math.floor(d)); mese = b.getMonth() + 1; dataStr = formatDate(b); }
     
     var tipoDoc = String(r.Tipo_Doc || '').trim();
     var tipoRiga = (tipoDoc === 'N.Acc.' || tipoDoc === 'F.Acc.') ? 'Accredito' : 'Vendita';
@@ -286,12 +332,18 @@ function cleanData(raw) {
       tipoRiga: tipoRiga,
       tipoDoc: tipoDoc,
       numDoc: String(r.Num_Doc || '').trim(),
-      data: d,
+      dataStr: dataStr,
       articolo: String(r.Descr_Articolo || '').trim(),
       tipologia: String(r.Descr_Merceologica || '').trim()
     });
   }
   return result;
+}
+
+function formatDate(d) {
+  var g = String(d.getDate()).padStart(2, '0');
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  return g + '/' + m + '/' + d.getFullYear();
 }
 
 function fillViste() {
@@ -333,6 +385,11 @@ function meseNome(n) {
   return m[n] || '';
 }
 
+function meseAbbr(n) {
+  var m = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+  return m[n] || '';
+}
+
 function calcolaDati(dati, anno, periodo) {
   var vend = [];
   for (var i = 0; i < dati.length; i++) {
@@ -358,6 +415,57 @@ function calcolaDati(dati, anno, periodo) {
   return { fatturato: fatturato, bottiglie: bottiglie, pm: PM(fatturato, bottiglie), clienti: clienti, ordini: vend.length, vendite: vend };
 }
 
+function calcolaReferenze(vendite) {
+  var refs = {};
+  for (var i = 0; i < REFERENZE.length; i++) {
+    refs[REFERENZE[i].name] = { fatt: 0, btl: 0 };
+  }
+  var altro = { fatt: 0, btl: 0 };
+  
+  for (var i = 0; i < vendite.length; i++) {
+    var v = vendite[i];
+    var art = (v.articolo + ' ' + v.tipologia).toLowerCase();
+    var matched = false;
+    for (var j = 0; j < REFERENZE.length; j++) {
+      var ref = REFERENZE[j];
+      var found = false;
+      for (var k = 0; k < ref.keys.length; k++) {
+        if (art.indexOf(ref.keys[k]) !== -1) { found = true; break; }
+      }
+      if (found) {
+        var excluded = false;
+        for (var k = 0; k < ref.exclude.length; k++) {
+          if (art.indexOf(ref.exclude[k]) !== -1) { excluded = true; break; }
+        }
+        if (!excluded) {
+          refs[ref.name].fatt += v.importo;
+          refs[ref.name].btl += v.pezzi;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) {
+      altro.fatt += v.importo;
+      altro.btl += v.pezzi;
+    }
+  }
+  refs['Altro'] = altro;
+  return refs;
+}
+
+function calcolaTrendMensile(dati, anno, periodo) {
+  var trend = {};
+  for (var m = 1; m <= 12; m++) trend[m] = 0;
+  for (var i = 0; i < dati.length; i++) {
+    var r = dati[i];
+    if (r.anno !== anno) continue;
+    if (r.tipoRiga !== 'Vendita') continue;
+    trend[r.mese] += r.importo;
+  }
+  return trend;
+}
+
 function generaReport() {
   var vista = document.getElementById('vista').value;
   var anno = parseInt(document.getElementById('anno').value);
@@ -369,7 +477,12 @@ function generaReport() {
   var d26 = calcolaDati(dati, anno, periodo);
   var d25 = calcolaDati(dati, annoP, periodo);
   
-  // Costruisci lista clienti unificata
+  var refs26 = calcolaReferenze(d26.vendite);
+  var refs25 = calcolaReferenze(d25.vendite);
+  
+  var trend26 = calcolaTrendMensile(dati, anno, periodo);
+  var trend25 = calcolaTrendMensile(dati, annoP, periodo);
+  
   var clienti26 = Object.keys(d26.clienti);
   var clienti25 = Object.keys(d25.clienti);
   var tutti = {};
@@ -384,21 +497,15 @@ function generaReport() {
     var c25 = d25.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '' };
     var agente = c26.agente || c25.agente || '';
     listaClienti.push({
-      nome: c,
-      agente: agente,
-      f26: c26.fatt,
-      f25: c25.fatt,
-      b26: c26.btl,
-      b25: c25.btl,
-      pm26: PM(c26.fatt, c26.btl),
-      pm25: PM(c25.fatt, c25.btl),
+      nome: c, agente: agente,
+      f26: c26.fatt, f25: c25.fatt,
+      b26: c26.btl, b25: c25.btl,
+      pm26: PM(c26.fatt, c26.btl), pm25: PM(c25.fatt, c25.btl),
       ordini: c26.ordini
     });
   }
   
-  var attivi = [];
-  var calo = [];
-  var assenti = [];
+  var attivi = [], calo = [], assenti = [];
   for (var i = 0; i < listaClienti.length; i++) {
     var c = listaClienti[i];
     if (c.f26 > 0 && c.f25 === 0) attivi.push(c);
@@ -411,8 +518,9 @@ function generaReport() {
   listaClienti.sort(function(a, b) { return b.f26 - a.f26; });
   
   lastReport = {
-    vista: vista, anno: anno, annoP: annoP, periodo: periodo,
-    d26: d26, d25: d25,
+    vista: vista, anno: anno, annoP: annoP, periodo: periodo, dati: dati,
+    d26: d26, d25: d25, refs26: refs26, refs25: refs25,
+    trend26: trend26, trend25: trend25,
     tutti: listaClienti, attivi: attivi, calo: calo, assenti: assenti
   };
   
@@ -424,27 +532,123 @@ function renderReport() {
   var dF = r.d25.fatturato > 0 ? ((r.d26.fatturato - r.d25.fatturato) / r.d25.fatturato) * 100 : 0;
   var dB = r.d25.bottiglie > 0 ? ((r.d26.bottiglie - r.d25.bottiglie) / r.d25.bottiglie) * 100 : 0;
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
+  var deltaF = r.d26.fatturato - r.d25.fatturato;
+  var deltaB = r.d26.bottiglie - r.d25.bottiglie;
   
   var html = '';
-  html += '<div class="report-header"><div><h1>' + escapeHTML(r.vista) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div></div>';
+  html += '<div class="report-header"><div><h1>' + escapeHTML(r.vista) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div>';
+  html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button></div></div>';
   
   html += '<div class="kpi-row">';
-  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCT(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglie) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglie) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCT(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCT(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglie) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglie) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + ' ' + r.annoP + '</div></div>';
   html += '</div>';
   
+  // Grafico andamento mensile
+  html += '<div class="chart-wrap">';
+  html += '<div class="chart-title">Andamento mensile fatturato</div>';
+  html += '<div class="chart-legend"><div class="legend-item"><span class="legend-dot" style="background:var(--wine)"></span>' + r.anno + '</div><div class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span>' + r.annoP + '</div></div>';
+  html += buildChart(r.trend26, r.trend25, r.anno, r.annoP);
+  html += '</div>';
+  
+  // 4 blocchi riepilogo
   html += '<div class="section"><div class="section-title">Riepilogo clienti</div><div class="summary-grid">';
-  html += '<div class="summ-block blue" onclick="openFV(\'tutti\')"><div class="summ-left"><h4>≡ Tutti i clienti</h4><div class="summ-num">' + r.tutti.length + '</div></div><span class="summ-arrow">›</span></div>';
-  html += '<div class="summ-block green" onclick="openFV(\'attivi\')"><div class="summ-left"><h4>✓ Clienti attivi</h4><div class="summ-num">' + r.attivi.length + '</div></div><span class="summ-arrow">›</span></div>';
-  html += '<div class="summ-block ' + (r.calo.length?'red':'green') + '"' + (r.calo.length?' onclick="openFV(\'calo\')"':' style="opacity:0.5;cursor:default"') + '><div class="summ-left"><h4>↓ Clienti in calo</h4><div class="summ-num">' + r.calo.length + '</div></div>' + (r.calo.length?'<span class="summ-arrow">›</span>':'') + '</div>';
-  html += '<div class="summ-block ' + (r.assenti.length?'amber':'green') + '"' + (r.assenti.length?' onclick="openFV(\'assenti\')"':' style="opacity:0.5;cursor:default"') + '><div class="summ-left"><h4>⚠ Non ancora attivi</h4><div class="summ-num">' + r.assenti.length + '</div></div>' + (r.assenti.length?'<span class="summ-arrow">›</span>':'') + '</div>';
+  
+  var totDeltaTutti = 0;
+  for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
+  var totDeltaAttivi = 0;
+  for (var i = 0; i < r.attivi.length; i++) totDeltaAttivi += (r.attivi[i].f26 - r.attivi[i].f25);
+  var totDeltaCalo = 0;
+  for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
+  var totDeltaAssenti = 0;
+  for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
+  
+  html += buildSummBlock('blue', '≡ Tutti i clienti', r.tutti.length, totDeltaTutti, 'tutti', true);
+  html += buildSummBlock('green', '✓ Clienti attivi', r.attivi.length, totDeltaAttivi, 'attivi', true);
+  html += buildSummBlock(r.calo.length?'red':'green', '↓ Clienti in calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
+  html += buildSummBlock(r.assenti.length?'amber':'green', '⚠ Non ancora attivi', r.assenti.length, totDeltaAssenti, 'assenti', r.assenti.length > 0);
+  
+  html += '</div></div>';
+  
+  // Rotazione referenze
+  html += '<div class="section"><div class="section-title">Rotazione referenze ' + r.anno + '</div>';
+  html += '<div class="ref-grid">';
+  var refNames = REFERENZE.map(function(x) { return x.name; });
+  refNames.push('Altro');
+  for (var i = 0; i < refNames.length; i++) {
+    var name = refNames[i];
+    var r26 = r.refs26[name] || { fatt: 0, btl: 0 };
+    var r25 = r.refs25[name] || { fatt: 0, btl: 0 };
+    if (r26.btl === 0 && r25.btl === 0) continue;
+    var dRef = r25.btl > 0 ? ((r26.btl - r25.btl) / r25.btl) * 100 : 0;
+    var pctTot = r.d26.bottiglie > 0 ? (r26.btl / r.d26.bottiglie) * 100 : 0;
+    html += '<div class="ref-card">';
+    html += '<div class="ref-name">' + escapeHTML(name) + '</div>';
+    html += '<div class="ref-val">' + NUM(r26.btl) + ' btl</div>';
+    html += '<div class="ref-meta">' + EUR(r26.fatt) + '<br>';
+    html += pctTot.toFixed(2).replace('.', ',') + '% sul tot · ';
+    html += '<span class="' + (dRef>=0?'text-green':'text-red') + '">' + PCTsign(dRef) + '</span> vs ' + r.annoP;
+    html += '</div></div>';
+  }
   html += '</div></div>';
   
   document.getElementById('report-wrapper').innerHTML = html;
   document.getElementById('report-wrapper').style.display = 'block';
   document.getElementById('placeholder').style.display = 'none';
+}
+
+function buildSummBlock(color, label, count, delta, type, enabled) {
+  var html = '<div class="summ-block ' + color + (enabled?'':' disabled') + '"' + (enabled?' onclick="openFV(\'' + type + '\')"':'') + '>';
+  html += '<div class="summ-top"><h4>' + label + '</h4>';
+  html += enabled ? '<span class="summ-arrow">›</span>' : '';
+  html += '</div>';
+  html += '<div class="summ-num">' + count + '</div>';
+  if (count > 0) {
+    var deltaClass = delta >= 0 ? 'text-green' : 'text-red';
+    html += '<div class="summ-delta">Var €: <span class="delta-val ' + deltaClass + '">' + EUR(delta) + '</span></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildChart(t26, t25, anno, annoP) {
+  var maxV = 0;
+  for (var m = 1; m <= 12; m++) {
+    if (t26[m] > maxV) maxV = t26[m];
+    if (t25[m] > maxV) maxV = t25[m];
+  }
+  if (maxV === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
+  
+  var w = 760, h = 220, padL = 50, padR = 20, padT = 10, padB = 30;
+  var cw = w - padL - padR;
+  var ch = h - padT - padB;
+  var bw = cw / 12;
+  
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:280px">';
+  
+  // gridlines
+  for (var i = 0; i <= 4; i++) {
+    var y = padT + (ch * i / 4);
+    var val = maxV * (4 - i) / 4;
+    svg += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="#e8dede" stroke-width="1"/>';
+    svg += '<text x="' + (padL - 5) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#7a6b6c">' + (val >= 1000 ? Math.round(val/1000) + 'k' : Math.round(val)) + '</text>';
+  }
+  
+  // bars
+  for (var m = 1; m <= 12; m++) {
+    var x = padL + (m - 1) * bw + 4;
+    var bwHalf = (bw - 8) / 2;
+    var h25 = (t25[m] / maxV) * ch;
+    var h26 = (t26[m] / maxV) * ch;
+    svg += '<rect x="' + x + '" y="' + (padT + ch - h25) + '" width="' + bwHalf + '" height="' + h25 + '" fill="#C9A84C" opacity="0.8"/>';
+    svg += '<rect x="' + (x + bwHalf) + '" y="' + (padT + ch - h26) + '" width="' + bwHalf + '" height="' + h26 + '" fill="#722F37"/>';
+    svg += '<text x="' + (x + bwHalf) + '" y="' + (h - 10) + '" text-anchor="middle" font-size="10" fill="#7a6b6c">' + meseAbbr(m) + '</text>';
+  }
+  
+  svg += '</svg>';
+  return svg;
 }
 
 function openFV(tipo) {
@@ -454,8 +658,33 @@ function openFV(tipo) {
   else if (tipo === 'calo') { data = lastReport.calo; title = 'Clienti in calo'; }
   else if (tipo === 'assenti') { data = lastReport.assenti; title = 'Non ancora attivi'; }
   
+  fvStack = [];
+  showFV({ type: 'lista', data: data, title: title });
+}
+
+function showFV(state) {
+  fvStack.push(state);
+  renderFV();
+}
+
+function renderFV() {
+  var state = fvStack[fvStack.length - 1];
+  
+  if (state.type === 'lista') {
+    renderFVLista(state);
+  } else if (state.type === 'cliente') {
+    renderFVCliente(state);
+  }
+  
+  document.getElementById('fv').classList.add('open');
+}
+
+function renderFVLista(state) {
+  var data = state.data;
+  var title = state.title;
   window._fvData = data;
   window._fvTitle = title;
+  window._fvType = 'lista';
   
   document.getElementById('fv-bc').textContent = title + ' · ' + lastReport.vista;
   
@@ -466,22 +695,154 @@ function openFV(tipo) {
   }
   var pm26 = PM(f26, b26), pm25 = PM(f25, b25);
   var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
+  var dB = b25 > 0 ? ((b26 - b25) / b25) * 100 : 0;
+  var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
   var html = '<div class="fv-title">' + escapeHTML(title) + '</div><div class="fv-sub">' + escapeHTML(lastReport.vista) + ' · ' + escapeHTML(lastReport.periodo.label) + ' · ' + data.length + ' clienti</div>';
   
   html += '<div class="kpi-row">';
-  html += '<div class="kpi-card"><div class="kpi-label">Fatturato 2026</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCT(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie 2026</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + '</div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio 2026</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Clienti</div><div class="kpi-value">' + data.length + '</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatturato 2026</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie 2026</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Var €</div><div class="kpi-value ' + (f26-f25>=0?'text-green':'text-red') + '">' + EUR(f26 - f25) + '</div></div>';
   html += '</div>';
   
   html += buildTable(data, 'fv-tbl', f26, f25, b26, b25);
   
   document.getElementById('fv-body').innerHTML = html;
-  document.getElementById('fv').classList.add('open');
   
-  setTimeout(function() { initSort('fv-tbl'); initResize('fv-tbl'); }, 50);
+  setTimeout(function() {
+    initSort('fv-tbl');
+    initResize('fv-tbl');
+    bindRowClicks('fv-tbl', data);
+  }, 50);
+}
+
+function bindRowClicks(tblId, data) {
+  var rows = document.querySelectorAll('#' + tblId + ' tbody tr:not(.tot-row)');
+  for (var i = 0; i < rows.length; i++) {
+    (function(row, idx) {
+      row.classList.add('clik');
+      row.addEventListener('click', function() {
+        var clienteName = row.cells[0].textContent.trim();
+        var c = null;
+        for (var j = 0; j < data.length; j++) {
+          if (data[j].nome === clienteName) { c = data[j]; break; }
+        }
+        if (c) openClienteFV(c.nome);
+      });
+    })(rows[i], i);
+  }
+}
+
+function openClienteFV(nome) {
+  showFV({ type: 'cliente', nome: nome });
+}
+
+function renderFVCliente(state) {
+  var nome = state.nome;
+  var anno = lastReport.anno;
+  var annoP = lastReport.annoP;
+  var periodo = lastReport.periodo;
+  
+  // Calcola dati cliente
+  var v26 = [], v25 = [];
+  var allCliente = [];
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].cliente !== nome) continue;
+    if (D[i].tipoRiga !== 'Vendita') continue;
+    if (D[i].mese < periodo.da || D[i].mese > periodo.a) continue;
+    if (D[i].anno === anno) v26.push(D[i]);
+    if (D[i].anno === annoP) v25.push(D[i]);
+    allCliente.push(D[i]);
+  }
+  
+  var f26 = 0, b26 = 0, f25 = 0, b25 = 0;
+  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; }
+  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; }
+  var pm26 = PM(f26, b26), pm25 = PM(f25, b25);
+  var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
+  var dB = b25 > 0 ? ((b26 - b25) / b25) * 100 : 0;
+  var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
+  
+  // Agente del cliente
+  var agente = '';
+  for (var i = 0; i < v26.length; i++) { if (v26[i].agente) { agente = v26[i].agente; break; } }
+  if (!agente) for (var i = 0; i < v25.length; i++) { if (v25[i].agente) { agente = v25[i].agente; break; } }
+  
+  // Referenze
+  var refs26 = calcolaReferenze(v26);
+  var refs25 = calcolaReferenze(v25);
+  
+  // Fatture (raggruppate per num_doc + data)
+  var fatture = {};
+  for (var i = 0; i < v26.length; i++) {
+    var key = v26[i].numDoc + '|' + v26[i].dataStr;
+    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, importo: 0, pezzi: 0, righe: [] };
+    fatture[key].importo += v26[i].importo;
+    fatture[key].pezzi += v26[i].pezzi;
+    fatture[key].righe.push(v26[i]);
+  }
+  var fattureArr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
+  
+  document.getElementById('fv-bc').textContent = 'Cliente: ' + nome + (agente ? ' · ' + agente : '');
+  window._fvData = null;
+  window._fvType = 'cliente';
+  window._fvCliente = nome;
+  
+  var html = '<div class="fv-title">' + escapeHTML(nome) + '</div>';
+  html += '<div class="fv-sub">' + (agente ? escapeHTML(agente) + ' · ' : '') + escapeHTML(lastReport.periodo.label) + '</div>';
+  
+  html += '<div class="kpi-row">';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + anno + '</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + anno + '</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Var €</div><div class="kpi-value ' + (f26-f25>=0?'text-green':'text-red') + '">' + EUR(f26 - f25) + '</div><div class="kpi-sub">' + fattureArr.length + ' fatture</div></div>';
+  html += '</div>';
+  
+  // Referenze cliente
+  html += '<div class="section"><div class="section-title">Referenze ' + anno + '</div><div class="ref-grid">';
+  var refNames = REFERENZE.map(function(x) { return x.name; });
+  refNames.push('Altro');
+  for (var i = 0; i < refNames.length; i++) {
+    var name = refNames[i];
+    var r26 = refs26[name] || { fatt: 0, btl: 0 };
+    var r25 = refs25[name] || { fatt: 0, btl: 0 };
+    if (r26.btl === 0 && r25.btl === 0) continue;
+    var dRef = r25.btl > 0 ? ((r26.btl - r25.btl) / r25.btl) * 100 : 0;
+    var pctTot = b26 > 0 ? (r26.btl / b26) * 100 : 0;
+    html += '<div class="ref-card">';
+    html += '<div class="ref-name">' + escapeHTML(name) + '</div>';
+    html += '<div class="ref-val">' + NUM(r26.btl) + ' btl</div>';
+    html += '<div class="ref-meta">' + EUR(r26.fatt) + '<br>';
+    html += pctTot.toFixed(2).replace('.', ',') + '% · ';
+    html += '<span class="' + (dRef>=0?'text-green':'text-red') + '">' + PCTsign(dRef) + '</span> vs ' + annoP;
+    html += '</div></div>';
+  }
+  html += '</div></div>';
+  
+  // Elenco fatture
+  html += '<div class="section"><div class="section-title">Fatture ' + anno + ' (' + fattureArr.length + ')</div>';
+  html += '<div class="table-wrap"><div class="table-scroll"><table id="fv-fat-tbl">';
+  html += '<thead><tr>';
+  html += '<th data-col="0" data-type="str">Data <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="1" data-type="str">N. Doc <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="2" data-type="num" class="text-right">Bottiglie <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="3" data-type="num" class="text-right">Importo <span class="sort-arrow">▼</span></th>';
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < fattureArr.length; i++) {
+    var f = fattureArr[i];
+    html += '<tr><td>' + escapeHTML(f.data) + '</td><td>' + escapeHTML(f.numDoc) + '</td><td class="text-right">' + NUM(f.pezzi) + '</td><td class="text-right">' + EUR(f.importo) + '</td></tr>';
+  }
+  html += '<tr class="tot-row"><td>TOTALE</td><td></td><td class="text-right">' + NUM(b26) + '</td><td class="text-right">' + EUR(f26) + '</td></tr>';
+  html += '</tbody></table></div></div></div>';
+  
+  document.getElementById('fv-body').innerHTML = html;
+  
+  setTimeout(function() {
+    initSort('fv-fat-tbl');
+    initResize('fv-fat-tbl');
+  }, 50);
 }
 
 function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
@@ -510,14 +871,13 @@ function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
     html += '<td class="text-right">' + EUR(c.f26) + '</td>';
     html += '<td class="text-right">' + EUR(c.f25) + '</td>';
     html += '<td class="text-right ' + varColor + '">' + EUR(varV) + '</td>';
-    html += '<td class="text-right ' + varColor + '">' + PCT(varP) + '</td>';
+    html += '<td class="text-right ' + varColor + '">' + PCTsign(varP) + '</td>';
     html += '<td class="text-right">' + NUM(c.b26) + '</td>';
     html += '<td class="text-right">' + NUM(c.b25) + '</td>';
     html += '<td class="text-right">' + EUR(c.pm26) + '</td>';
     html += '</tr>';
   }
   
-  // Riga totale
   var totVarV = totF26 - totF25;
   var totVarP = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
   var totPM26 = PM(totF26, totB26);
@@ -529,7 +889,7 @@ function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
   html += '<td class="text-right">' + EUR(totF26) + '</td>';
   html += '<td class="text-right">' + EUR(totF25) + '</td>';
   html += '<td class="text-right ' + totColor + '">' + EUR(totVarV) + '</td>';
-  html += '<td class="text-right ' + totColor + '">' + PCT(totVarP) + '</td>';
+  html += '<td class="text-right ' + totColor + '">' + PCTsign(totVarP) + '</td>';
   html += '<td class="text-right">' + NUM(totB26) + '</td>';
   html += '<td class="text-right">' + NUM(totB25) + '</td>';
   html += '<td class="text-right">' + EUR(totPM26) + '</td>';
@@ -572,7 +932,6 @@ function sortTable(tblId, colIdx, type) {
     return dir === 'asc' ? av.localeCompare(bv, 'it') : bv.localeCompare(av, 'it');
   });
   
-  // Update header indicators
   var ths = tbl.querySelectorAll('thead th');
   for (var i = 0; i < ths.length; i++) {
     ths[i].classList.remove('sort-asc', 'sort-desc');
@@ -586,6 +945,11 @@ function sortTable(tblId, colIdx, type) {
   tbody.innerHTML = '';
   for (var i = 0; i < rows.length; i++) tbody.appendChild(rows[i]);
   if (totRow) tbody.appendChild(totRow);
+  
+  // Riattacca click handlers
+  if (window._fvData && tblId === 'fv-tbl') {
+    bindRowClicks(tblId, window._fvData);
+  }
 }
 
 function initResize(tblId) {
@@ -614,7 +978,13 @@ function initResize(tblId) {
 }
 
 function closeFV() {
-  document.getElementById('fv').classList.remove('open');
+  if (fvStack.length > 1) {
+    fvStack.pop();
+    renderFV();
+  } else {
+    document.getElementById('fv').classList.remove('open');
+    fvStack = [];
+  }
 }
 
 function doSearch(q) {
@@ -664,10 +1034,14 @@ function doSearch(q) {
       if (type === 'agente') {
         document.getElementById('vista').value = name;
         generaReport();
+        clearSearch();
       } else {
-        alert('Scheda cliente: ' + name + ' (in arrivo nello STEP 2)');
+        // Apri direttamente la scheda cliente
+        if (!lastReport) generaReport();
+        clearSearch();
+        fvStack = [];
+        showFV({ type: 'cliente', nome: name });
       }
-      clearSearch();
     });
   }
 }
@@ -678,7 +1052,11 @@ function clearSearch() {
   document.getElementById('search-clear').classList.remove('show');
 }
 
-function exportFV() {
+function exportFVExcel() {
+  if (window._fvType === 'cliente') {
+    exportClienteExcel(window._fvCliente);
+    return;
+  }
   if (!window._fvData || !window._fvData.length) return;
   var wb = XLSX.utils.book_new();
   var headers = ['Cliente', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Btl. 2026', 'Btl. 2025', 'PM 2026'];
@@ -686,12 +1064,195 @@ function exportFV() {
   for (var i = 0; i < window._fvData.length; i++) {
     var c = window._fvData[i];
     var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-    rows.push([c.nome, c.agente, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(1) + '%', c.b26, c.b25, c.pm26]);
+    rows.push([c.nome, c.agente, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(2) + '%', c.b26, c.b25, c.pm26]);
   }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Clienti');
-  try {
-    XLSX.writeFile(wb, 'Mosnel_' + (window._fvTitle || 'Lista') + '.xlsx');
-  } catch (e) {
+  saveXlsx(wb, 'Mosnel_' + (window._fvTitle || 'Lista') + '.xlsx');
+}
+
+function exportClienteExcel(nome) {
+  var anno = lastReport.anno, annoP = lastReport.annoP, periodo = lastReport.periodo;
+  var v26 = [], v25 = [];
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].cliente !== nome) continue;
+    if (D[i].tipoRiga !== 'Vendita') continue;
+    if (D[i].mese < periodo.da || D[i].mese > periodo.a) continue;
+    if (D[i].anno === anno) v26.push(D[i]);
+    if (D[i].anno === annoP) v25.push(D[i]);
+  }
+  var fatture = {};
+  for (var i = 0; i < v26.length; i++) {
+    var key = v26[i].numDoc + '|' + v26[i].dataStr;
+    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, importo: 0, pezzi: 0 };
+    fatture[key].importo += v26[i].importo;
+    fatture[key].pezzi += v26[i].pezzi;
+  }
+  var wb = XLSX.utils.book_new();
+  var rows = [['Data', 'N. Doc', 'Bottiglie', 'Importo']];
+  var arr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
+  for (var i = 0; i < arr.length; i++) rows.push([arr[i].data, arr[i].numDoc, arr[i].pezzi, arr[i].importo]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Fatture');
+  saveXlsx(wb, 'Mosnel_Cliente_' + nome.substr(0,30) + '.xlsx');
+}
+
+function exportFVPdf() {
+  if (window._fvType === 'cliente') {
+    exportClientePdf(window._fvCliente);
+    return;
+  }
+  if (!window._fvData) return;
+  var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(114, 47, 55);
+  doc.text('Mosnel — ' + window._fvTitle, 14, 18);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(lastReport.vista + ' · ' + lastReport.periodo.label, 14, 24);
+  
+  var headers = [['Cliente', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Btl. 26', 'Btl. 25', 'PM 26']];
+  var body = [];
+  var totF26 = 0, totF25 = 0, totB26 = 0, totB25 = 0;
+  for (var i = 0; i < window._fvData.length; i++) {
+    var c = window._fvData[i];
+    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    body.push([c.nome, c.agente, EUR(c.f26), EUR(c.f25), EUR(c.f26-c.f25), PCTsign(varP), NUM(c.b26), NUM(c.b25), EUR(c.pm26)]);
+    totF26 += c.f26; totF25 += c.f25; totB26 += c.b26; totB25 += c.b25;
+  }
+  body.push(['TOTALE', '', EUR(totF26), EUR(totF25), EUR(totF26-totF25), PCTsign(totF25>0?((totF26-totF25)/totF25)*100:0), NUM(totB26), NUM(totB25), EUR(PM(totF26,totB26))]);
+  
+  doc.autoTable({
+    head: headers, body: body, startY: 30,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 8 },
+    foot: [], styles: { cellPadding: 2 }
+  });
+  
+  doc.save('Mosnel_' + window._fvTitle + '.pdf');
+}
+
+function exportClientePdf(nome) {
+  var anno = lastReport.anno, annoP = lastReport.annoP, periodo = lastReport.periodo;
+  var v26 = [], v25 = [];
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].cliente !== nome) continue;
+    if (D[i].tipoRiga !== 'Vendita') continue;
+    if (D[i].mese < periodo.da || D[i].mese > periodo.a) continue;
+    if (D[i].anno === anno) v26.push(D[i]);
+    if (D[i].anno === annoP) v25.push(D[i]);
+  }
+  var f26=0,b26=0,f25=0,b25=0;
+  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; }
+  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; }
+  var fatture = {};
+  for (var i = 0; i < v26.length; i++) {
+    var key = v26[i].numDoc + '|' + v26[i].dataStr;
+    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, importo: 0, pezzi: 0 };
+    fatture[key].importo += v26[i].importo;
+    fatture[key].pezzi += v26[i].pezzi;
+  }
+  var arr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
+  
+  var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(114, 47, 55);
+  doc.text('Mosnel — ' + nome, 14, 18);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(lastReport.periodo.label, 14, 24);
+  
+  doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.text('Fatturato ' + anno + ': ' + EUR(f26) + ' (vs ' + EUR(f25) + ')', 14, 34);
+  doc.text('Bottiglie ' + anno + ': ' + NUM(b26) + ' (vs ' + NUM(b25) + ')', 14, 40);
+  doc.text('Prezzo medio ' + anno + ': ' + EUR(PM(f26,b26)), 14, 46);
+  
+  var body = [];
+  for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), EUR(arr[i].importo)]);
+  body.push(['TOTALE', '', NUM(b26), EUR(f26)]);
+  
+  doc.autoTable({
+    head: [['Data', 'N. Doc', 'Bottiglie', 'Importo']], body: body, startY: 54,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255 },
+    bodyStyles: { fontSize: 9 }
+  });
+  
+  doc.save('Mosnel_Cliente_' + nome.substr(0,30) + '.pdf');
+}
+
+function exportReportExcel() {
+  if (!lastReport) return;
+  var r = lastReport;
+  var wb = XLSX.utils.book_new();
+  
+  // KPI sheet
+  var kpiRows = [['Mosnel - ' + r.vista], ['Periodo: ' + r.periodo.label], [],
+    ['', r.anno, r.annoP, 'Var €', 'Var %'],
+    ['Fatturato', r.d26.fatturato, r.d25.fatturato, r.d26.fatturato - r.d25.fatturato, (r.d25.fatturato>0?((r.d26.fatturato-r.d25.fatturato)/r.d25.fatturato)*100:0).toFixed(2)+'%'],
+    ['Bottiglie', r.d26.bottiglie, r.d25.bottiglie, r.d26.bottiglie - r.d25.bottiglie, (r.d25.bottiglie>0?((r.d26.bottiglie-r.d25.bottiglie)/r.d25.bottiglie)*100:0).toFixed(2)+'%'],
+    ['Prezzo Medio', r.d26.pm, r.d25.pm, r.d26.pm - r.d25.pm, (r.d25.pm>0?((r.d26.pm-r.d25.pm)/r.d25.pm)*100:0).toFixed(2)+'%']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPI');
+  
+  // Liste
+  var headers = ['Cliente', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Btl. 2026', 'Btl. 2025', 'PM 2026'];
+  
+  function makeRows(arr) {
+    var rows = [headers];
+    for (var i = 0; i < arr.length; i++) {
+      var c = arr[i];
+      var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+      rows.push([c.nome, c.agente, c.f26, c.f25, c.f26-c.f25, varP.toFixed(2)+'%', c.b26, c.b25, c.pm26]);
+    }
+    return rows;
+  }
+  
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.tutti)), 'Tutti');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.attivi)), 'Attivi');
+  if (r.calo.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.calo)), 'In Calo');
+  if (r.assenti.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.assenti)), 'Non attivi');
+  
+  saveXlsx(wb, 'Mosnel_Report_' + r.vista + '.xlsx');
+}
+
+function exportReportPdf() {
+  if (!lastReport) return;
+  var r = lastReport;
+  var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(114, 47, 55);
+  doc.text('Mosnel — ' + r.vista, 14, 18);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(r.anno + ' vs ' + r.annoP + ' · ' + r.periodo.label, 14, 24);
+  
+  var kpi = [
+    ['Fatturato', EUR(r.d26.fatturato), EUR(r.d25.fatturato), EUR(r.d26.fatturato-r.d25.fatturato), PCTsign(r.d25.fatturato>0?((r.d26.fatturato-r.d25.fatturato)/r.d25.fatturato)*100:0)],
+    ['Bottiglie', NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUM(r.d26.bottiglie-r.d25.bottiglie), PCTsign(r.d25.bottiglie>0?((r.d26.bottiglie-r.d25.bottiglie)/r.d25.bottiglie)*100:0)],
+    ['Prezzo Medio', EUR(r.d26.pm), EUR(r.d25.pm), EUR(r.d26.pm-r.d25.pm), PCTsign(r.d25.pm>0?((r.d26.pm-r.d25.pm)/r.d25.pm)*100:0)]
+  ];
+  doc.autoTable({
+    head: [['', r.anno.toString(), r.annoP.toString(), 'Var €', 'Var %']], body: kpi, startY: 32,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255 },
+    bodyStyles: { fontSize: 10 }
+  });
+  
+  doc.text('Clienti attivi: ' + r.attivi.length + ' · In calo: ' + r.calo.length + ' · Non ancora attivi: ' + r.assenti.length, 14, doc.lastAutoTable.finalY + 10);
+  
+  doc.save('Mosnel_Report_' + r.vista + '.pdf');
+}
+
+function saveXlsx(wb, name) {
+  try { XLSX.writeFile(wb, name); }
+  catch (e) {
     var o = XLSX.write(wb, {bookType:'xlsx', type:'binary'});
     var buf = new ArrayBuffer(o.length);
     var v = new Uint8Array(buf);
@@ -699,7 +1260,7 @@ function exportFV() {
     var blob = new Blob([buf], {type:'application/octet-stream'});
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'Mosnel_export.xlsx';
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -707,7 +1268,7 @@ function exportFV() {
 }
 
 function resetApp() {
-  D = []; lastReport = null;
+  D = []; lastReport = null; fvStack = [];
   document.getElementById('upload-screen').style.display = 'flex';
   document.getElementById('app-screen').style.display = 'none';
   document.getElementById('fi').value = '';
