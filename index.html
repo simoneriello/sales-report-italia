@@ -1,3 +1,4 @@
+<!-- v2.0 -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -429,16 +430,16 @@ function buildFVContent(type,data,title){
   if(type==='attivi'||type==='all'){
     const pmTot=totB26>0?totF26/totB26:0;
     thead=`<tr>
-      ${TH('Cliente','fv-tbl',0,'str',false)}
-      ${TH('Agente','fv-tbl',1,'str',false)}
-      ${TH('Fatt. 2026','fv-tbl',2,'num',true)}
-      ${TH('Fatt. 2025','fv-tbl',3,'num',true)}
-      ${TH('Var €','fv-tbl',4,'num',true)}
-      ${TH('Var %','fv-tbl',5,'pct',true)}
-      ${TH('Bott. 2026','fv-tbl',6,'num',true)}
-      ${TH('Bott. 2025','fv-tbl',7,'num',true)}
-      ${TH('Var Bt','fv-tbl',8,'num',true)}
-      ${TH('PM 2026','fv-tbl',9,'num',true)}
+      <th onclick="sortT('fv-tbl',0,'str')"><div class="thi"><span>Cliente</span><span class="si"></span></div></th>
+      <th onclick="sortT('fv-tbl',1,'str')"><div class="thi"><span>Agente</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',2,'num')"><div class="thi"><span>Fatt. 2026</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',3,'num')"><div class="thi"><span>Fatt. 2025</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',4,'num')"><div class="thi"><span>Var €</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',5,'pct')"><div class="thi"><span>Var %</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',6,'num')"><div class="thi"><span>Bott. 2026</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',7,'num')"><div class="thi"><span>Bott. 2025</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',8,'num')"><div class="thi"><span>Var Bt</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',9,'num')"><div class="thi"><span>PM 2026</span><span class="si"></span></div></th>
     </tr>`;
     rows=data.map(c=>{
       const d=c.v25>0&&c.v26>0?((c.v26-c.v25)/c.v25)*100:null;
@@ -468,15 +469,15 @@ function buildFVContent(type,data,title){
     </tr>`;
   } else if(type==='calo'){
     thead=`<tr>
-      ${TH('Cliente','fv-tbl',0,'str',false)}
-      ${TH('Agente','fv-tbl',1,'str',false)}
-      ${TH('Fatt. 2025','fv-tbl',2,'num',true)}
-      ${TH('Fatt. 2026','fv-tbl',3,'num',true)}
-      ${TH('Var €','fv-tbl',4,'num',true)}
-      ${TH('Var %','fv-tbl',5,'pct',true)}
-      ${TH('Bott. 2025','fv-tbl',6,'num',true)}
-      ${TH('Bott. 2026','fv-tbl',7,'num',true)}
-      ${TH('Var Bt','fv-tbl',8,'num',true)}
+      <th onclick="sortT('fv-tbl',0,'str')"><div class="thi"><span>Cliente</span><span class="si"></span></div></th>
+      <th onclick="sortT('fv-tbl',1,'str')"><div class="thi"><span>Agente</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',2,'num')"><div class="thi"><span>Fatt. 2025</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',3,'num')"><div class="thi"><span>Fatt. 2026</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',4,'num')"><div class="thi"><span>Var €</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',5,'pct')"><div class="thi"><span>Var %</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',6,'num')"><div class="thi"><span>Bott. 2025</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',7,'num')"><div class="thi"><span>Bott. 2026</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',8,'num')"><div class="thi"><span>Var Bt</span><span class="si"></span></div></th>
     </tr>`;
     rows=data.map(c=>{
       const d=c.v25>0?((c.v26-c.v25)/c.v25)*100:-100;
@@ -502,16 +503,16 @@ function buildFVContent(type,data,title){
   } else {
     // assenti — colonne uniformi, delta -100% in rosso
     thead=`<tr>
-      ${TH('Cliente','fv-tbl',0,'str',false)}
-      ${TH('Agente','fv-tbl',1,'str',false)}
-      ${TH('Fatt. 2026','fv-tbl',2,'num',true)}
-      ${TH('Fatt. 2025','fv-tbl',3,'num',true)}
-      ${TH('Var €','fv-tbl',4,'num',true)}
-      ${TH('Var %','fv-tbl',5,'pct',true)}
-      ${TH('Bott. 2026','fv-tbl',6,'num',true)}
-      ${TH('Bott. 2025','fv-tbl',7,'num',true)}
-      ${TH('Var Bt','fv-tbl',8,'num',true)}
-      ${TH('PM 2026','fv-tbl',9,'num',true)}
+      <th onclick="sortT('fv-tbl',0,'str')"><div class="thi"><span>Cliente</span><span class="si"></span></div></th>
+      <th onclick="sortT('fv-tbl',1,'str')"><div class="thi"><span>Agente</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',2,'num')"><div class="thi"><span>Fatt. 2026</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',3,'num')"><div class="thi"><span>Fatt. 2025</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',4,'num')"><div class="thi"><span>Var €</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',5,'pct')"><div class="thi"><span>Var %</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',6,'num')"><div class="thi"><span>Bott. 2026</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',7,'num')"><div class="thi"><span>Bott. 2025</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',8,'num')"><div class="thi"><span>Var Bt</span><span class="si"></span></div></th>
+      <th class="thr" onclick="sortT('fv-tbl',9,'num')"><div class="thi"><span>PM 2026</span><span class="si"></span></div></th>
     </tr>`;
     rows=data.map(c=>`<tr class="dr clik" onclick="openClienteInFV('${ESC(c.nome)}')">
       <td><span class="cn">${c.nome}</span></td>
@@ -1011,7 +1012,7 @@ function gen(){
     agentiHtml=`<div class="section"><div class="card">
       <div class="card-head"><h3>Riepilogo per Agente</h3><span>${agList.length} agenti · clicca riga per scheda agente</span></div>
       <div class="tbl-wrap"><table id="tbl-ag">
-        <thead><tr>${TH('Agente','tbl-ag',0,'str',false)}${TH(`Fatt. ${anno}`,'tbl-ag',1,'num',true)}${TH('Bott.','tbl-ag',2,'num',true)}${TH('PM','tbl-ag',3,'num',true)}${TH(`Fatt. ${ap}`,'tbl-ag',4,'num',true)}${TH('Var €','tbl-ag',5,'num',true)}${TH('Var Bt','tbl-ag',6,'num',true)}${TH('Var %','tbl-ag',7,'pct',true)}</tr></thead>
+        <thead><tr><th onclick="sortT('tbl-ag',0,'str')"><div class="thi"><span>Agente</span><span class="si"></span></div></th>${TH(`Fatt. ${anno}`,'tbl-ag',1,'num',true)}<th class="thr" onclick="sortT('tbl-ag',2,'num')"><div class="thi"><span>Bott.</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ag',3,'num')"><div class="thi"><span>PM</span><span class="si"></span></div></th>${TH(`Fatt. ${ap}`,'tbl-ag',4,'num',true)}<th class="thr" onclick="sortT('tbl-ag',5,'num')"><div class="thi"><span>Var €</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ag',6,'num')"><div class="thi"><span>Var Bt</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ag',7,'pct')"><div class="thi"><span>Var %</span><span class="si"></span></div></th></tr></thead>
         <tbody>${agList.map(a=>`<tr class="dr clik" onclick="openAgentePanel('${ESC(a.ag)}')">
           <td style="font-weight:600">${a.ag}</td>
           <td class="r" style="font-weight:700">${EUR(a.imp)}</td><td class="r">${NUM(a.pz)}</td><td class="r">${EUR(a.pm)}</td>
@@ -1068,7 +1069,7 @@ function gen(){
   <div class="section"><div class="card">
     <div class="card-head"><h3>Referenze — Rotazione Bottiglie</h3><span>${topRef.length} tipologie · trascina bordo per allargare</span></div>
     <div class="tbl-wrap"><table id="tbl-ref">
-      <thead><tr>${TH('Tipologia','tbl-ref',0,'str',false)}${TH('Bottiglie','tbl-ref',1,'num',true)}${TH('Fatturato','tbl-ref',2,'num',true)}${TH('PM','tbl-ref',3,'num',true)}${TH('Clienti','tbl-ref',4,'num',true)}<th><div class="thi">Rotazione</div></th></tr></thead>
+      <thead><tr><th onclick="sortT('tbl-ref',0,'str')"><div class="thi"><span>Tipologia</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ref',1,'num')"><div class="thi"><span>Bottiglie</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ref',2,'num')"><div class="thi"><span>Fatturato</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ref',3,'num')"><div class="thi"><span>PM</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-ref',4,'num')"><div class="thi"><span>Clienti</span><span class="si"></span></div></th><th><div class="thi">Rotazione</div></th></tr></thead>
       <tbody>${topRef.map(r=>`<tr class="dr"><td style="font-weight:600">${r.tip}</td><td class="r">${NUM(r.pz)}</td><td class="r">${EUR(r.imp)}</td><td class="r">${EUR(r.pz>0?r.imp/r.pz:0)}</td><td class="r">${r.cli.size}</td>
         <td><div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:5px;background:#ede9e9;border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--wine);border-radius:3px;width:${Math.round(r.pz/maxRef*100)}%"></div></div><span style="font-size:10px;color:var(--muted);min-width:24px">${Math.round(r.pz/maxRef*100)}%</span></div></td>
       </tr>`).join('')}</tbody>
@@ -1077,7 +1078,7 @@ function gen(){
   ${accs.length>0?`<div class="section"><div class="card">
     <div class="card-head"><h3>Note di Accredito / Resi</h3><span>${accs.length} doc · Totale: ${EUR(K.acc)}</span></div>
     <div class="tbl-wrap"><table id="tbl-acc">
-      <thead><tr>${TH('Cliente','tbl-acc',0,'str',false)}${TH('Articolo','tbl-acc',1,'str',false)}${TH('Tipo','tbl-acc',2,'str',false)}${TH('Importo','tbl-acc',3,'num',true)}</tr></thead>
+      <thead><tr><th onclick="sortT('tbl-acc',0,'str')"><div class="thi"><span>Cliente</span><span class="si"></span></div></th><th onclick="sortT('tbl-acc',1,'str')"><div class="thi"><span>Articolo</span><span class="si"></span></div></th><th onclick="sortT('tbl-acc',2,'str')"><div class="thi"><span>Tipo</span><span class="si"></span></div></th><th class="thr" onclick="sortT('tbl-acc',3,'num')"><div class="thi"><span>Importo</span><span class="si"></span></div></th></tr></thead>
       <tbody>${accs.map(r=>`<tr class="acc-row dr"><td style="font-weight:600">${r.cliente}</td><td>${r.articolo||'N/D'}</td><td>${r.tipoDoc}</td><td class="r" style="font-weight:700">${EUR(r.importo)}</td></tr>`).join('')}</tbody>
     </table></div>
   </div></div>`:''}`;
