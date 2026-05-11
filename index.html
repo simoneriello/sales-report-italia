@@ -272,7 +272,7 @@ tr.total-row td:first-child{color:var(--wine);text-transform:uppercase;letter-sp
 
 <div id="upload-screen">
   <div class="brand-hero">Mosnel<small>Sales Intelligence</small></div>
-  <div class="drop-zone" onclick="document.getElementById('fi').click()">
+  <div class="drop-zone" id="drop-zone">
     <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
     <h3>Carica file vendite</h3>
     <p>Seleziona il file Excel dal gestionale<br><small style="color:#c0392b;font-weight:600">⚠ Elimina righe 35698 e 35702 prima di caricare</small></p>
@@ -702,6 +702,8 @@ function fvGoBack(){
 }
 
 // FILE LOAD
+document.getElementById('drop-zone').addEventListener('click',function(){document.getElementById('fi').click();});
+
 document.getElementById('fi').addEventListener('change',function(e){
   const f=e.target.files[0];if(!f)return;
   document.getElementById('pw').style.display='block';
