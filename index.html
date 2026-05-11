@@ -76,7 +76,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 .kpi-card{background:white;border:1px solid var(--border);border-radius:10px;padding:16px}
 .kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px;letter-spacing:0.5px}
-.kpi-value{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;color:var(--wine);line-height:1.2}
+.kpi-value{font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:700;color:var(--wine);line-height:1.2;letter-spacing:-0.02em}
 .kpi-sub{font-size:11px;color:var(--muted);margin-top:6px}
 .badge{display:inline-block;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700}
 .badge-up{background:#dcfce7;color:var(--green)}
@@ -98,7 +98,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .summ-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
 .summ-top h4{font-size:13px;font-weight:600}
 .summ-arrow{font-size:18px;opacity:0.4}
-.summ-num{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:var(--wine);line-height:1;margin-bottom:4px}
+.summ-num{font-family:'DM Sans',sans-serif;font-size:2.2rem;font-weight:700;color:var(--wine);line-height:1;margin-bottom:6px;letter-spacing:-0.02em}
 .summ-delta{font-size:11px;color:var(--muted);font-weight:600}
 .summ-delta .delta-val{color:var(--ink);font-weight:700}
 
@@ -146,7 +146,7 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 .fv-bar button.fv-exp{background:white;color:var(--wine);border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif}
 .fv-bar button.fv-exp:hover{background:#f9f0e8}
 #fv-body{flex:1;overflow-y:auto;padding:24px}
-.fv-title{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;color:var(--wine);margin-bottom:4px}
+.fv-title{font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;color:var(--wine);margin-bottom:4px;letter-spacing:-0.02em}
 .fv-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
 
 .invoice-list{margin-top:16px}
@@ -255,9 +255,23 @@ var REFERENZE = [
 
 function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
 function EUR0(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0}).format(n); }
+function EURsign(n) {
+  if (n === 0) return EUR(0);
+  var formatted = new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(Math.abs(n));
+  return (n >= 0 ? '+' : '-') + formatted;
+}
 function NUM(n) { return new Intl.NumberFormat('it-IT').format(Math.round(n)); }
+function NUMsign(n) {
+  if (n === 0) return '0';
+  var formatted = new Intl.NumberFormat('it-IT').format(Math.abs(Math.round(n)));
+  return (n >= 0 ? '+' : '-') + formatted;
+}
 function PCT(n) { if (!isFinite(n)) return '0,00%'; return new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n) + '%'; }
-function PCTsign(n) { if (!isFinite(n)) return '0,00%'; var s = n>=0?'+':''; return s + new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n) + '%'; }
+function PCTsign(n) {
+  if (!isFinite(n) || n === 0) return '0,00%';
+  var s = n >= 0 ? '+' : '-';
+  return s + new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(Math.abs(n)) + '%';
+}
 function PM(tot, btl) { return btl > 0 ? tot / btl : 0; }
 function escapeHTML(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
@@ -322,11 +336,16 @@ function cleanData(raw) {
     var tipoDoc = String(r.Tipo_Doc || '').trim();
     var tipoRiga = (tipoDoc === 'N.Acc.' || tipoDoc === 'F.Acc.') ? 'Accredito' : 'Vendita';
     
+    var citta = String(r.Citta || r.Città || r.Comune || r.Localita || r.Località || '').trim();
+    var prov = String(r.Prov || r.Provincia || r.Sigla_Provincia || '').trim();
+    
     result.push({
       anno: anno,
       mese: mese,
       agente: agente,
       cliente: String(r.Ragione_Sociale || '').trim(),
+      citta: citta,
+      prov: prov,
       pezzi: parseFloat(r.Qta_Pezzi) || 0,
       importo: parseFloat(r.Importo_Netto) || 0,
       tipoRiga: tipoRiga,
@@ -406,7 +425,7 @@ function calcolaDati(dati, anno, periodo) {
     fatturato += vend[i].importo;
     bottiglie += vend[i].pezzi;
     var c = vend[i].cliente;
-    if (!clienti[c]) clienti[c] = { fatt: 0, btl: 0, ordini: 0, agente: vend[i].agente };
+    if (!clienti[c]) clienti[c] = { fatt: 0, btl: 0, ordini: 0, agente: vend[i].agente, citta: vend[i].citta, prov: vend[i].prov };
     clienti[c].fatt += vend[i].importo;
     clienti[c].btl += vend[i].pezzi;
     clienti[c].ordini++;
@@ -493,11 +512,14 @@ function generaReport() {
   var keys = Object.keys(tutti);
   for (var i = 0; i < keys.length; i++) {
     var c = keys[i];
-    var c26 = d26.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '' };
-    var c25 = d25.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '' };
+    var c26 = d26.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '', citta: '', prov: '' };
+    var c25 = d25.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '', citta: '', prov: '' };
     var agente = c26.agente || c25.agente || '';
+    var citta = c26.citta || c25.citta || '';
+    var prov = c26.prov || c25.prov || '';
+    var cittaFull = citta + (prov ? ' (' + prov + ')' : '');
     listaClienti.push({
-      nome: c, agente: agente,
+      nome: c, agente: agente, citta: cittaFull,
       f26: c26.fatt, f25: c25.fatt,
       b26: c26.btl, b25: c25.btl,
       pm26: PM(c26.fatt, c26.btl), pm25: PM(c25.fatt, c25.btl),
@@ -540,10 +562,10 @@ function renderReport() {
   html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button></div></div>';
   
   html += '<div class="kpi-row">';
-  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglie) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglie) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + ' ' + r.annoP + '</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + '</div><div class="kpi-sub"><span class="' + (r.d26.fatturato-r.d25.fatturato>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.fatturato-r.d25.fatturato) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglie) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglie) + '</div><div class="kpi-sub"><span class="' + (r.d26.bottiglie-r.d25.bottiglie>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglie-r.d25.bottiglie) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + '</div><div class="kpi-sub"><span class="' + (r.d26.ordini-r.d25.ordini>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.ordini-r.d25.ordini) + '</span></div></div>';
   html += '</div>';
   
   // Grafico andamento mensile
@@ -586,7 +608,7 @@ function renderReport() {
     var pctTot = r.d26.bottiglie > 0 ? (r26.btl / r.d26.bottiglie) * 100 : 0;
     html += '<div class="ref-card">';
     html += '<div class="ref-name">' + escapeHTML(name) + '</div>';
-    html += '<div class="ref-val">' + NUM(r26.btl) + ' btl</div>';
+    html += '<div class="ref-val">' + NUM(r26.btl) + ' bott.</div>';
     html += '<div class="ref-meta">' + EUR(r26.fatt) + '<br>';
     html += pctTot.toFixed(2).replace('.', ',') + '% sul tot · ';
     html += '<span class="' + (dRef>=0?'text-green':'text-red') + '">' + PCTsign(dRef) + '</span> vs ' + r.annoP;
@@ -607,7 +629,7 @@ function buildSummBlock(color, label, count, delta, type, enabled) {
   html += '<div class="summ-num">' + count + '</div>';
   if (count > 0) {
     var deltaClass = delta >= 0 ? 'text-green' : 'text-red';
-    html += '<div class="summ-delta">Var €: <span class="delta-val ' + deltaClass + '">' + EUR(delta) + '</span></div>';
+    html += '<div class="summ-delta">Var €: <span class="delta-val ' + deltaClass + '">' + EURsign(delta) + '</span></div>';
   }
   html += '</div>';
   return html;
@@ -621,30 +643,68 @@ function buildChart(t26, t25, anno, annoP) {
   }
   if (maxV === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
   
-  var w = 760, h = 220, padL = 50, padR = 20, padT = 10, padB = 30;
+  var w = 760, h = 240, padL = 56, padR = 20, padT = 20, padB = 40;
   var cw = w - padL - padR;
   var ch = h - padT - padB;
-  var bw = cw / 12;
+  var step = cw / 11; // 11 intervalli tra 12 mesi
   
-  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:280px">';
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:320px">';
   
-  // gridlines
+  // gridlines orizzontali
   for (var i = 0; i <= 4; i++) {
     var y = padT + (ch * i / 4);
     var val = maxV * (4 - i) / 4;
     svg += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="#e8dede" stroke-width="1"/>';
-    svg += '<text x="' + (padL - 5) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#7a6b6c">' + (val >= 1000 ? Math.round(val/1000) + 'k' : Math.round(val)) + '</text>';
+    var lbl = val >= 1000000 ? (val/1000000).toFixed(1) + 'M' : (val >= 1000 ? Math.round(val/1000) + 'k' : Math.round(val));
+    svg += '<text x="' + (padL - 8) + '" y="' + (y + 3) + '" text-anchor="end" font-size="10" fill="#7a6b6c">' + lbl + '</text>';
   }
   
-  // bars
+  // Asse X labels
   for (var m = 1; m <= 12; m++) {
-    var x = padL + (m - 1) * bw + 4;
-    var bwHalf = (bw - 8) / 2;
-    var h25 = (t25[m] / maxV) * ch;
-    var h26 = (t26[m] / maxV) * ch;
-    svg += '<rect x="' + x + '" y="' + (padT + ch - h25) + '" width="' + bwHalf + '" height="' + h25 + '" fill="#C9A84C" opacity="0.8"/>';
-    svg += '<rect x="' + (x + bwHalf) + '" y="' + (padT + ch - h26) + '" width="' + bwHalf + '" height="' + h26 + '" fill="#722F37"/>';
-    svg += '<text x="' + (x + bwHalf) + '" y="' + (h - 10) + '" text-anchor="middle" font-size="10" fill="#7a6b6c">' + meseAbbr(m) + '</text>';
+    var x = padL + (m - 1) * step;
+    svg += '<text x="' + x + '" y="' + (h - 18) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
+  }
+  
+  // Linea 2025 (oro tratteggiata)
+  var pts25 = [];
+  for (var m = 1; m <= 12; m++) {
+    var x = padL + (m - 1) * step;
+    var y = padT + ch - ((t25[m] / maxV) * ch);
+    pts25.push(x + ',' + y);
+  }
+  svg += '<polyline points="' + pts25.join(' ') + '" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-dasharray="6,4"/>';
+  
+  // Punti 2025
+  for (var m = 1; m <= 12; m++) {
+    if (t25[m] === 0) continue;
+    var x = padL + (m - 1) * step;
+    var y = padT + ch - ((t25[m] / maxV) * ch);
+    svg += '<circle cx="' + x + '" cy="' + y + '" r="3.5" fill="#C9A84C" stroke="white" stroke-width="1.5"/>';
+  }
+  
+  // Linea 2026 (bordeaux piena)
+  var pts26 = [];
+  var lastMese26 = 0;
+  for (var m = 1; m <= 12; m++) {
+    if (t26[m] > 0 || m === 1) {
+      var x = padL + (m - 1) * step;
+      var y = padT + ch - ((t26[m] / maxV) * ch);
+      pts26.push(x + ',' + y);
+      if (t26[m] > 0) lastMese26 = m;
+    } else if (m > lastMese26) {
+      break;
+    }
+  }
+  if (pts26.length > 1) {
+    svg += '<polyline points="' + pts26.join(' ') + '" fill="none" stroke="#722F37" stroke-width="3"/>';
+  }
+  
+  // Punti 2026
+  for (var m = 1; m <= 12; m++) {
+    if (t26[m] === 0) continue;
+    var x = padL + (m - 1) * step;
+    var y = padT + ch - ((t26[m] / maxV) * ch);
+    svg += '<circle cx="' + x + '" cy="' + y + '" r="4" fill="#722F37" stroke="white" stroke-width="2"/>';
   }
   
   svg += '</svg>';
@@ -701,10 +761,10 @@ function renderFVLista(state) {
   var html = '<div class="fv-title">' + escapeHTML(title) + '</div><div class="fv-sub">' + escapeHTML(lastReport.vista) + ' · ' + escapeHTML(lastReport.periodo.label) + ' · ' + data.length + ' clienti</div>';
   
   html += '<div class="kpi-row">';
-  html += '<div class="kpi-card"><div class="kpi-label">Fatturato 2026</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie 2026</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Var €</div><div class="kpi-value ' + (f26-f25>=0?'text-green':'text-red') + '">' + EUR(f26 - f25) + '</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatturato 2026</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + '</div><div class="kpi-sub"><span class="' + (f26-f25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(f26-f25) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie 2026</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + '</div><div class="kpi-sub"><span class="' + (b26-b25>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26-b25) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Clienti</div><div class="kpi-value">' + data.length + '</div><div class="kpi-sub">in questa lista</div></div>';
   html += '</div>';
   
   html += buildTable(data, 'fv-tbl', f26, f25, b26, b25);
@@ -794,10 +854,10 @@ function renderFVCliente(state) {
   html += '<div class="fv-sub">' + (agente ? escapeHTML(agente) + ' · ' : '') + escapeHTML(lastReport.periodo.label) + '</div>';
   
   html += '<div class="kpi-row">';
-  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + anno + '</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + ' <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + anno + '</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + ' <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + ' <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Var €</div><div class="kpi-value ' + (f26-f25>=0?'text-green':'text-red') + '">' + EUR(f26 - f25) + '</div><div class="kpi-sub">' + fattureArr.length + ' fatture</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + anno + '</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + '</div><div class="kpi-sub"><span class="' + (f26-f25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(f26-f25) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + anno + '</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + '</div><div class="kpi-sub"><span class="' + (b26-b25>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26-b25) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Fatture ' + anno + '</div><div class="kpi-value">' + fattureArr.length + '</div><div class="kpi-sub">documenti emessi</div></div>';
   html += '</div>';
   
   // Referenze cliente
@@ -813,7 +873,7 @@ function renderFVCliente(state) {
     var pctTot = b26 > 0 ? (r26.btl / b26) * 100 : 0;
     html += '<div class="ref-card">';
     html += '<div class="ref-name">' + escapeHTML(name) + '</div>';
-    html += '<div class="ref-val">' + NUM(r26.btl) + ' btl</div>';
+    html += '<div class="ref-val">' + NUM(r26.btl) + ' bott.</div>';
     html += '<div class="ref-meta">' + EUR(r26.fatt) + '<br>';
     html += pctTot.toFixed(2).replace('.', ',') + '% · ';
     html += '<span class="' + (dRef>=0?'text-green':'text-red') + '">' + PCTsign(dRef) + '</span> vs ' + annoP;
@@ -849,14 +909,15 @@ function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
   var html = '<div class="table-wrap"><div class="table-scroll"><table id="' + tblId + '">';
   html += '<thead><tr>';
   html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="1" data-type="str">Agente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="2" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="6" data-type="num" class="text-right">Btl. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="7" data-type="num" class="text-right">Btl. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+  html += '<th data-col="1" data-type="str">Città <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="2" data-type="str">Agente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="4" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="5" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="6" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="7" data-type="num" class="text-right">Bott. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="8" data-type="num" class="text-right">Bott. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="9" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
   html += '</tr></thead><tbody>';
   
   for (var i = 0; i < data.length; i++) {
@@ -867,10 +928,11 @@ function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
     
     html += '<tr>';
     html += '<td>' + escapeHTML(c.nome) + '</td>';
+    html += '<td class="text-muted">' + escapeHTML(c.citta || '') + '</td>';
     html += '<td class="text-muted">' + escapeHTML(c.agente) + '</td>';
     html += '<td class="text-right">' + EUR(c.f26) + '</td>';
     html += '<td class="text-right">' + EUR(c.f25) + '</td>';
-    html += '<td class="text-right ' + varColor + '">' + EUR(varV) + '</td>';
+    html += '<td class="text-right ' + varColor + '">' + EURsign(varV) + '</td>';
     html += '<td class="text-right ' + varColor + '">' + PCTsign(varP) + '</td>';
     html += '<td class="text-right">' + NUM(c.b26) + '</td>';
     html += '<td class="text-right">' + NUM(c.b25) + '</td>';
@@ -886,9 +948,10 @@ function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
   html += '<tr class="tot-row">';
   html += '<td>TOTALE</td>';
   html += '<td></td>';
+  html += '<td></td>';
   html += '<td class="text-right">' + EUR(totF26) + '</td>';
   html += '<td class="text-right">' + EUR(totF25) + '</td>';
-  html += '<td class="text-right ' + totColor + '">' + EUR(totVarV) + '</td>';
+  html += '<td class="text-right ' + totColor + '">' + EURsign(totVarV) + '</td>';
   html += '<td class="text-right ' + totColor + '">' + PCTsign(totVarP) + '</td>';
   html += '<td class="text-right">' + NUM(totB26) + '</td>';
   html += '<td class="text-right">' + NUM(totB25) + '</td>';
@@ -1059,12 +1122,12 @@ function exportFVExcel() {
   }
   if (!window._fvData || !window._fvData.length) return;
   var wb = XLSX.utils.book_new();
-  var headers = ['Cliente', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Btl. 2026', 'Btl. 2025', 'PM 2026'];
+  var headers = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 2026', 'Bott. 2025', 'PM 2026'];
   var rows = [headers];
   for (var i = 0; i < window._fvData.length; i++) {
     var c = window._fvData[i];
     var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-    rows.push([c.nome, c.agente, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(2) + '%', c.b26, c.b25, c.pm26]);
+    rows.push([c.nome, c.citta || '', c.agente, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(2) + '%', c.b26, c.b25, c.pm26]);
   }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Clienti');
   saveXlsx(wb, 'Mosnel_' + (window._fvTitle || 'Lista') + '.xlsx');
@@ -1102,32 +1165,71 @@ function exportFVPdf() {
   }
   if (!window._fvData) return;
   var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var pageW = 297, margin = 14;
+  
+  // Header bordeaux
+  doc.setFillColor(114, 47, 55);
+  doc.rect(0, 0, pageW, 24, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.setTextColor(114, 47, 55);
-  doc.text('Mosnel — ' + window._fvTitle, 14, 18);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Mosnel — ' + window._fvTitle, margin, 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text(lastReport.vista + ' · ' + lastReport.periodo.label, 14, 24);
+  doc.setTextColor(201, 168, 76);
+  doc.text(lastReport.vista + ' · ' + lastReport.periodo.label + ' · ' + window._fvData.length + ' clienti', margin, 19);
   
-  var headers = [['Cliente', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Btl. 26', 'Btl. 25', 'PM 26']];
-  var body = [];
+  // KPI riassuntivi
   var totF26 = 0, totF25 = 0, totB26 = 0, totB25 = 0;
   for (var i = 0; i < window._fvData.length; i++) {
     var c = window._fvData[i];
-    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-    body.push([c.nome, c.agente, EUR(c.f26), EUR(c.f25), EUR(c.f26-c.f25), PCTsign(varP), NUM(c.b26), NUM(c.b25), EUR(c.pm26)]);
     totF26 += c.f26; totF25 += c.f25; totB26 += c.b26; totB25 += c.b25;
   }
-  body.push(['TOTALE', '', EUR(totF26), EUR(totF25), EUR(totF26-totF25), PCTsign(totF25>0?((totF26-totF25)/totF25)*100:0), NUM(totB26), NUM(totB25), EUR(PM(totF26,totB26))]);
+  var pm26 = PM(totF26, totB26), pm25 = PM(totF25, totB25);
+  var dF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
+  var dB = totB25 > 0 ? ((totB26 - totB25) / totB25) * 100 : 0;
+  var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
   doc.autoTable({
-    head: headers, body: body, startY: 30,
+    head: [['Indicatore', '2026', '2025', 'Var', 'Var %']],
+    body: [
+      ['Fatturato', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF)],
+      ['Bottiglie', NUM(totB26), NUM(totB25), NUMsign(totB26-totB25), PCTsign(dB)],
+      ['Prezzo Medio', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)]
+    ],
+    startY: 28,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 8 },
-    foot: [], styles: { cellPadding: 2 }
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+    margin: { left: margin, right: margin }
+  });
+  
+  var y = doc.lastAutoTable.finalY + 6;
+  
+  var headers = [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
+  var body = [];
+  for (var i = 0; i < window._fvData.length; i++) {
+    var c = window._fvData[i];
+    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26), NUM(c.b25), EUR(c.pm26)]);
+  }
+  body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF), NUM(totB26), NUM(totB25), EUR(pm26)]);
+  
+  doc.autoTable({
+    head: headers, body: body, startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+    bodyStyles: { fontSize: 7 },
+    columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+    styles: { cellPadding: 1.8 },
+    margin: { left: margin, right: margin },
+    didParseCell: function(data) {
+      if (data.section === 'body' && data.row.index === body.length - 1) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [240, 230, 230];
+      }
+    }
   });
   
   doc.save('Mosnel_' + window._fvTitle + '.pdf');
@@ -1146,6 +1248,21 @@ function exportClientePdf(nome) {
   var f26=0,b26=0,f25=0,b25=0;
   for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; }
   for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; }
+  var pm26 = PM(f26, b26), pm25 = PM(f25, b25);
+  var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
+  var dB = b25 > 0 ? ((b26 - b25) / b25) * 100 : 0;
+  var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
+  
+  // Agente e città
+  var agente = '', citta = '', prov = '';
+  for (var i = 0; i < v26.length; i++) { if (v26[i].agente) { agente = v26[i].agente; citta = v26[i].citta; prov = v26[i].prov; break; } }
+  if (!agente) for (var i = 0; i < v25.length; i++) { if (v25[i].agente) { agente = v25[i].agente; citta = v25[i].citta; prov = v25[i].prov; break; } }
+  
+  // Referenze
+  var refs26 = calcolaReferenze(v26);
+  var refs25 = calcolaReferenze(v25);
+  
+  // Fatture
   var fatture = {};
   for (var i = 0; i < v26.length; i++) {
     var key = v26[i].numDoc + '|' + v26[i].dataStr;
@@ -1156,31 +1273,113 @@ function exportClientePdf(nome) {
   var arr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
   
   var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  var pageW = 210, pageH = 297, margin = 14;
+  
+  // Header bordeaux
+  doc.setFillColor(114, 47, 55);
+  doc.rect(0, 0, pageW, 28, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(114, 47, 55);
-  doc.text('Mosnel — ' + nome, 14, 18);
+  doc.setFontSize(15);
+  doc.setTextColor(255, 255, 255);
+  var nomeShort = nome.length > 60 ? nome.substr(0, 58) + '..' : nome;
+  doc.text(nomeShort, margin, 13);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text(lastReport.periodo.label, 14, 24);
+  doc.setFontSize(9);
+  doc.setTextColor(201, 168, 76);
+  var subtitle = '';
+  if (citta) subtitle += citta + (prov ? ' (' + prov + ')' : '') + ' · ';
+  if (agente) subtitle += agente + ' · ';
+  subtitle += lastReport.periodo.label;
+  doc.text(subtitle, margin, 20);
+  doc.text('Cliente Mosnel · ' + anno + ' vs ' + annoP, margin, 25);
   
-  doc.setFontSize(11);
-  doc.setTextColor(0);
-  doc.text('Fatturato ' + anno + ': ' + EUR(f26) + ' (vs ' + EUR(f25) + ')', 14, 34);
-  doc.text('Bottiglie ' + anno + ': ' + NUM(b26) + ' (vs ' + NUM(b25) + ')', 14, 40);
-  doc.text('Prezzo medio ' + anno + ': ' + EUR(PM(f26,b26)), 14, 46);
+  var y = 36;
   
-  var body = [];
-  for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), EUR(arr[i].importo)]);
-  body.push(['TOTALE', '', NUM(b26), EUR(f26)]);
-  
+  // KPI riepilogo
   doc.autoTable({
-    head: [['Data', 'N. Doc', 'Bottiglie', 'Importo']], body: body, startY: 54,
-    theme: 'striped',
-    headStyles: { fillColor: [114, 47, 55], textColor: 255 },
-    bodyStyles: { fontSize: 9 }
+    head: [['Indicatore', anno.toString(), annoP.toString(), 'Var', 'Var %']],
+    body: [
+      ['Fatturato', EUR(f26), EUR(f25), EURsign(f26-f25), PCTsign(dF)],
+      ['Bottiglie', NUM(b26), NUM(b25), NUMsign(b26-b25), PCTsign(dB)],
+      ['Prezzo Medio', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)],
+      ['Fatture', arr.length.toString(), '', '', '']
+    ],
+    startY: y, theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+    margin: { left: margin, right: margin }
   });
+  y = doc.lastAutoTable.finalY + 8;
+  
+  // Referenze
+  if (b26 > 0 || b25 > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(114, 47, 55);
+    doc.text('Rotazione referenze ' + anno, margin, y);
+    y += 4;
+    
+    var refRows = [];
+    var refNames = REFERENZE.map(function(x) { return x.name; });
+    refNames.push('Altro');
+    for (var i = 0; i < refNames.length; i++) {
+      var name = refNames[i];
+      var r26v = refs26[name] || { fatt: 0, btl: 0 };
+      var r25v = refs25[name] || { fatt: 0, btl: 0 };
+      if (r26v.btl === 0 && r25v.btl === 0) continue;
+      var dRef = r25v.btl > 0 ? ((r26v.btl - r25v.btl) / r25v.btl) * 100 : 0;
+      var pctTot = b26 > 0 ? (r26v.btl / b26) * 100 : 0;
+      refRows.push([name, NUM(r26v.btl), EUR(r26v.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+    }
+    if (refRows.length) {
+      doc.autoTable({
+        head: [['Referenza', 'Bott.', 'Fatturato', '% sul tot', 'Var % vs ' + annoP]],
+        body: refRows, startY: y,
+        theme: 'striped',
+        headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+        bodyStyles: { fontSize: 9 },
+        columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+        margin: { left: margin, right: margin }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+  }
+  
+  // Fatture
+  if (arr.length) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(114, 47, 55);
+    doc.text('Fatture ' + anno + ' (' + arr.length + ')', margin, y);
+    y += 4;
+    
+    var body = [];
+    for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), EUR(arr[i].importo)]);
+    body.push(['TOTALE', '', NUM(b26), EUR(f26)]);
+    
+    doc.autoTable({
+      head: [['Data', 'N. Doc', 'Bottiglie', 'Importo']], body: body, startY: y,
+      theme: 'striped',
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } },
+      margin: { left: margin, right: margin },
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.row.index === body.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [240, 230, 230];
+        }
+      }
+    });
+  }
+  
+  // Footer
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text('Mosnel Sales Intelligence · generato ' + new Date().toLocaleDateString('it-IT'), margin, pageH - 8);
   
   doc.save('Mosnel_Cliente_' + nome.substr(0,30) + '.pdf');
 }
@@ -1200,14 +1399,14 @@ function exportReportExcel() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPI');
   
   // Liste
-  var headers = ['Cliente', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Btl. 2026', 'Btl. 2025', 'PM 2026'];
+  var headers = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 2026', 'Bott. 2025', 'PM 2026'];
   
   function makeRows(arr) {
     var rows = [headers];
     for (var i = 0; i < arr.length; i++) {
       var c = arr[i];
       var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-      rows.push([c.nome, c.agente, c.f26, c.f25, c.f26-c.f25, varP.toFixed(2)+'%', c.b26, c.b25, c.pm26]);
+      rows.push([c.nome, c.citta || '', c.agente, c.f26, c.f25, c.f26-c.f25, varP.toFixed(2)+'%', c.b26, c.b25, c.pm26]);
     }
     return rows;
   }
@@ -1224,28 +1423,204 @@ function exportReportPdf() {
   if (!lastReport) return;
   var r = lastReport;
   var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  var pageW = 210;
+  var margin = 14;
+  
+  // Header
+  doc.setFillColor(114, 47, 55);
+  doc.rect(0, 0, pageW, 28, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.setTextColor(114, 47, 55);
-  doc.text('Mosnel — ' + r.vista, 14, 18);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Mosnel — ' + r.vista, margin, 14);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text(r.anno + ' vs ' + r.annoP + ' · ' + r.periodo.label, 14, 24);
+  doc.setTextColor(201, 168, 76);
+  doc.text(r.anno + ' vs ' + r.annoP + ' · ' + r.periodo.label, margin, 22);
+  
+  var y = 36;
+  
+  // KPI cards in griglia 2x2
+  var dF = r.d25.fatturato > 0 ? ((r.d26.fatturato - r.d25.fatturato) / r.d25.fatturato) * 100 : 0;
+  var dB = r.d25.bottiglie > 0 ? ((r.d26.bottiglie - r.d25.bottiglie) / r.d25.bottiglie) * 100 : 0;
+  var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(114, 47, 55);
+  doc.text('Indicatori chiave', margin, y);
+  y += 4;
   
   var kpi = [
-    ['Fatturato', EUR(r.d26.fatturato), EUR(r.d25.fatturato), EUR(r.d26.fatturato-r.d25.fatturato), PCTsign(r.d25.fatturato>0?((r.d26.fatturato-r.d25.fatturato)/r.d25.fatturato)*100:0)],
-    ['Bottiglie', NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUM(r.d26.bottiglie-r.d25.bottiglie), PCTsign(r.d25.bottiglie>0?((r.d26.bottiglie-r.d25.bottiglie)/r.d25.bottiglie)*100:0)],
-    ['Prezzo Medio', EUR(r.d26.pm), EUR(r.d25.pm), EUR(r.d26.pm-r.d25.pm), PCTsign(r.d25.pm>0?((r.d26.pm-r.d25.pm)/r.d25.pm)*100:0)]
+    ['Fatturato ' + r.anno, EUR(r.d26.fatturato), EUR(r.d25.fatturato), EURsign(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
+    ['Bottiglie ' + r.anno, NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUMsign(r.d26.bottiglie-r.d25.bottiglie), PCTsign(dB)],
+    ['Prezzo Medio', EUR(r.d26.pm), EUR(r.d25.pm), EURsign(r.d26.pm-r.d25.pm), PCTsign(dPM)],
+    ['Ordini ' + r.anno, NUM(r.d26.ordini), NUM(r.d25.ordini), NUMsign(r.d26.ordini-r.d25.ordini), '']
   ];
   doc.autoTable({
-    head: [['', r.anno.toString(), r.annoP.toString(), 'Var €', 'Var %']], body: kpi, startY: 32,
+    head: [['', r.anno.toString(), r.annoP.toString(), 'Var', 'Var %']],
+    body: kpi, startY: y,
     theme: 'striped',
-    headStyles: { fillColor: [114, 47, 55], textColor: 255 },
-    bodyStyles: { fontSize: 10 }
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 10 },
+    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+    margin: { left: margin, right: margin }
+  });
+  y = doc.lastAutoTable.finalY + 8;
+  
+  // Grafico — converto SVG in immagine canvas e lo aggiungo al PDF
+  var svgEl = document.querySelector('.chart-wrap svg');
+  if (svgEl) {
+    var chartTitle = 'Andamento mensile fatturato';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(114, 47, 55);
+    doc.text(chartTitle, margin, y);
+    y += 4;
+    try {
+      var svgData = new XMLSerializer().serializeToString(svgEl);
+      var canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 380;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      var img = new Image();
+      var svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(svgBlob);
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        var imgData = canvas.toDataURL('image/png');
+        doc.addImage(imgData, 'PNG', margin, y, pageW - 2*margin, 60);
+        var yAfterChart = y + 64;
+        addBlocksAndRefsToPdf(doc, r, yAfterChart);
+      };
+      img.onerror = function() {
+        URL.revokeObjectURL(url);
+        addBlocksAndRefsToPdf(doc, r, y);
+      };
+      img.src = url;
+    } catch (e) {
+      console.warn('Errore grafico PDF:', e);
+      addBlocksAndRefsToPdf(doc, r, y);
+    }
+  } else {
+    addBlocksAndRefsToPdf(doc, r, y);
+  }
+}
+
+function addBlocksAndRefsToPdf(doc, r, y) {
+  var pageW = 210, pageH = 297, margin = 14;
+  
+  // 4 blocchi riepilogo
+  if (y > 230) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(114, 47, 55);
+  doc.text('Riepilogo clienti', margin, y);
+  y += 4;
+  
+  var totDeltaTutti = 0, totDeltaAttivi = 0, totDeltaCalo = 0, totDeltaAssenti = 0;
+  for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
+  for (var i = 0; i < r.attivi.length; i++) totDeltaAttivi += (r.attivi[i].f26 - r.attivi[i].f25);
+  for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
+  for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
+  
+  var blocks = [
+    ['Tutti i clienti', r.tutti.length, totDeltaTutti],
+    ['Clienti attivi', r.attivi.length, totDeltaAttivi],
+    ['Clienti in calo', r.calo.length, totDeltaCalo],
+    ['Non ancora attivi', r.assenti.length, totDeltaAssenti]
+  ];
+  doc.autoTable({
+    head: [['Categoria', 'N. Clienti', 'Var € totale']],
+    body: blocks.map(function(b) { return [b[0], b[1], EURsign(b[2])]; }),
+    startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 10 },
+    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' } },
+    margin: { left: margin, right: margin }
+  });
+  y = doc.lastAutoTable.finalY + 8;
+  
+  // Rotazione referenze
+  if (y > 230) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(114, 47, 55);
+  doc.text('Rotazione referenze ' + r.anno, margin, y);
+  y += 4;
+  
+  var refRows = [];
+  var refNames = REFERENZE.map(function(x) { return x.name; });
+  refNames.push('Altro');
+  for (var i = 0; i < refNames.length; i++) {
+    var name = refNames[i];
+    var r26 = r.refs26[name] || { fatt: 0, btl: 0 };
+    var r25 = r.refs25[name] || { fatt: 0, btl: 0 };
+    if (r26.btl === 0 && r25.btl === 0) continue;
+    var dRef = r25.btl > 0 ? ((r26.btl - r25.btl) / r25.btl) * 100 : 0;
+    var pctTot = r.d26.bottiglie > 0 ? (r26.btl / r.d26.bottiglie) * 100 : 0;
+    refRows.push([name, NUM(r26.btl), EUR(r26.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+  }
+  doc.autoTable({
+    head: [['Referenza', 'Bott. ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
+    body: refRows, startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+    margin: { left: margin, right: margin }
   });
   
-  doc.text('Clienti attivi: ' + r.attivi.length + ' · In calo: ' + r.calo.length + ' · Non ancora attivi: ' + r.assenti.length, 14, doc.lastAutoTable.finalY + 10);
+  // Tabella clienti completa (in pagina aggiuntiva landscape)
+  if (r.tutti.length > 0) {
+    doc.addPage('a4', 'landscape');
+    var pW = 297;
+    doc.setFillColor(114, 47, 55);
+    doc.rect(0, 0, pW, 18, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Elenco clienti — ' + r.vista, margin, 11);
+    
+    var totF26 = 0, totF25 = 0, totB26 = 0, totB25 = 0;
+    var body = [];
+    for (var i = 0; i < r.tutti.length; i++) {
+      var c = r.tutti[i];
+      var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+      body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26), NUM(c.b25), EUR(c.pm26)]);
+      totF26 += c.f26; totF25 += c.f25; totB26 += c.b26; totB25 += c.b25;
+    }
+    var totPM = PM(totF26, totB26);
+    var totDF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
+    body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(totDF), NUM(totB26), NUM(totB25), EUR(totPM)]);
+    
+    doc.autoTable({
+      head: [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']],
+      body: body, startY: 22,
+      theme: 'striped',
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 7 },
+      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+      styles: { cellPadding: 1.5 },
+      margin: { left: margin, right: margin },
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.row.index === body.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [240, 230, 230];
+        }
+      }
+    });
+  }
+  
+  // Footer
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text('Mosnel Sales Intelligence · generato ' + new Date().toLocaleDateString('it-IT'), margin, pageH - 8);
   
   doc.save('Mosnel_Report_' + r.vista + '.pdf');
 }
