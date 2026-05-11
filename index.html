@@ -849,39 +849,33 @@ function buildAgenteHTML(agente){
   const pm25=vPM25.reduce((s,r)=>s+r.pezzi,0)>0?vPM25.reduce((s,r)=>s+r.importo,0)/vPM25.reduce((s,r)=>s+r.pezzi,0):0;
   const cli26=new Set(v26.map(r=>r.codCli)).size,cli25=new Set(v25.map(r=>r.codCli)).size;
   const dF=f25>0?((f26-f25)/f25)*100:null,dB=b25>0?((b26-b25)/b25)*100:null,dPm=pm25>0?((pm26-pm25)/pm25)*100:null;
-  // Use pre-computed data from _openAgenteFV (or compute if called directly)
   const attivi=window._agAttivi||[];
   const calo=window._agCalo||[];
   const assenti=window._agAssenti||[];
   const allCli=window._agAll||[];
   const percCalo=attivi.length>0?Math.round(calo.length/attivi.length*100):0;
   const perdita=calo.reduce((s,c)=>s+c.v26-c.v25,0);
-  return\`<div class="fv-title">\${agente}</div>
-  <div class="fv-sub">\${LR?MI[LR.from]+' – '+MI[LR.to]:''} 2026 vs 2025 — YTD stesso periodo</div>
-  <div class="fv-kpis">
-    <div class="fvk"><div class="fvk-lbl">Fatturato 2026</div><div class="fvk-val">\${EUR(f26)}</div><div class="fvk-sub">2025: \${EUR(f25)}</div><div class="fvk-var">\${dF!==null?\`<span class="\${dF>=0?'up':'dn'}">\${PCT(dF)} · \${EURDIFF(f26-f25)}</span>\`:'&nbsp;'}</div></div>
-    <div class="fvk"><div class="fvk-lbl">Bottiglie 2026</div><div class="fvk-val">\${NUM(b26)}</div><div class="fvk-sub">2025: \${NUM(b25)}</div><div class="fvk-var">\${dB!==null?\`<span class="\${dB>=0?'up':'dn'}">\${PCT(dB)} · \${dB>=0?'+':''}\${NUM(b26-b25)} bt</span>\`:'&nbsp;'}</div></div>
-    <div class="fvk"><div class="fvk-lbl">PM 2026</div><div class="fvk-val">\${EUR(pm26)}</div><div class="fvk-sub">2025: \${EUR(pm25)}</div><div class="fvk-var">\${dPm!==null?\`<span class="\${dPm>=0?'up':'dn'}">\${PCT(dPm)} · \${EURDIFF(pm26-pm25)}</span>\`:'&nbsp;'}</div></div>
-    <div class="fvk"><div class="fvk-lbl">Clienti attivi 2026</div><div class="fvk-val">\${cli26}</div><div class="fvk-sub">2025: \${cli25}</div></div>
-  </div>
-  <div class="summary-grid">
-    <div class="summ-block green" onclick="openFV('attivi',window._agAttivi,'Clienti Attivi','\${ESC(agente)}','\${ESC(agente)} › Clienti Attivi')">
-      <div class="summ-left"><h4>✓ Clienti Attivi</h4><div class="summ-num">\${attivi.length}</div><div class="summ-sub">\${EUR(f26)} · Apri lista</div></div>
-      <span class="summ-arrow">›</span>
-    </div>
-    <div class="summ-block \${calo.length>0?'red':'green'}" \${calo.length>0?\`onclick="openFV('calo',window._agCalo,'Clienti in Calo','\${ESC(agente)}','\${ESC(agente)} › In Calo')"\`:''}>
-      <div class="summ-left"><h4>\${calo.length>0?'↓ In Calo':'✓ Nessuno in Calo'}</h4><div class="summ-num">\${calo.length}</div><div class="summ-sub">\${calo.length>0?EURDIFF(perdita)+' · '+percCalo+'% · Apri lista':'Tutti stabili o in crescita'}</div></div>
-      \${calo.length>0?'<span class="summ-arrow">›</span>':''}
-    </div>
-    <div class="summ-block \${assenti.length>0?'amber':'green'}" \${assenti.length>0?\`onclick="openFV('assenti',window._agAssenti,'Non ancora attivi','\${ESC(agente)}','\${ESC(agente)} › Non ancora attivi')"\`:''}>
-      <div class="summ-left"><h4>\${assenti.length>0?'⚠ Non ancora attivi':'✓ Tutti attivi'}</h4><div class="summ-num">\${assenti.length}</div><div class="summ-sub">\${assenti.length>0?'Presenti nel 2025 · Apri lista':'Tutti hanno già ordinato'}</div></div>
-      \${assenti.length>0?'<span class="summ-arrow">›</span>':''}
-    </div>
-    <div class="summ-block blue" onclick="openFV('all',window._agAll,'Tutti i Clienti','\${ESC(agente)}','\${ESC(agente)} › Tutti i Clienti')">
-      <div class="summ-left"><h4>≡ Tutti i Clienti</h4><div class="summ-num">\${allCli.length}</div><div class="summ-sub">2025 + 2026 · Apri lista</div></div>
-      <span class="summ-arrow">›</span>
-    </div>
-  </div>\`;
+  const ag=ESC(agente);
+  let html='';
+  html+='<div class="fv-title">'+agente+'</div>';
+  html+='<div class="fv-sub">'+(LR?MI[LR.from]+' \u2013 '+MI[LR.to]:'')+' 2026 vs 2025 \u2014 YTD stesso periodo</div>';
+  html+='<div class="fv-kpis">';
+  html+='<div class="fvk"><div class="fvk-lbl">Fatturato 2026</div><div class="fvk-val">'+EUR(f26)+'</div><div class="fvk-sub">2025: '+EUR(f25)+'</div><div class="fvk-var">'+(dF!==null?'<span class="'+(dF>=0?'up':'dn')+'">'+PCT(dF)+' \u00b7 '+EURDIFF(f26-f25)+'</span>':'&nbsp;')+'</div></div>';
+  html+='<div class="fvk"><div class="fvk-lbl">Bottiglie 2026</div><div class="fvk-val">'+NUM(b26)+'</div><div class="fvk-sub">2025: '+NUM(b25)+'</div><div class="fvk-var">'+(dB!==null?'<span class="'+(dB>=0?'up':'dn')+'">'+PCT(dB)+' \u00b7 '+(dB>=0?'+':'')+NUM(b26-b25)+' bt</span>':'&nbsp;')+'</div></div>';
+  html+='<div class="fvk"><div class="fvk-lbl">PM 2026</div><div class="fvk-val">'+EUR(pm26)+'</div><div class="fvk-sub">2025: '+EUR(pm25)+'</div><div class="fvk-var">'+(dPm!==null?'<span class="'+(dPm>=0?'up':'dn')+'">'+PCT(dPm)+' \u00b7 '+EURDIFF(pm26-pm25)+'</span>':'&nbsp;')+'</div></div>';
+  html+='<div class="fvk"><div class="fvk-lbl">Clienti attivi 2026</div><div class="fvk-val">'+cli26+'</div><div class="fvk-sub">2025: '+cli25+'</div></div>';
+  html+='</div>';
+  html+='<div class="summary-grid">';
+  html+='<div class="summ-block green" onclick="openFV(\'attivi\',window._agAttivi,\'Clienti Attivi\',\''+ag+'\',\''+ag+' \u203a Clienti Attivi\')">';
+  html+='<div class="summ-left"><h4>\u2713 Clienti Attivi</h4><div class="summ-num">'+attivi.length+'</div><div class="summ-sub">'+EUR(f26)+' \u00b7 Apri lista</div></div><span class="summ-arrow">\u203a</span></div>';
+  html+='<div class="summ-block '+(calo.length>0?'red':'green')+'" '+(calo.length>0?'onclick="openFV(\'calo\',window._agCalo,\'Clienti in Calo\',\''+ag+'\',\''+ag+' \u203a In Calo\')"':'')+' >';
+  html+='<div class="summ-left"><h4>'+(calo.length>0?'\u2193 In Calo':'\u2713 Nessuno in Calo')+'</h4><div class="summ-num">'+calo.length+'</div><div class="summ-sub">'+(calo.length>0?EURDIFF(perdita)+' \u00b7 '+percCalo+'% \u00b7 Apri lista':'Tutti stabili o in crescita')+'</div></div>'+(calo.length>0?'<span class="summ-arrow">\u203a</span>':'')+'</div>';
+  html+='<div class="summ-block '+(assenti.length>0?'amber':'green')+'" '+(assenti.length>0?'onclick="openFV(\'assenti\',window._agAssenti,\'Non ancora attivi\',\''+ag+'\',\''+ag+' \u203a Non ancora attivi\')"':'')+' >';
+  html+='<div class="summ-left"><h4>'+(assenti.length>0?'\u26a0 Non ancora attivi':'\u2713 Tutti attivi')+'</h4><div class="summ-num">'+assenti.length+'</div><div class="summ-sub">'+(assenti.length>0?'Presenti nel 2025 \u00b7 Apri lista':'Tutti hanno gi\u00e0 ordinato')+'</div></div>'+(assenti.length>0?'<span class="summ-arrow">\u203a</span>':'')+'</div>';
+  html+='<div class="summ-block blue" onclick="openFV(\'all\',window._agAll,\'Tutti i Clienti\',\''+ag+'\',\''+ag+' \u203a Tutti i Clienti\')">';
+  html+='<div class="summ-left"><h4>\u2261 Tutti i Clienti</h4><div class="summ-num">'+allCli.length+'</div><div class="summ-sub">2025 + 2026 \u00b7 Apri lista</div></div><span class="summ-arrow">\u203a</span></div>';
+  html+='</div>';
+  return html;
 }
 
 
