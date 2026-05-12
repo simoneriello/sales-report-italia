@@ -278,6 +278,16 @@ var REFERENZE = [
 
 function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
 function EUR0(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0}).format(n); }
+// Versione PDF-friendly: il simbolo € va DOPO il numero per evitare bug di rendering jsPDF
+function EURpdf(n) {
+  var formatted = new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n);
+  return formatted + ' EUR';
+}
+function EURsignPdf(n) {
+  if (n === 0) return '0,00 EUR';
+  var formatted = new Intl.NumberFormat('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}).format(Math.abs(n));
+  return (n >= 0 ? '+' : '-') + formatted + ' EUR';
+}
 function EURsign(n) {
   if (n === 0) return EUR(0);
   var formatted = new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(Math.abs(n));
@@ -804,7 +814,67 @@ function renderReport() {
     initSort('main-tbl');
     initResize('main-tbl');
     bindMainRowClicks(r);
+    // Se c'è uno snapshot per questa vista, applica l'ordine salvato
+    applyMainTableSnapshot(r);
   }, 50);
+}
+
+function applyMainTableSnapshot(r) {
+  var snap = window._mainSnapshot;
+  if (!snap) return;
+  // Verifica che lo snapshot sia compatibile (stessa vista o stessa Italia)
+  if (snap.vista !== r.vista) return;
+  
+  // Riapplica l'ordine al tbody
+  var tbody = document.querySelector('#main-tbl tbody');
+  if (!tbody) return;
+  var totRow = tbody.querySelector('tr.tot-row');
+  var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr:not(.tot-row)'));
+  
+  // Crea mappa nome → riga
+  var rowMap = {};
+  for (var i = 0; i < rows.length; i++) {
+    rowMap[rows[i].cells[0].textContent.trim()] = rows[i];
+  }
+  
+  // Riordina secondo snapshot
+  tbody.innerHTML = '';
+  for (var i = 0; i < snap.domOrder.length; i++) {
+    var row = rowMap[snap.domOrder[i].nome];
+    if (row) tbody.appendChild(row);
+  }
+  // Aggiungi rimanenti
+  for (var key in rowMap) {
+    var r2 = rowMap[key];
+    if (r2.parentElement !== tbody) tbody.appendChild(r2);
+  }
+  if (totRow) tbody.appendChild(totRow);
+  
+  // Riapplica sort states (indicatori freccia)
+  sortStates = snap.sortStates || {};
+  for (var key in sortStates) {
+    var parts = key.split(':');
+    if (parts[0] !== 'main-tbl') continue;
+    var colIdx = parseInt(parts[1]);
+    var dir = sortStates[key];
+    var ths = document.querySelectorAll('#main-tbl thead th');
+    if (ths[colIdx]) {
+      ths[colIdx].classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+      var arr = ths[colIdx].querySelector('.sort-arrow');
+      if (arr) arr.textContent = dir === 'asc' ? '▲' : '▼';
+    }
+  }
+  
+  // Riapplica scroll
+  if (snap.scrollY) {
+    setTimeout(function() {
+      var content = document.querySelector('.content');
+      if (content) content.scrollTop = snap.scrollY;
+    }, 100);
+  }
+  
+  // Snapshot consumato
+  window._mainSnapshot = null;
 }
 
 function bindMainRowClicks(r) {
@@ -815,10 +885,32 @@ function bindMainRowClicks(r) {
       row.addEventListener('click', function() {
         var name = row.cells[0].textContent.trim();
         if (r.isItalia) {
+          // Salva snapshot per ripristino: ordine corrente della tabella main
+          window._mainSnapshot = {
+            vista: 'ITALIA',
+            anno: r.anno,
+            periodoMode: document.getElementById('periodo').value,
+            meseDa: document.getElementById('mese-da').value,
+            meseA: document.getElementById('mese-a').value,
+            domOrder: readTableOrder('main-tbl', r.tutti),
+            sortStates: JSON.parse(JSON.stringify(sortStates)),
+            scrollY: document.querySelector('.content').scrollTop || 0
+          };
           document.getElementById('vista').value = name;
           generaReport();
           window.scrollTo(0, 0);
         } else {
+          // Salva snapshot prima di entrare nel cliente
+          window._mainSnapshot = {
+            vista: r.vista,
+            anno: r.anno,
+            periodoMode: document.getElementById('periodo').value,
+            meseDa: document.getElementById('mese-da').value,
+            meseA: document.getElementById('mese-a').value,
+            domOrder: readTableOrder('main-tbl', r.tutti),
+            sortStates: JSON.parse(JSON.stringify(sortStates)),
+            scrollY: document.querySelector('.content').scrollTop || 0
+          };
           fvStack = [];
           showFV({ type: 'cliente', nome: name });
         }
@@ -1123,6 +1215,18 @@ function openFV(tipo) {
   else if (tipo === 'attivi') { data = lastReport.attivi; title = entityCap + ' attivi'; }
   else if (tipo === 'calo') { data = lastReport.calo; title = entityCap + ' in calo'; }
   else if (tipo === 'assenti') { data = lastReport.assenti; title = 'Non ancora attivi'; }
+  
+  // Salva snapshot della vista corrente prima di aprire FV
+  window._mainSnapshot = {
+    vista: lastReport.vista,
+    anno: lastReport.anno,
+    periodoMode: document.getElementById('periodo').value,
+    meseDa: document.getElementById('mese-da').value,
+    meseA: document.getElementById('mese-a').value,
+    domOrder: readTableOrder('main-tbl', lastReport.tutti),
+    sortStates: JSON.parse(JSON.stringify(sortStates)),
+    scrollY: document.querySelector('.content').scrollTop || 0
+  };
   
   fvStack = [];
   showFV({ type: 'lista', data: data, title: title, isItalia: lastReport.isItalia });
@@ -1550,11 +1654,32 @@ function initResize(tblId) {
 
 function closeFV() {
   if (fvStack.length > 1) {
+    // Sono dentro un sub-FV (es. cliente aperto da una lista FV) → torna alla FV precedente
     fvStack.pop();
     renderFV();
   } else {
+    // Chiudo la FV completamente
     document.getElementById('fv').classList.remove('open');
     fvStack = [];
+    
+    // Se c'è uno snapshot della vista principale, ripristinala
+    if (window._mainSnapshot && lastReport) {
+      var snap = window._mainSnapshot;
+      // Se lo snapshot corrisponde alla vista attualmente in lastReport, applicalo
+      if (snap.vista === lastReport.vista) {
+        applyMainTableSnapshot(lastReport);
+      } else {
+        // Vista cambiata (es. sono passato da Italia → cliente di un agente)
+        // Imposta i filtri salvati e rigenera
+        document.getElementById('vista').value = snap.vista;
+        document.getElementById('periodo').value = snap.periodoMode;
+        if (snap.meseDa) document.getElementById('mese-da').value = snap.meseDa;
+        if (snap.meseA) document.getElementById('mese-a').value = snap.meseA;
+        togglePeriodo();
+        // applyMainTableSnapshot verrà chiamato da renderReport
+        generaReport();
+      }
+    }
   }
 }
 
@@ -1603,12 +1728,38 @@ function doSearch(q) {
       var type = this.getAttribute('data-type');
       var name = this.getAttribute('data-name');
       if (type === 'agente') {
+        // Salva snapshot se c'è già un report
+        if (lastReport) {
+          window._mainSnapshot = {
+            vista: lastReport.vista,
+            anno: lastReport.anno,
+            periodoMode: document.getElementById('periodo').value,
+            meseDa: document.getElementById('mese-da').value,
+            meseA: document.getElementById('mese-a').value,
+            domOrder: readTableOrder('main-tbl', lastReport.tutti),
+            sortStates: JSON.parse(JSON.stringify(sortStates)),
+            scrollY: document.querySelector('.content').scrollTop || 0
+          };
+        }
         document.getElementById('vista').value = name;
         generaReport();
         clearSearch();
       } else {
-        // Apri direttamente la scheda cliente
-        if (!lastReport) generaReport();
+        // Salva snapshot prima di aprire scheda cliente
+        if (lastReport) {
+          window._mainSnapshot = {
+            vista: lastReport.vista,
+            anno: lastReport.anno,
+            periodoMode: document.getElementById('periodo').value,
+            meseDa: document.getElementById('mese-da').value,
+            meseA: document.getElementById('mese-a').value,
+            domOrder: readTableOrder('main-tbl', lastReport.tutti),
+            sortStates: JSON.parse(JSON.stringify(sortStates)),
+            scrollY: document.querySelector('.content').scrollTop || 0
+          };
+        } else {
+          generaReport();
+        }
         clearSearch();
         fvStack = [];
         showFV({ type: 'cliente', nome: name });
@@ -1728,17 +1879,17 @@ function exportFVPdf() {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(255, 255, 255);
-  doc.text('Mosnel — ' + window._fvTitle, margin, 12);
+  doc.text('Mosnel - ' + window._fvTitle, margin, 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(201, 168, 76);
-  doc.text(lastReport.vista + ' · ' + lastReport.periodo.label + ' · ' + window._fvData.length + ' ' + (window._fvIsItalia ? 'agenti' : 'clienti'), margin, 19);
+  doc.text(lastReport.vista + ' - ' + lastReport.periodo.label + ' - ' + window._fvData.length + ' ' + (window._fvIsItalia ? 'agenti' : 'clienti'), margin, 19);
   
   // Usa ordine DOM
   var ordered = readTableOrder('fv-tbl', window._fvData);
   var isItalia = window._fvIsItalia;
   
-  // KPI riassuntivi — usa bottiglie equivalenti
+  // KPI riassuntivi
   var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
   for (var i = 0; i < ordered.length; i++) {
     var c = ordered[i];
@@ -1753,38 +1904,39 @@ function exportFVPdf() {
   doc.autoTable({
     head: [['Indicatore', '2026', '2025', 'Var', 'Var %']],
     body: [
-      ['Fatturato', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF)],
+      ['Fatturato', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(dF)],
       ['Bott. eq. 0,75L', NUM(totB26Eq), NUM(totB25Eq), NUMsign(totB26Eq-totB25Eq), PCTsign(dB)],
-      ['Prezzo Medio (0,75L)', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)]
+      ['Prezzo Medio (0,75L)', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)]
     ],
     startY: 28,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 9 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin }
+    margin: { left: margin, right: margin },
+    didParseCell: colorNegativesCallback
   });
   
   var y = doc.lastAutoTable.finalY + 6;
   
   var headers = isItalia
-    ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
-    : [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
+    ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
+    : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
   
   var body = [];
   for (var i = 0; i < ordered.length; i++) {
     var c = ordered[i];
     var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
     if (isItalia) {
-      body.push([c.nome, c.nClienti26 || 0, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+      body.push([c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
     } else {
-      body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+      body.push([c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
     }
   }
   if (isItalia) {
-    body.push(['TOTALE', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF), NUM(totB26Eq), NUM(totB25Eq), EUR(pm26)]);
+    body.push(['TOTALE', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(dF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(pm26)]);
   } else {
-    body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF), NUM(totB26Eq), NUM(totB25Eq), EUR(pm26)]);
+    body.push(['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(dF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(pm26)]);
   }
   
   var rightCols = isItalia ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
@@ -1799,6 +1951,7 @@ function exportFVPdf() {
     styles: { cellPadding: 1.8 },
     margin: { left: margin, right: margin },
     didParseCell: function(data) {
+      colorNegativesCallback(data);
       if (data.section === 'body' && data.row.index === body.length - 1) {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fillColor = [240, 230, 230];
@@ -1807,6 +1960,22 @@ function exportFVPdf() {
   });
   
   doc.save('Mosnel_' + window._fvTitle + '.pdf');
+}
+
+// Callback per autoTable: colora di rosso le celle con valori negativi
+function colorNegativesCallback(data) {
+  if (data.section !== 'body') return;
+  var txt = String(data.cell.raw || data.cell.text || '');
+  if (typeof data.cell.raw === 'string') txt = data.cell.raw;
+  else if (Array.isArray(data.cell.text)) txt = data.cell.text.join(' ');
+  // Cerca segno meno all'inizio del valore numerico
+  if (/^-[\d]/.test(txt.trim()) || /^-\d/.test(txt.trim())) {
+    data.cell.styles.textColor = [185, 28, 28]; // var --red
+  }
+  // Verde per positivi con segno +
+  else if (/^\+[\d]/.test(txt.trim())) {
+    data.cell.styles.textColor = [21, 128, 61]; // var --green
+  }
 }
 
 function exportClientePdf(nome) {
@@ -1884,7 +2053,7 @@ function exportClientePdf(nome) {
   if (agente) subtitle += agente + ' · ';
   subtitle += lastReport.periodo.label;
   doc.text(subtitle, margin, 20);
-  doc.text('Cliente Mosnel · ' + anno + ' vs ' + annoP, margin, 25);
+  doc.text('Cliente Mosnel - ' + anno + ' vs ' + annoP, margin, 25);
   
   var y = 36;
   
@@ -1892,17 +2061,18 @@ function exportClientePdf(nome) {
   doc.autoTable({
     head: [['Indicatore', anno.toString(), annoP.toString(), 'Var', 'Var %']],
     body: [
-      ['Fatturato', EUR(f26), EUR(f25), EURsign(f26-f25), PCTsign(dF)],
+      ['Fatturato', EURpdf(f26), EURpdf(f25), EURsignPdf(f26-f25), PCTsign(dF)],
       ['Bott. eq. 0,75L', NUM(b26Eq), NUM(b25Eq), NUMsign(b26Eq-b25Eq), PCTsign(dB)],
       ['Bottiglie effettive', NUM(b26), NUM(b25), NUMsign(b26-b25), ''],
-      ['Prezzo Medio (0,75L)', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)],
+      ['Prezzo Medio (0,75L)', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)],
       ['Fatture', arr.length.toString(), '', '', '']
     ],
     startY: y, theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 9 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin }
+    margin: { left: margin, right: margin },
+    didParseCell: colorNegativesCallback
   });
   y = doc.lastAutoTable.finalY + 8;
   
@@ -1924,7 +2094,7 @@ function exportClientePdf(nome) {
       if (r26v.btlEq === 0 && r25v.btlEq === 0) continue;
       var dRef = r25v.btlEq > 0 ? ((r26v.btlEq - r25v.btlEq) / r25v.btlEq) * 100 : 0;
       var pctTot = b26Eq > 0 ? (r26v.btlEq / b26Eq) * 100 : 0;
-      refRows.push([name, NUM(r26v.btlEq), EUR(r26v.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+      refRows.push([name, NUM(r26v.btlEq), EURpdf(r26v.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
     }
     if (refRows.length) {
       doc.autoTable({
@@ -1934,7 +2104,8 @@ function exportClientePdf(nome) {
         headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 9 },
         columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        didParseCell: colorNegativesCallback
       });
       y = doc.lastAutoTable.finalY + 8;
     }
@@ -1950,8 +2121,8 @@ function exportClientePdf(nome) {
     y += 4;
     
     var body = [];
-    for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), NUM(arr[i].pezziEq), EUR(arr[i].importo)]);
-    body.push(['TOTALE', '', NUM(b26), NUM(b26Eq), EUR(f26)]);
+    for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), NUM(arr[i].pezziEq), EURpdf(arr[i].importo)]);
+    body.push(['TOTALE', '', NUM(b26), NUM(b26Eq), EURpdf(f26)]);
     
     doc.autoTable({
       head: [['Data', 'N. Doc', 'Bottiglie', 'Bott. eq.', 'Importo']], body: body, startY: y,
@@ -1973,7 +2144,7 @@ function exportClientePdf(nome) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(150);
-  doc.text('Mosnel Sales Intelligence · generato ' + new Date().toLocaleDateString('it-IT'), margin, pageH - 8);
+  doc.text('Mosnel Sales Intelligence - generato ' + new Date().toLocaleDateString('it-IT'), margin, pageH - 8);
   
   doc.save('Mosnel_Cliente_' + nome.substr(0,30) + '.pdf');
 }
@@ -2053,10 +2224,10 @@ function exportReportPdf() {
   y += 4;
   
   var kpi = [
-    ['Fatturato ' + r.anno, EUR(r.d26.fatturato), EUR(r.d25.fatturato), EURsign(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
+    ['Fatturato ' + r.anno, EURpdf(r.d26.fatturato), EURpdf(r.d25.fatturato), EURsignPdf(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
     ['Bott. eq. 0,75L ' + r.anno, NUM(r.d26.bottiglieEq), NUM(r.d25.bottiglieEq), NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq), PCTsign(dB)],
     ['Bottiglie effettive ' + r.anno, NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUMsign(r.d26.bottiglie-r.d25.bottiglie), ''],
-    ['Prezzo Medio (0,75L)', EUR(r.d26.pm), EUR(r.d25.pm), EURsign(r.d26.pm-r.d25.pm), PCTsign(dPM)],
+    ['Prezzo Medio (0,75L)', EURpdf(r.d26.pm), EURpdf(r.d25.pm), EURsignPdf(r.d26.pm-r.d25.pm), PCTsign(dPM)],
     ['Ordini ' + r.anno, NUM(r.d26.ordini), NUM(r.d25.ordini), NUMsign(r.d26.ordini-r.d25.ordini), '']
   ];
   doc.autoTable({
@@ -2066,7 +2237,8 @@ function exportReportPdf() {
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 10 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin }
+    margin: { left: margin, right: margin },
+    didParseCell: colorNegativesCallback
   });
   y = doc.lastAutoTable.finalY + 8;
   
@@ -2139,18 +2311,19 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     ['Non ancora attivi', r.assenti.length, totDeltaAssenti]
   ];
   doc.autoTable({
-    head: [['Categoria', 'N. ' + entityCap, 'Var € totale']],
-    body: blocks.map(function(b) { return [b[0], b[1], EURsign(b[2])]; }),
+    head: [['Categoria', 'N. ' + entityCap, 'Var EUR totale']],
+    body: blocks.map(function(b) { return [b[0], b[1], EURsignPdf(b[2])]; }),
     startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 10 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' } },
-    margin: { left: margin, right: margin }
+    margin: { left: margin, right: margin },
+    didParseCell: colorNegativesCallback
   });
   y = doc.lastAutoTable.finalY + 8;
   
-  // Rotazione referenze — usa btlEq
+  // Rotazione referenze
   if (y > 230) { doc.addPage(); y = 20; }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -2168,7 +2341,7 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     if (r26ref.btlEq === 0 && r25ref.btlEq === 0) continue;
     var dRef = r25ref.btlEq > 0 ? ((r26ref.btlEq - r25ref.btlEq) / r25ref.btlEq) * 100 : 0;
     var pctTot = r.d26.bottiglieEq > 0 ? (r26ref.btlEq / r.d26.bottiglieEq) * 100 : 0;
-    refRows.push([name, NUM(r26ref.btlEq), EUR(r26ref.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+    refRows.push([name, NUM(r26ref.btlEq), EURpdf(r26ref.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
   }
   doc.autoTable({
     head: [['Referenza', 'Bott. eq. ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
@@ -2177,10 +2350,11 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 9 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin }
+    margin: { left: margin, right: margin },
+    didParseCell: colorNegativesCallback
   });
   
-  // Tabella in pagina aggiuntiva — usa ordine DOM e supporta Italia/Agente
+  // Tabella in pagina aggiuntiva
   var orderedTutti = readTableOrder('main-tbl', r.tutti);
   if (orderedTutti.length > 0) {
     doc.addPage('a4', 'landscape');
@@ -2190,7 +2364,7 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
-    doc.text('Elenco ' + entityLbl + ' — ' + r.vista, margin, 11);
+    doc.text('Elenco ' + entityLbl + ' - ' + r.vista, margin, 11);
     
     var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
     var body = [];
@@ -2198,9 +2372,9 @@ function addBlocksAndRefsToPdf(doc, r, y) {
       var c = orderedTutti[i];
       var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
       if (r.isItalia) {
-        body.push([c.nome, c.nClienti26 || 0, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+        body.push([c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
       } else {
-        body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+        body.push([c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
       }
       totF26 += c.f26; totF25 += c.f25;
       totB26Eq += c.b26Eq || 0; totB25Eq += c.b25Eq || 0;
@@ -2208,14 +2382,14 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     var totPM = PM(totF26, totB26Eq);
     var totDF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
     if (r.isItalia) {
-      body.push(['TOTALE', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EUR(totPM)]);
+      body.push(['TOTALE', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
     } else {
-      body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EUR(totPM)]);
+      body.push(['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
     }
     
     var heads = r.isItalia
-      ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
-      : [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
+      ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
+      : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
     
     var colStyles = r.isItalia
       ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
@@ -2230,6 +2404,7 @@ function addBlocksAndRefsToPdf(doc, r, y) {
       styles: { cellPadding: 1.5 },
       margin: { left: margin, right: margin },
       didParseCell: function(data) {
+        colorNegativesCallback(data);
         if (data.section === 'body' && data.row.index === body.length - 1) {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [240, 230, 230];
