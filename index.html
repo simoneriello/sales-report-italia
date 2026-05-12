@@ -187,7 +187,6 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
     <div class="upload-icon">⬆</div>
     <h3>Carica file vendite</h3>
     <p>Seleziona il file Excel dal gestionale</p>
-    <p class="warning">⚠ Elimina righe 35698 e 35702 prima di caricare</p>
   </div>
   <div class="progress-wrap" id="progress-wrap">
     <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
@@ -757,8 +756,8 @@ function renderReport() {
   // KPI principali — uso bottiglie equivalenti
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + '</div><div class="kpi-sub"><span class="' + (r.d26.fatturato-r.d25.fatturato>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.fatturato-r.d25.fatturato) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bott. eq. 0,75L ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglieEq) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglieEq) + ' eq. · ' + NUM(r.d26.bottiglie) + ' effettive</div><div class="kpi-sub"><span class="' + (r.d26.bottiglieEq-r.d25.bottiglieEq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio (per 0,75L)</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglieEq) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglieEq) + '</div><div class="kpi-sub"><span class="' + (r.d26.bottiglieEq-r.d25.bottiglieEq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
   if (r.isItalia) {
     html += '<div class="kpi-card"><div class="kpi-label">Agenti attivi</div><div class="kpi-value">' + r.attivi.length + '</div><div class="kpi-sub">' + r.tutti.length + ' totali nel periodo</div></div>';
   } else {
@@ -929,8 +928,8 @@ function buildMainTable(data, isItalia) {
     html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="6" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Bott. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
   } else {
     html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
@@ -939,8 +938,8 @@ function buildMainTable(data, isItalia) {
     html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="6" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Bott. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
   }
   html += '</tr></thead><tbody>';
@@ -1277,7 +1276,7 @@ function renderFVLista(state) {
   
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato 2026</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + '</div><div class="kpi-sub"><span class="' + (f26-f25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(f26-f25) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bott. eq. 0,75L 2026</div><div class="kpi-value">' + NUM(b26Eq) + '</div><div class="kpi-sub">vs ' + NUM(b25Eq) + '</div><div class="kpi-sub"><span class="' + (b26Eq-b25Eq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq-b25Eq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie 2026</div><div class="kpi-value">' + NUM(b26Eq) + '</div><div class="kpi-sub">vs ' + NUM(b25Eq) + '</div><div class="kpi-sub"><span class="' + (b26Eq-b25Eq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq-b25Eq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">' + (isItalia ? 'Agenti' : 'Clienti') + '</div><div class="kpi-value">' + data.length + '</div><div class="kpi-sub">in questa lista</div></div>';
   html += '</div>';
@@ -1325,8 +1324,8 @@ function buildFVTable(data, tblId, totF26, totF25, totB26Eq, totB25Eq, isItalia)
     html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="6" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Bott. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
   } else {
     html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
@@ -1336,8 +1335,8 @@ function buildFVTable(data, tblId, totF26, totF25, totB26Eq, totB25Eq, isItalia)
     html += '<th data-col="4" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="5" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="6" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="8" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">Bott. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="9" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
   }
   html += '</tr></thead><tbody>';
@@ -1455,8 +1454,8 @@ function renderFVCliente(state) {
   
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + anno + '</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + '</div><div class="kpi-sub"><span class="' + (f26-f25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(f26-f25) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bott. eq. 0,75L ' + anno + '</div><div class="kpi-value">' + NUM(b26Eq) + '</div><div class="kpi-sub">vs ' + NUM(b25Eq) + ' eq. · ' + NUM(b26) + ' effettive</div><div class="kpi-sub"><span class="' + (b26Eq-b25Eq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq-b25Eq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio (per 0,75L)</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + anno + '</div><div class="kpi-value">' + NUM(b26Eq) + '</div><div class="kpi-sub">vs ' + NUM(b25Eq) + '</div><div class="kpi-sub"><span class="' + (b26Eq-b25Eq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq-b25Eq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Fatture ' + anno + '</div><div class="kpi-value">' + fattureArr.length + '</div><div class="kpi-sub">documenti emessi</div></div>';
   html += '</div>';
   
@@ -1472,7 +1471,7 @@ function renderFVCliente(state) {
   html += '<th data-col="0" data-type="str">Data <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
   html += '<th data-col="1" data-type="str">N. Doc <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
   html += '<th data-col="2" data-type="num" class="text-right">Bottiglie <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="3" data-type="num" class="text-right">Bott. eq. <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="3" data-type="num" class="text-right">Bott. <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
   html += '<th data-col="4" data-type="num" class="text-right">Importo <span class="sort-arrow">▼</span></th>';
   html += '</tr></thead><tbody>';
   for (var i = 0; i < fattureArr.length; i++) {
@@ -1801,8 +1800,8 @@ function exportFVExcel() {
   var isItalia = window._fvIsItalia;
   var wb = XLSX.utils.book_new();
   var headers = isItalia
-    ? ['Agente', 'Clienti 2026', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026']
-    : ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026'];
+    ? ['Agente', 'Clienti 2026', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 2026']
+    : ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 2026'];
   var rows = [headers];
   for (var i = 0; i < ordered.length; i++) {
     var c = ordered[i];
@@ -1856,7 +1855,7 @@ function exportClienteExcel(nome) {
   }
   
   var wb = XLSX.utils.book_new();
-  var rows = [['Data', 'N. Doc', 'Bottiglie', 'Bott. eq.', 'Importo']];
+  var rows = [['Data', 'N. Doc', 'Bottiglie', 'Bott.', 'Importo']];
   for (var i = 0; i < arr.length; i++) {
     rows.push([arr[i].data, arr[i].numDoc, arr[i].pezzi, Math.round(arr[i].pezziEq * 100) / 100, arr[i].importo]);
   }
@@ -1905,8 +1904,8 @@ function exportFVPdf() {
     head: [['Indicatore', '2026', '2025', 'Var', 'Var %']],
     body: [
       ['Fatturato', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(dF)],
-      ['Bott. eq. 0,75L', NUM(totB26Eq), NUM(totB25Eq), NUMsign(totB26Eq-totB25Eq), PCTsign(dB)],
-      ['Prezzo Medio (0,75L)', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)]
+      ['Bottiglie', NUM(totB26Eq), NUM(totB25Eq), NUMsign(totB26Eq-totB25Eq), PCTsign(dB)],
+      ['Prezzo Medio', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)]
     ],
     startY: 28,
     theme: 'striped',
@@ -1920,8 +1919,8 @@ function exportFVPdf() {
   var y = doc.lastAutoTable.finalY + 6;
   
   var headers = isItalia
-    ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
-    : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
+    ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
+    : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
   
   var body = [];
   for (var i = 0; i < ordered.length; i++) {
@@ -1979,6 +1978,18 @@ function colorNegativesCallback(data) {
 }
 
 function exportClientePdf(nome) {
+  // Pre-converto il donut della scheda cliente (se visibile) prima di costruire il PDF
+  var donutSvg = document.querySelector('.donut-svg');
+  var donutPromise = donutSvg ? svgToPng(donutSvg, 600, 600) : Promise.resolve(null);
+  donutPromise.then(function(donutImg) {
+    _exportClientePdfBody(nome, donutImg);
+  }).catch(function(err) {
+    console.warn('Errore conversione donut:', err);
+    _exportClientePdfBody(nome, null);
+  });
+}
+
+function _exportClientePdfBody(nome, donutImg) {
   var anno = lastReport.anno, annoP = lastReport.annoP, periodo = lastReport.periodo;
   var v26 = [], v25 = [];
   for (var i = 0; i < D.length; i++) {
@@ -2062,9 +2073,8 @@ function exportClientePdf(nome) {
     head: [['Indicatore', anno.toString(), annoP.toString(), 'Var', 'Var %']],
     body: [
       ['Fatturato', EURpdf(f26), EURpdf(f25), EURsignPdf(f26-f25), PCTsign(dF)],
-      ['Bott. eq. 0,75L', NUM(b26Eq), NUM(b25Eq), NUMsign(b26Eq-b25Eq), PCTsign(dB)],
-      ['Bottiglie effettive', NUM(b26), NUM(b25), NUMsign(b26-b25), ''],
-      ['Prezzo Medio (0,75L)', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)],
+      ['Bottiglie', NUM(b26Eq), NUM(b25Eq), NUMsign(b26Eq-b25Eq), PCTsign(dB)],
+      ['Prezzo Medio', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)],
       ['Fatture', arr.length.toString(), '', '', '']
     ],
     startY: y, theme: 'striped',
@@ -2082,7 +2092,23 @@ function exportClientePdf(nome) {
     doc.setFontSize(11);
     doc.setTextColor(114, 47, 55);
     doc.text('Rotazione referenze ' + anno, margin, y);
-    y += 4;
+    y += 5;
+    
+    // Donut chart
+    if (donutImg) {
+      var donutSize = 55;
+      var donutX = (pageW - donutSize) / 2;
+      if (y + donutSize + 12 > pageH - 15) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.addImage(donutImg, 'PNG', donutX, y, donutSize, donutSize);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(120, 100, 100);
+      doc.text('Totale bottiglie ' + anno + ': ' + NUM(b26Eq), pageW/2, y + donutSize + 4, { align: 'center' });
+      y = y + donutSize + 9;
+    }
     
     var refRows = [];
     var refNames = REFERENZE.map(function(x) { return x.name; });
@@ -2098,7 +2124,7 @@ function exportClientePdf(nome) {
     }
     if (refRows.length) {
       doc.autoTable({
-        head: [['Referenza', 'Bott. eq.', 'Fatturato', '% sul tot', 'Var % vs ' + annoP]],
+        head: [['Referenza', 'Bottiglie', 'Fatturato', '% sul tot', 'Var % vs ' + annoP]],
         body: refRows, startY: y,
         theme: 'striped',
         headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
@@ -2125,7 +2151,7 @@ function exportClientePdf(nome) {
     body.push(['TOTALE', '', NUM(b26), NUM(b26Eq), EURpdf(f26)]);
     
     doc.autoTable({
-      head: [['Data', 'N. Doc', 'Bottiglie', 'Bott. eq.', 'Importo']], body: body, startY: y,
+      head: [['Data', 'N. Doc', 'Bottiglie', 'Bott.', 'Importo']], body: body, startY: y,
       theme: 'striped',
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
       bodyStyles: { fontSize: 9 },
@@ -2166,8 +2192,8 @@ function exportReportExcel() {
   // Liste — usa ordine DOM per "Tutti" se possibile
   var orderedTutti = readTableOrder('main-tbl', r.tutti);
   
-  var headersCli = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026'];
-  var headersAg = ['Agente', 'Clienti 2026', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026'];
+  var headersCli = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 2026'];
+  var headersAg = ['Agente', 'Clienti 2026', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 2026'];
   
   function makeRows(arr) {
     var rows = [r.isItalia ? headersAg : headersCli];
@@ -2189,6 +2215,32 @@ function exportReportExcel() {
   if (r.assenti.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.assenti)), 'Non attivi');
   
   saveXlsx(wb, 'Mosnel_Report_' + r.vista + '.xlsx');
+}
+
+// Converte un elemento SVG in PNG dataURL (Promise)
+function svgToPng(svgEl, width, height) {
+  return new Promise(function(resolve, reject) {
+    if (!svgEl) { reject('no svg'); return; }
+    try {
+      var svgData = new XMLSerializer().serializeToString(svgEl);
+      var canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      var img = new Image();
+      var svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(svgBlob);
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = function() { URL.revokeObjectURL(url); reject('img error'); };
+      img.src = url;
+    } catch (e) { reject(e); }
+  });
 }
 
 function exportReportPdf() {
@@ -2225,9 +2277,8 @@ function exportReportPdf() {
   
   var kpi = [
     ['Fatturato ' + r.anno, EURpdf(r.d26.fatturato), EURpdf(r.d25.fatturato), EURsignPdf(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
-    ['Bott. eq. 0,75L ' + r.anno, NUM(r.d26.bottiglieEq), NUM(r.d25.bottiglieEq), NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq), PCTsign(dB)],
-    ['Bottiglie effettive ' + r.anno, NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUMsign(r.d26.bottiglie-r.d25.bottiglie), ''],
-    ['Prezzo Medio (0,75L)', EURpdf(r.d26.pm), EURpdf(r.d25.pm), EURsignPdf(r.d26.pm-r.d25.pm), PCTsign(dPM)],
+    ['Bottiglie ' + r.anno, NUM(r.d26.bottiglieEq), NUM(r.d25.bottiglieEq), NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq), PCTsign(dB)],
+    ['Prezzo Medio', EURpdf(r.d26.pm), EURpdf(r.d25.pm), EURsignPdf(r.d26.pm-r.d25.pm), PCTsign(dPM)],
     ['Ordini ' + r.anno, NUM(r.d26.ordini), NUM(r.d25.ordini), NUMsign(r.d26.ordini-r.d25.ordini), '']
   ];
   doc.autoTable({
@@ -2242,57 +2293,47 @@ function exportReportPdf() {
   });
   y = doc.lastAutoTable.finalY + 8;
   
-  // Grafico — converto SVG in immagine canvas e lo aggiungo al PDF
-  var svgEl = document.querySelector('.chart-wrap svg');
-  if (svgEl) {
-    var chartTitle = 'Andamento mensile fatturato';
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(114, 47, 55);
-    doc.text(chartTitle, margin, y);
-    y += 4;
-    try {
-      var svgData = new XMLSerializer().serializeToString(svgEl);
-      var canvas = document.createElement('canvas');
-      canvas.width = 1200;
-      canvas.height = 380;
-      var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      var img = new Image();
-      var svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      var url = URL.createObjectURL(svgBlob);
-      img.onload = function() {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        URL.revokeObjectURL(url);
-        var imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', margin, y, pageW - 2*margin, 60);
-        var yAfterChart = y + 64;
-        addBlocksAndRefsToPdf(doc, r, yAfterChart);
-      };
-      img.onerror = function() {
-        URL.revokeObjectURL(url);
-        addBlocksAndRefsToPdf(doc, r, y);
-      };
-      img.src = url;
-    } catch (e) {
-      console.warn('Errore grafico PDF:', e);
-      addBlocksAndRefsToPdf(doc, r, y);
+  // Pre-converto chart SVG + donut SVG in PNG, poi aggiungo tutto al PDF
+  var chartSvg = document.querySelector('.chart-wrap svg');
+  var donutSvg = document.querySelector('.donut-svg');
+  
+  var chartPromise = chartSvg ? svgToPng(chartSvg, 1200, 380) : Promise.resolve(null);
+  var donutPromise = donutSvg ? svgToPng(donutSvg, 600, 600) : Promise.resolve(null);
+  
+  Promise.all([chartPromise, donutPromise]).then(function(images) {
+    var chartImg = images[0];
+    var donutImg = images[1];
+    var yPos = y;
+    
+    // Aggiungi grafico
+    if (chartImg) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(114, 47, 55);
+      doc.text('Andamento mensile fatturato', margin, yPos);
+      yPos += 4;
+      doc.addImage(chartImg, 'PNG', margin, yPos, pageW - 2*margin, 60);
+      yPos += 64;
     }
-  } else {
-    addBlocksAndRefsToPdf(doc, r, y);
-  }
+    
+    addBlocksAndRefsToPdf(doc, r, yPos, donutImg);
+  }).catch(function(err) {
+    console.warn('Errore conversione SVG:', err);
+    addBlocksAndRefsToPdf(doc, r, y, null);
+  });
 }
 
-function addBlocksAndRefsToPdf(doc, r, y) {
+function addBlocksAndRefsToPdf(doc, r, y, donutImg) {
   var pageW = 210, pageH = 297, margin = 14;
+  var entityLbl = r.isItalia ? 'agenti' : 'clienti';
+  var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
   
   // 4 blocchi riepilogo
   if (y > 230) { doc.addPage(); y = 20; }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(114, 47, 55);
-  doc.text('Riepilogo clienti', margin, y);
+  doc.text('Riepilogo ' + entityLbl, margin, y);
   y += 4;
   
   var totDeltaTutti = 0, totDeltaAttivi = 0, totDeltaCalo = 0, totDeltaAssenti = 0;
@@ -2300,9 +2341,6 @@ function addBlocksAndRefsToPdf(doc, r, y) {
   for (var i = 0; i < r.attivi.length; i++) totDeltaAttivi += (r.attivi[i].f26 - r.attivi[i].f25);
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
   for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
-  
-  var entityLbl = r.isItalia ? 'agenti' : 'clienti';
-  var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
   
   var blocks = [
     ['Tutti i ' + entityLbl, r.tutti.length, totDeltaTutti],
@@ -2323,13 +2361,33 @@ function addBlocksAndRefsToPdf(doc, r, y) {
   });
   y = doc.lastAutoTable.finalY + 8;
   
-  // Rotazione referenze
-  if (y > 230) { doc.addPage(); y = 20; }
+  // Rotazione referenze: titolo + (eventuale) donut + tabella
+  if (y > 200) { doc.addPage(); y = 20; }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(114, 47, 55);
   doc.text('Rotazione referenze ' + r.anno, margin, y);
-  y += 4;
+  y += 5;
+  
+  // Inserisci il donut se disponibile
+  if (donutImg) {
+    var donutSize = 65;
+    var donutX = (pageW - donutSize) / 2;
+    // Controlla se c'è spazio nella pagina corrente
+    if (y + donutSize + 15 > pageH - 15) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.addImage(donutImg, 'PNG', donutX, y, donutSize, donutSize);
+    
+    // Sotto al donut: totale bottiglie
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120, 100, 100);
+    doc.text('Totale bottiglie ' + r.anno + ': ' + NUM(r.d26.bottiglieEq), pageW/2, y + donutSize + 5, { align: 'center' });
+    
+    y = y + donutSize + 10;
+  }
   
   var refRows = [];
   var refNames = REFERENZE.map(function(x) { return x.name; });
@@ -2344,7 +2402,7 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     refRows.push([name, NUM(r26ref.btlEq), EURpdf(r26ref.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
   }
   doc.autoTable({
-    head: [['Referenza', 'Bott. eq. ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
+    head: [['Referenza', 'Bottiglie ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
     body: refRows, startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
@@ -2388,8 +2446,8 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     }
     
     var heads = r.isItalia
-      ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
-      : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
+      ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
+      : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
     
     var colStyles = r.isItalia
       ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
