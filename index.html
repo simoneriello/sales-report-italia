@@ -153,6 +153,29 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 .invoice-row{display:grid;grid-template-columns:120px 1fr 100px 120px;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .invoice-row:hover{background:#fdfafa}
 .invoice-row strong{font-weight:600}
+
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--wine);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.donut-wrap{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:center}
+@media(max-width:700px){.donut-wrap{grid-template-columns:1fr}}
+.donut-center{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-svg{width:240px;height:240px}
+.donut-total-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-top:8px;letter-spacing:0.5px}
+.donut-total-val{font-family:'DM Sans',sans-serif;font-size:1.6rem;font-weight:700;color:var(--wine);letter-spacing:-0.02em}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.legend-row{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.legend-row:last-child{border-bottom:none}
+.legend-color{width:12px;height:12px;border-radius:3px}
+.legend-name{font-weight:600}
+.legend-bar-wrap{display:flex;flex-direction:column;gap:3px;min-width:140px}
+.legend-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;position:relative}
+.legend-bar-fill{height:100%;border-radius:3px}
+.legend-bar-fill.cur{background:var(--wine)}
+.legend-bar-fill.prev{background:var(--gold);opacity:0.7}
+.legend-bar-label{font-size:10px;color:var(--muted)}
+.legend-val{font-weight:600;text-align:right}
+.legend-pct{font-size:11px;color:var(--muted);text-align:right;min-width:50px}
 </style>
 </head>
 <body>
@@ -315,6 +338,14 @@ function cleanData(raw) {
   var XA = ['PV', 'AUTOCONSUMO', 'VUOTO', 'WINE CLUB'];
   var XC = ['SCONTRINO', 'AUTOCONSUMO'];
   var result = [];
+  
+  // Identifica chiavi per accesso colonna Q (formato) - prendo la 17esima colonna se ci sono nomi indicizzati
+  // In SheetJS le colonne senza header arrivano come "__EMPTY", "__EMPTY_1" etc
+  var firstRow = raw.length > 0 ? raw[0] : {};
+  var allKeys = Object.keys(firstRow);
+  // Colonna Q = posizione 17 (A=1, B=2, ..., Q=17)
+  var qKey = allKeys[16] || null;
+  
   for (var i = 0; i < raw.length; i++) {
     var r = raw[i];
     var agente = String(r.Nome_Agente || '').trim();
@@ -326,12 +357,13 @@ function cleanData(raw) {
     if (stato && stato !== '_Italia') continue;
     if (anno !== 2025 && anno !== 2026) continue;
     
-    var mese = 0;
+    var mese = 0, giorno = 0;
     var d = r.Data_Doc;
     var dataStr = '';
-    if (d instanceof Date) { mese = d.getMonth() + 1; dataStr = formatDate(d); }
-    else if (typeof d === 'string') { var p = new Date(d); if (!isNaN(p.getTime())) { mese = p.getMonth() + 1; dataStr = formatDate(p); } }
-    else if (typeof d === 'number') { var b = new Date(1899, 11, 30); b.setDate(b.getDate() + Math.floor(d)); mese = b.getMonth() + 1; dataStr = formatDate(b); }
+    var dataISO = '';
+    if (d instanceof Date) { mese = d.getMonth() + 1; giorno = d.getDate(); dataStr = formatDate(d); dataISO = isoDate(d); }
+    else if (typeof d === 'string') { var p = new Date(d); if (!isNaN(p.getTime())) { mese = p.getMonth() + 1; giorno = p.getDate(); dataStr = formatDate(p); dataISO = isoDate(p); } }
+    else if (typeof d === 'number') { var b = new Date(1899, 11, 30); b.setDate(b.getDate() + Math.floor(d)); mese = b.getMonth() + 1; giorno = b.getDate(); dataStr = formatDate(b); dataISO = isoDate(b); }
     
     var tipoDoc = String(r.Tipo_Doc || '').trim();
     var tipoRiga = (tipoDoc === 'N.Acc.' || tipoDoc === 'F.Acc.') ? 'Accredito' : 'Vendita';
@@ -339,14 +371,30 @@ function cleanData(raw) {
     var citta = String(r.Citta || r.Città || r.Comune || r.Localita || r.Località || '').trim();
     var prov = String(r.Prov || r.Provincia || r.Sigla_Provincia || '').trim();
     
+    // Leggi formato dalla colonna Q
+    var formato = '';
+    if (qKey && r[qKey] !== undefined && r[qKey] !== '') {
+      formato = String(r[qKey]).trim();
+    }
+    
+    // Calcola fattore equivalenza alla bottiglia standard 0,75L
+    var fattore = calcolaFattoreEquiv(formato);
+    
+    var pezzi = parseFloat(r.Qta_Pezzi) || 0;
+    
     result.push({
       anno: anno,
       mese: mese,
+      giorno: giorno,
+      dataISO: dataISO,
       agente: agente,
       cliente: String(r.Ragione_Sociale || '').trim(),
       citta: citta,
       prov: prov,
-      pezzi: parseFloat(r.Qta_Pezzi) || 0,
+      pezzi: pezzi,
+      pezziEq: pezzi * fattore,
+      formato: formato,
+      fattore: fattore,
       importo: parseFloat(r.Importo_Netto) || 0,
       tipoRiga: tipoRiga,
       tipoDoc: tipoDoc,
@@ -357,6 +405,37 @@ function cleanData(raw) {
     });
   }
   return result;
+}
+
+function calcolaFattoreEquiv(formato) {
+  if (!formato) return 1;
+  var f = formato.toLowerCase().replace(',', '.').trim();
+  // Cerca numeri tipo "0.375", "0.75", "1.5", "3", "6"
+  var numMatch = f.match(/\d+(?:\.\d+)?/);
+  if (numMatch) {
+    var litri = parseFloat(numMatch[0]);
+    // Se è un numero plausibile come capacità in litri
+    if (litri >= 0.1 && litri <= 30) {
+      return litri / 0.75;
+    }
+  }
+  // Cerca per nome formato
+  if (f.indexOf('magnum') !== -1) return 1.5 / 0.75; // 2
+  if (f.indexOf('jeroboam') !== -1 || f.indexOf('doppio magnum') !== -1) return 3.0 / 0.75; // 4
+  if (f.indexOf('rehoboam') !== -1) return 4.5 / 0.75; // 6
+  if (f.indexOf('mathusalem') !== -1 || f.indexOf('matusalem') !== -1) return 6.0 / 0.75; // 8
+  if (f.indexOf('salmanazar') !== -1) return 9.0 / 0.75; // 12
+  if (f.indexOf('balthazar') !== -1) return 12.0 / 0.75; // 16
+  if (f.indexOf('nabuchodonosor') !== -1 || f.indexOf('nabucodonosor') !== -1) return 15.0 / 0.75; // 20
+  if (f.indexOf('mezza') !== -1 || f.indexOf('demi') !== -1) return 0.375 / 0.75; // 0.5
+  return 1;
+}
+
+function isoDate(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var g = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + g;
 }
 
 function formatDate(d) {
@@ -388,15 +467,44 @@ function togglePeriodo() {
 function getPeriodoFilter() {
   var p = document.getElementById('periodo').value;
   if (p === 'YTD') {
-    var maxMese = 0;
+    // Trova l'ultimo giorno disponibile nel 2026
+    var maxMese = 0, maxGiorno = 0;
     for (var i = 0; i < D.length; i++) {
-      if (D[i].anno === 2026 && D[i].mese > maxMese) maxMese = D[i].mese;
+      if (D[i].anno === 2026) {
+        if (D[i].mese > maxMese || (D[i].mese === maxMese && D[i].giorno > maxGiorno)) {
+          maxMese = D[i].mese;
+          maxGiorno = D[i].giorno;
+        }
+      }
     }
-    return { da: 1, a: maxMese || 12, label: 'YTD (gen-' + meseNome(maxMese || 12).toLowerCase() + ')' };
+    if (maxMese === 0) maxMese = 12;
+    return {
+      mode: 'YTD',
+      da: 1,
+      a: maxMese,
+      giornoMax: maxGiorno || 31,
+      label: 'YTD (1 gen - ' + (maxGiorno || '') + ' ' + meseNome(maxMese).toLowerCase() + ')'
+    };
   }
   var da = parseInt(document.getElementById('mese-da').value);
   var a = parseInt(document.getElementById('mese-a').value);
-  return { da: da, a: a, label: meseNome(da) + ' - ' + meseNome(a) };
+  return {
+    mode: 'RANGE',
+    da: da,
+    a: a,
+    giornoMax: 31,
+    label: meseNome(da) + ' - ' + meseNome(a)
+  };
+}
+
+// Filtra le righe in base al periodo. Per YTD usa anche il giorno (confronto preciso)
+function inPeriodo(row, periodo) {
+  if (row.mese < periodo.da || row.mese > periodo.a) return false;
+  // Se YTD e siamo nell'ultimo mese, filtra anche per giorno
+  if (periodo.mode === 'YTD' && row.mese === periodo.a) {
+    if (row.giorno > periodo.giornoMax) return false;
+  }
+  return true;
 }
 
 function meseNome(n) {
@@ -415,31 +523,41 @@ function calcolaDati(dati, anno, periodo) {
     var r = dati[i];
     if (r.anno !== anno) continue;
     if (r.tipoRiga !== 'Vendita') continue;
-    if (r.mese < periodo.da || r.mese > periodo.a) continue;
+    if (!inPeriodo(r, periodo)) continue;
     vend.push(r);
   }
   
-  var fatturato = 0, bottiglie = 0;
+  var fatturato = 0, bottiglie = 0, bottiglieEq = 0;
   var clienti = {};
   for (var i = 0; i < vend.length; i++) {
     fatturato += vend[i].importo;
     bottiglie += vend[i].pezzi;
+    bottiglieEq += vend[i].pezziEq;
     var c = vend[i].cliente;
-    if (!clienti[c]) clienti[c] = { fatt: 0, btl: 0, ordini: 0, agente: vend[i].agente, citta: vend[i].citta, prov: vend[i].prov };
+    if (!clienti[c]) clienti[c] = { fatt: 0, btl: 0, btlEq: 0, ordini: 0, agente: vend[i].agente, citta: vend[i].citta, prov: vend[i].prov };
     clienti[c].fatt += vend[i].importo;
     clienti[c].btl += vend[i].pezzi;
+    clienti[c].btlEq += vend[i].pezziEq;
     clienti[c].ordini++;
   }
   
-  return { fatturato: fatturato, bottiglie: bottiglie, pm: PM(fatturato, bottiglie), clienti: clienti, ordini: vend.length, vendite: vend };
+  return {
+    fatturato: fatturato,
+    bottiglie: bottiglie,
+    bottiglieEq: bottiglieEq,
+    pm: PM(fatturato, bottiglieEq),
+    clienti: clienti,
+    ordini: vend.length,
+    vendite: vend
+  };
 }
 
 function calcolaReferenze(vendite) {
   var refs = {};
   for (var i = 0; i < REFERENZE.length; i++) {
-    refs[REFERENZE[i].name] = { fatt: 0, btl: 0 };
+    refs[REFERENZE[i].name] = { fatt: 0, btl: 0, btlEq: 0 };
   }
-  var altro = { fatt: 0, btl: 0 };
+  var altro = { fatt: 0, btl: 0, btlEq: 0 };
   
   for (var i = 0; i < vendite.length; i++) {
     var v = vendite[i];
@@ -459,6 +577,7 @@ function calcolaReferenze(vendite) {
         if (!excluded) {
           refs[ref.name].fatt += v.importo;
           refs[ref.name].btl += v.pezzi;
+          refs[ref.name].btlEq += v.pezziEq;
           matched = true;
           break;
         }
@@ -467,6 +586,7 @@ function calcolaReferenze(vendite) {
     if (!matched) {
       altro.fatt += v.importo;
       altro.btl += v.pezzi;
+      altro.btlEq += v.pezziEq;
     }
   }
   refs['Altro'] = altro;
@@ -480,6 +600,10 @@ function calcolaTrendMensile(dati, anno, periodo) {
     var r = dati[i];
     if (r.anno !== anno) continue;
     if (r.tipoRiga !== 'Vendita') continue;
+    // Per il trend, applica il filtro periodo (mese range)
+    if (r.mese < periodo.da || r.mese > periodo.a) continue;
+    // Per YTD applica anche il filtro giorno sull'ultimo mese
+    if (periodo.mode === 'YTD' && r.mese === periodo.a && r.giorno > periodo.giornoMax) continue;
     trend[r.mese] += r.importo;
   }
   return trend;
@@ -491,92 +615,160 @@ function generaReport() {
   var annoP = anno - 1;
   var periodo = getPeriodoFilter();
   
-  var dati = vista === 'ITALIA' ? D : D.filter(function(r) { return r.agente === vista; });
+  // Mostra spinner
+  document.getElementById('placeholder').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px"><div class="spinner"></div><div style="color:var(--muted);font-size:13px">Calcolo report in corso...</div></div>';
+  document.getElementById('placeholder').style.display = 'block';
+  document.getElementById('report-wrapper').style.display = 'none';
   
-  var d26 = calcolaDati(dati, anno, periodo);
-  var d25 = calcolaDati(dati, annoP, periodo);
-  
-  var refs26 = calcolaReferenze(d26.vendite);
-  var refs25 = calcolaReferenze(d25.vendite);
-  
-  var trend26 = calcolaTrendMensile(dati, anno, periodo);
-  var trend25 = calcolaTrendMensile(dati, annoP, periodo);
-  
-  var clienti26 = Object.keys(d26.clienti);
-  var clienti25 = Object.keys(d25.clienti);
-  var tutti = {};
-  for (var i = 0; i < clienti26.length; i++) tutti[clienti26[i]] = true;
-  for (var i = 0; i < clienti25.length; i++) tutti[clienti25[i]] = true;
-  
-  var listaClienti = [];
-  var keys = Object.keys(tutti);
-  for (var i = 0; i < keys.length; i++) {
-    var c = keys[i];
-    var c26 = d26.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '', citta: '', prov: '' };
-    var c25 = d25.clienti[c] || { fatt: 0, btl: 0, ordini: 0, agente: '', citta: '', prov: '' };
-    var agente = c26.agente || c25.agente || '';
-    var citta = c26.citta || c25.citta || '';
-    var prov = c26.prov || c25.prov || '';
-    var cittaFull = citta + (prov ? ' (' + prov + ')' : '');
-    listaClienti.push({
-      nome: c, agente: agente, citta: cittaFull,
-      f26: c26.fatt, f25: c25.fatt,
-      b26: c26.btl, b25: c25.btl,
-      pm26: PM(c26.fatt, c26.btl), pm25: PM(c25.fatt, c25.btl),
-      ordini: c26.ordini
-    });
-  }
-  
-  var attivi = [], calo = [], assenti = [];
-  for (var i = 0; i < listaClienti.length; i++) {
-    var c = listaClienti[i];
-    if (c.f26 > 0 && c.f25 === 0) attivi.push(c);
-    else if (c.f26 > 0 && c.f25 > 0) {
-      if (c.f26 < c.f25) calo.push(c);
-      else attivi.push(c);
-    } else if (c.f26 === 0 && c.f25 > 0) assenti.push(c);
-  }
-  
-  listaClienti.sort(function(a, b) { return b.f26 - a.f26; });
-  
-  lastReport = {
-    vista: vista, anno: anno, annoP: annoP, periodo: periodo, dati: dati,
-    d26: d26, d25: d25, refs26: refs26, refs25: refs25,
-    trend26: trend26, trend25: trend25,
-    tutti: listaClienti, attivi: attivi, calo: calo, assenti: assenti
-  };
-  
-  renderReport();
+  setTimeout(function() {
+    var dati = vista === 'ITALIA' ? D : D.filter(function(r) { return r.agente === vista; });
+    
+    var d26 = calcolaDati(dati, anno, periodo);
+    var d25 = calcolaDati(dati, annoP, periodo);
+    
+    var refs26 = calcolaReferenze(d26.vendite);
+    var refs25 = calcolaReferenze(d25.vendite);
+    
+    var trend26 = calcolaTrendMensile(dati, anno, periodo);
+    var trend25 = calcolaTrendMensile(dati, annoP, periodo);
+    
+    var listaItems = [];
+    
+    if (vista === 'ITALIA') {
+      // Vista Italia: aggrega per agente
+      var ag26 = {}, ag25 = {};
+      for (var i = 0; i < d26.vendite.length; i++) {
+        var v = d26.vendite[i];
+        if (!v.agente) continue;
+        if (!ag26[v.agente]) ag26[v.agente] = { fatt: 0, btl: 0, btlEq: 0, clienti: {} };
+        ag26[v.agente].fatt += v.importo;
+        ag26[v.agente].btl += v.pezzi;
+        ag26[v.agente].btlEq += v.pezziEq;
+        ag26[v.agente].clienti[v.cliente] = true;
+      }
+      for (var i = 0; i < d25.vendite.length; i++) {
+        var v = d25.vendite[i];
+        if (!v.agente) continue;
+        if (!ag25[v.agente]) ag25[v.agente] = { fatt: 0, btl: 0, btlEq: 0, clienti: {} };
+        ag25[v.agente].fatt += v.importo;
+        ag25[v.agente].btl += v.pezzi;
+        ag25[v.agente].btlEq += v.pezziEq;
+        ag25[v.agente].clienti[v.cliente] = true;
+      }
+      
+      var agentiUnici = {};
+      var k1 = Object.keys(ag26), k2 = Object.keys(ag25);
+      for (var i = 0; i < k1.length; i++) agentiUnici[k1[i]] = true;
+      for (var i = 0; i < k2.length; i++) agentiUnici[k2[i]] = true;
+      var keys = Object.keys(agentiUnici);
+      
+      for (var i = 0; i < keys.length; i++) {
+        var a = keys[i];
+        var a26 = ag26[a] || { fatt: 0, btl: 0, btlEq: 0, clienti: {} };
+        var a25 = ag25[a] || { fatt: 0, btl: 0, btlEq: 0, clienti: {} };
+        listaItems.push({
+          tipo: 'agente',
+          nome: a,
+          citta: '',
+          agente: a,
+          f26: a26.fatt, f25: a25.fatt,
+          b26: a26.btl, b25: a25.btl,
+          b26Eq: a26.btlEq, b25Eq: a25.btlEq,
+          pm26: PM(a26.fatt, a26.btlEq), pm25: PM(a25.fatt, a25.btlEq),
+          nClienti26: Object.keys(a26.clienti).length,
+          nClienti25: Object.keys(a25.clienti).length
+        });
+      }
+    } else {
+      // Vista Agente: aggrega per cliente
+      var clienti26 = Object.keys(d26.clienti);
+      var clienti25 = Object.keys(d25.clienti);
+      var tutti = {};
+      for (var i = 0; i < clienti26.length; i++) tutti[clienti26[i]] = true;
+      for (var i = 0; i < clienti25.length; i++) tutti[clienti25[i]] = true;
+      
+      var keys = Object.keys(tutti);
+      for (var i = 0; i < keys.length; i++) {
+        var c = keys[i];
+        var c26 = d26.clienti[c] || { fatt: 0, btl: 0, btlEq: 0, ordini: 0, agente: '', citta: '', prov: '' };
+        var c25 = d25.clienti[c] || { fatt: 0, btl: 0, btlEq: 0, ordini: 0, agente: '', citta: '', prov: '' };
+        var agente = c26.agente || c25.agente || '';
+        var citta = c26.citta || c25.citta || '';
+        var prov = c26.prov || c25.prov || '';
+        var cittaFull = citta + (prov ? ' (' + prov + ')' : '');
+        listaItems.push({
+          tipo: 'cliente',
+          nome: c,
+          agente: agente,
+          citta: cittaFull,
+          f26: c26.fatt, f25: c25.fatt,
+          b26: c26.btl, b25: c25.btl,
+          b26Eq: c26.btlEq, b25Eq: c25.btlEq,
+          pm26: PM(c26.fatt, c26.btlEq), pm25: PM(c25.fatt, c25.btlEq),
+          ordini: c26.ordini
+        });
+      }
+    }
+    
+    var attivi = [], calo = [], assenti = [];
+    for (var i = 0; i < listaItems.length; i++) {
+      var c = listaItems[i];
+      if (c.f26 > 0 && c.f25 === 0) attivi.push(c);
+      else if (c.f26 > 0 && c.f25 > 0) {
+        if (c.f26 < c.f25) calo.push(c);
+        else attivi.push(c);
+      } else if (c.f26 === 0 && c.f25 > 0) assenti.push(c);
+    }
+    
+    listaItems.sort(function(a, b) { return b.f26 - a.f26; });
+    
+    lastReport = {
+      vista: vista, anno: anno, annoP: annoP, periodo: periodo, dati: dati,
+      d26: d26, d25: d25, refs26: refs26, refs25: refs25,
+      trend26: trend26, trend25: trend25,
+      tutti: listaItems, attivi: attivi, calo: calo, assenti: assenti,
+      isItalia: vista === 'ITALIA'
+    };
+    
+    renderReport();
+  }, 50);
 }
 
 function renderReport() {
   var r = lastReport;
   var dF = r.d25.fatturato > 0 ? ((r.d26.fatturato - r.d25.fatturato) / r.d25.fatturato) * 100 : 0;
-  var dB = r.d25.bottiglie > 0 ? ((r.d26.bottiglie - r.d25.bottiglie) / r.d25.bottiglie) * 100 : 0;
+  var dB = r.d25.bottiglieEq > 0 ? ((r.d26.bottiglieEq - r.d25.bottiglieEq) / r.d25.bottiglieEq) * 100 : 0;
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
-  var deltaF = r.d26.fatturato - r.d25.fatturato;
-  var deltaB = r.d26.bottiglie - r.d25.bottiglie;
   
   var html = '';
   html += '<div class="report-header"><div><h1>' + escapeHTML(r.vista) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div>';
   html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button></div></div>';
   
+  // KPI principali — uso bottiglie equivalenti
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + '</div><div class="kpi-sub"><span class="' + (r.d26.fatturato-r.d25.fatturato>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.fatturato-r.d25.fatturato) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglie) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglie) + '</div><div class="kpi-sub"><span class="' + (r.d26.bottiglie-r.d25.bottiglie>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglie-r.d25.bottiglie) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + '</div><div class="kpi-sub"><span class="' + (r.d26.ordini-r.d25.ordini>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.ordini-r.d25.ordini) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bott. eq. 0,75L ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglieEq) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglieEq) + ' eq. · ' + NUM(r.d26.bottiglie) + ' effettive</div><div class="kpi-sub"><span class="' + (r.d26.bottiglieEq-r.d25.bottiglieEq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio (per 0,75L)</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  if (r.isItalia) {
+    html += '<div class="kpi-card"><div class="kpi-label">Agenti attivi</div><div class="kpi-value">' + r.attivi.length + '</div><div class="kpi-sub">' + r.tutti.length + ' totali nel periodo</div></div>';
+  } else {
+    html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + '</div><div class="kpi-sub"><span class="' + (r.d26.ordini-r.d25.ordini>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.ordini-r.d25.ordini) + '</span></div></div>';
+  }
   html += '</div>';
   
   // Grafico andamento mensile
   html += '<div class="chart-wrap">';
-  html += '<div class="chart-title">Andamento mensile fatturato</div>';
+  html += '<div class="chart-title">Andamento mensile fatturato — ' + escapeHTML(r.periodo.label) + '</div>';
   html += '<div class="chart-legend"><div class="legend-item"><span class="legend-dot" style="background:var(--wine)"></span>' + r.anno + '</div><div class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span>' + r.annoP + '</div></div>';
-  html += buildChart(r.trend26, r.trend25, r.anno, r.annoP);
+  html += buildChart(r.trend26, r.trend25, r.anno, r.annoP, r.periodo);
   html += '</div>';
   
+  // Etichetta blocchi: "clienti" o "agenti"
+  var entityLabel = r.isItalia ? 'agenti' : 'clienti';
+  var entityLabelCap = r.isItalia ? 'Agenti' : 'Clienti';
+  
   // 4 blocchi riepilogo
-  html += '<div class="section"><div class="section-title">Riepilogo clienti</div><div class="summary-grid">';
+  html += '<div class="section"><div class="section-title">Riepilogo ' + entityLabel + '</div><div class="summary-grid">';
   
   var totDeltaTutti = 0;
   for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
@@ -587,38 +779,240 @@ function renderReport() {
   var totDeltaAssenti = 0;
   for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
   
-  html += buildSummBlock('blue', '≡ Tutti i clienti', r.tutti.length, totDeltaTutti, 'tutti', true);
-  html += buildSummBlock('green', '✓ Clienti attivi', r.attivi.length, totDeltaAttivi, 'attivi', true);
-  html += buildSummBlock(r.calo.length?'red':'green', '↓ Clienti in calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
+  html += buildSummBlock('blue', '≡ Tutti i ' + entityLabel, r.tutti.length, totDeltaTutti, 'tutti', true);
+  html += buildSummBlock('green', '✓ ' + entityLabelCap + ' attivi', r.attivi.length, totDeltaAttivi, 'attivi', true);
+  html += buildSummBlock(r.calo.length?'red':'green', '↓ ' + entityLabelCap + ' in calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
   html += buildSummBlock(r.assenti.length?'amber':'green', '⚠ Non ancora attivi', r.assenti.length, totDeltaAssenti, 'assenti', r.assenti.length > 0);
   
   html += '</div></div>';
   
-  // Rotazione referenze
+  // Tabella inline (sempre visibile per scheda agente, opzionale per Italia)
+  html += '<div class="section"><div class="section-title">' + entityLabelCap + ' — dettaglio (' + r.tutti.length + ')</div>';
+  html += buildMainTable(r.tutti, r.isItalia);
+  html += '</div>';
+  
+  // Rotazione referenze — DONUT
   html += '<div class="section"><div class="section-title">Rotazione referenze ' + r.anno + '</div>';
-  html += '<div class="ref-grid">';
-  var refNames = REFERENZE.map(function(x) { return x.name; });
-  refNames.push('Altro');
-  for (var i = 0; i < refNames.length; i++) {
-    var name = refNames[i];
-    var r26 = r.refs26[name] || { fatt: 0, btl: 0 };
-    var r25 = r.refs25[name] || { fatt: 0, btl: 0 };
-    if (r26.btl === 0 && r25.btl === 0) continue;
-    var dRef = r25.btl > 0 ? ((r26.btl - r25.btl) / r25.btl) * 100 : 0;
-    var pctTot = r.d26.bottiglie > 0 ? (r26.btl / r.d26.bottiglie) * 100 : 0;
-    html += '<div class="ref-card">';
-    html += '<div class="ref-name">' + escapeHTML(name) + '</div>';
-    html += '<div class="ref-val">' + NUM(r26.btl) + ' bott.</div>';
-    html += '<div class="ref-meta">' + EUR(r26.fatt) + '<br>';
-    html += pctTot.toFixed(2).replace('.', ',') + '% sul tot · ';
-    html += '<span class="' + (dRef>=0?'text-green':'text-red') + '">' + PCTsign(dRef) + '</span> vs ' + r.annoP;
-    html += '</div></div>';
-  }
-  html += '</div></div>';
+  html += buildDonutReferenze(r);
+  html += '</div>';
   
   document.getElementById('report-wrapper').innerHTML = html;
   document.getElementById('report-wrapper').style.display = 'block';
   document.getElementById('placeholder').style.display = 'none';
+  
+  setTimeout(function() {
+    initSort('main-tbl');
+    initResize('main-tbl');
+    bindMainRowClicks(r);
+  }, 50);
+}
+
+function bindMainRowClicks(r) {
+  var rows = document.querySelectorAll('#main-tbl tbody tr:not(.tot-row)');
+  for (var i = 0; i < rows.length; i++) {
+    (function(row) {
+      row.classList.add('clik');
+      row.addEventListener('click', function() {
+        var name = row.cells[0].textContent.trim();
+        if (r.isItalia) {
+          document.getElementById('vista').value = name;
+          generaReport();
+          window.scrollTo(0, 0);
+        } else {
+          fvStack = [];
+          showFV({ type: 'cliente', nome: name });
+        }
+      });
+    })(rows[i]);
+  }
+}
+
+function buildMainTable(data, isItalia) {
+  var html = '<div class="table-wrap"><div class="table-scroll"><table id="main-tbl">';
+  html += '<thead><tr>';
+  if (isItalia) {
+    html += '<th data-col="0" data-type="str">Agente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="1" data-type="num" class="text-right">Clienti 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="2" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+  } else {
+    html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="1" data-type="str">Città <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="2" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+  }
+  html += '</tr></thead><tbody>';
+  
+  var totF26=0,totF25=0,totB26=0,totB25=0;
+  
+  for (var i = 0; i < data.length; i++) {
+    var c = data[i];
+    var varV = c.f26 - c.f25;
+    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    var varColor = varV >= 0 ? 'text-green' : 'text-red';
+    totF26 += c.f26; totF25 += c.f25; totB26 += c.b26Eq; totB25 += c.b25Eq;
+    
+    html += '<tr>';
+    html += '<td>' + escapeHTML(c.nome) + '</td>';
+    if (isItalia) {
+      html += '<td class="text-right">' + (c.nClienti26 || 0) + '</td>';
+    } else {
+      html += '<td class="text-muted">' + escapeHTML(c.citta || '') + '</td>';
+    }
+    html += '<td class="text-right">' + EUR(c.f26) + '</td>';
+    html += '<td class="text-right">' + EUR(c.f25) + '</td>';
+    html += '<td class="text-right ' + varColor + '">' + EURsign(varV) + '</td>';
+    html += '<td class="text-right ' + varColor + '">' + PCTsign(varP) + '</td>';
+    html += '<td class="text-right">' + NUM(c.b26Eq) + '</td>';
+    html += '<td class="text-right">' + NUM(c.b25Eq) + '</td>';
+    html += '<td class="text-right">' + EUR(c.pm26) + '</td>';
+    html += '</tr>';
+  }
+  
+  var totVarV = totF26 - totF25;
+  var totVarP = totF25 > 0 ? ((totF26-totF25)/totF25)*100 : 0;
+  var totPM = PM(totF26, totB26);
+  var totColor = totVarV >= 0 ? 'text-green' : 'text-red';
+  
+  html += '<tr class="tot-row">';
+  html += '<td>TOTALE</td>';
+  html += '<td></td>';
+  html += '<td class="text-right">' + EUR(totF26) + '</td>';
+  html += '<td class="text-right">' + EUR(totF25) + '</td>';
+  html += '<td class="text-right ' + totColor + '">' + EURsign(totVarV) + '</td>';
+  html += '<td class="text-right ' + totColor + '">' + PCTsign(totVarP) + '</td>';
+  html += '<td class="text-right">' + NUM(totB26) + '</td>';
+  html += '<td class="text-right">' + NUM(totB25) + '</td>';
+  html += '<td class="text-right">' + EUR(totPM) + '</td>';
+  html += '</tr>';
+  
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+function buildDonutReferenze(r) {
+  var refNames = REFERENZE.map(function(x) { return x.name; });
+  refNames.push('Altro');
+  
+  // Colori per le referenze
+  var COLORS = ['#722F37', '#C9A84C', '#8B5A3C', '#4A6FA5', '#7E9F3A', '#B47AAE', '#D88B4C', '#5C8A8A', '#A03333', '#6B4E71'];
+  
+  var items = [];
+  var totalBtl = r.d26.bottiglieEq;
+  
+  for (var i = 0; i < refNames.length; i++) {
+    var name = refNames[i];
+    var r26 = r.refs26[name] || { fatt: 0, btl: 0, btlEq: 0 };
+    var r25 = r.refs25[name] || { fatt: 0, btl: 0, btlEq: 0 };
+    if (r26.btlEq === 0 && r25.btlEq === 0) continue;
+    items.push({
+      name: name,
+      btlEq26: r26.btlEq,
+      btlEq25: r25.btlEq,
+      fatt26: r26.fatt,
+      fatt25: r25.fatt,
+      pctTot: totalBtl > 0 ? (r26.btlEq / totalBtl) * 100 : 0,
+      dRef: r25.btlEq > 0 ? ((r26.btlEq - r25.btlEq) / r25.btlEq) * 100 : (r26.btlEq > 0 ? 100 : 0),
+      color: COLORS[i % COLORS.length]
+    });
+  }
+  
+  items.sort(function(a, b) { return b.btlEq26 - a.btlEq26; });
+  
+  if (items.length === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
+  
+  // Costruisci donut SVG
+  var size = 240;
+  var cx = size / 2, cy = size / 2;
+  var rOuter = 110, rInner = 70;
+  
+  var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" class="donut-svg">';
+  
+  var startAngle = -90;
+  var totalForDonut = 0;
+  for (var i = 0; i < items.length; i++) totalForDonut += items[i].btlEq26;
+  
+  if (totalForDonut > 0) {
+    for (var i = 0; i < items.length; i++) {
+      var pct = items[i].btlEq26 / totalForDonut;
+      var angle = pct * 360;
+      var endAngle = startAngle + angle;
+      
+      var startRad = (startAngle * Math.PI) / 180;
+      var endRad = (endAngle * Math.PI) / 180;
+      
+      var x1 = cx + rOuter * Math.cos(startRad);
+      var y1 = cy + rOuter * Math.sin(startRad);
+      var x2 = cx + rOuter * Math.cos(endRad);
+      var y2 = cy + rOuter * Math.sin(endRad);
+      var x3 = cx + rInner * Math.cos(endRad);
+      var y3 = cy + rInner * Math.sin(endRad);
+      var x4 = cx + rInner * Math.cos(startRad);
+      var y4 = cy + rInner * Math.sin(startRad);
+      
+      var largeArc = angle > 180 ? 1 : 0;
+      
+      var path = 'M ' + x1 + ' ' + y1 +
+                 ' A ' + rOuter + ' ' + rOuter + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 +
+                 ' L ' + x3 + ' ' + y3 +
+                 ' A ' + rInner + ' ' + rInner + ' 0 ' + largeArc + ' 0 ' + x4 + ' ' + y4 +
+                 ' Z';
+      
+      svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="2"/>';
+      startAngle = endAngle;
+    }
+  }
+  
+  svg += '</svg>';
+  
+  var html = '<div class="donut-wrap">';
+  html += '<div class="donut-center">' + svg;
+  html += '<div class="donut-total-label">TOTALE BOTT. EQ. ' + r.anno + '</div>';
+  html += '<div class="donut-total-val">' + NUM(totalForDonut) + '</div>';
+  html += '</div>';
+  
+  // Legenda
+  html += '<div class="donut-legend">';
+  
+  // Trova max per scalare le barre
+  var maxBtl = 0;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].btlEq26 > maxBtl) maxBtl = items[i].btlEq26;
+    if (items[i].btlEq25 > maxBtl) maxBtl = items[i].btlEq25;
+  }
+  
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var w26 = maxBtl > 0 ? (it.btlEq26 / maxBtl) * 100 : 0;
+    var w25 = maxBtl > 0 ? (it.btlEq25 / maxBtl) * 100 : 0;
+    
+    html += '<div class="legend-row">';
+    html += '<div class="legend-color" style="background:' + it.color + '"></div>';
+    html += '<div>';
+    html += '<div class="legend-name">' + escapeHTML(it.name) + '</div>';
+    html += '<div class="legend-bar-wrap">';
+    html += '<div class="legend-bar"><div class="legend-bar-fill cur" style="width:' + w26.toFixed(1) + '%"></div></div>';
+    html += '<div class="legend-bar"><div class="legend-bar-fill prev" style="width:' + w25.toFixed(1) + '%"></div></div>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="legend-val">' + NUM(it.btlEq26) + ' bt<br><span style="font-size:10px;color:var(--muted);font-weight:400">' + EUR(it.fatt26) + '</span></div>';
+    html += '<div class="legend-pct">' + it.pctTot.toFixed(1).replace('.', ',') + '%<br><span class="' + (it.dRef>=0?'text-green':'text-red') + '" style="font-size:10px">' + PCTsign(it.dRef) + '</span></div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '</div>';
+  
+  return html;
 }
 
 function buildSummBlock(color, label, count, delta, type, enabled) {
@@ -635,18 +1029,22 @@ function buildSummBlock(color, label, count, delta, type, enabled) {
   return html;
 }
 
-function buildChart(t26, t25, anno, annoP) {
+function buildChart(t26, t25, anno, annoP, periodo) {
+  var mesiDa = periodo ? periodo.da : 1;
+  var mesiA = periodo ? periodo.a : 12;
+  var nMesi = mesiA - mesiDa + 1;
+  
   var maxV = 0;
-  for (var m = 1; m <= 12; m++) {
+  for (var m = mesiDa; m <= mesiA; m++) {
     if (t26[m] > maxV) maxV = t26[m];
     if (t25[m] > maxV) maxV = t25[m];
   }
-  if (maxV === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
+  if (maxV === 0) return '<p style="color:var(--muted);font-size:12px;padding:20px;text-align:center">Nessun dato nel periodo selezionato</p>';
   
-  var w = 760, h = 240, padL = 56, padR = 20, padT = 20, padB = 40;
+  var w = 760, h = 240, padL = 60, padR = 20, padT = 20, padB = 40;
   var cw = w - padL - padR;
   var ch = h - padT - padB;
-  var step = cw / 11; // 11 intervalli tra 12 mesi
+  var step = nMesi > 1 ? cw / (nMesi - 1) : cw / 2;
   
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:320px">';
   
@@ -659,52 +1057,58 @@ function buildChart(t26, t25, anno, annoP) {
     svg += '<text x="' + (padL - 8) + '" y="' + (y + 3) + '" text-anchor="end" font-size="10" fill="#7a6b6c">' + lbl + '</text>';
   }
   
+  // Funzione xCoord per mese
+  function xc(m) {
+    if (nMesi === 1) return padL + cw / 2;
+    return padL + (m - mesiDa) * step;
+  }
+  
   // Asse X labels
-  for (var m = 1; m <= 12; m++) {
-    var x = padL + (m - 1) * step;
-    svg += '<text x="' + x + '" y="' + (h - 18) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
+  for (var m = mesiDa; m <= mesiA; m++) {
+    svg += '<text x="' + xc(m) + '" y="' + (h - 18) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
+  }
+  
+  // Indicatore "ultimo aggiornamento" per YTD
+  if (periodo && periodo.mode === 'YTD' && periodo.giornoMax > 0 && periodo.giornoMax < 28) {
+    svg += '<text x="' + (w - padR) + '" y="14" text-anchor="end" font-size="9" fill="#7a6b6c" font-style="italic">aggiornato al ' + periodo.giornoMax + ' ' + meseAbbr(periodo.a).toLowerCase() + '</text>';
   }
   
   // Linea 2025 (oro tratteggiata)
-  var pts25 = [];
-  for (var m = 1; m <= 12; m++) {
-    var x = padL + (m - 1) * step;
-    var y = padT + ch - ((t25[m] / maxV) * ch);
-    pts25.push(x + ',' + y);
+  if (nMesi > 1) {
+    var pts25 = [];
+    for (var m = mesiDa; m <= mesiA; m++) {
+      var y25 = padT + ch - ((t25[m] / maxV) * ch);
+      pts25.push(xc(m) + ',' + y25);
+    }
+    svg += '<polyline points="' + pts25.join(' ') + '" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-dasharray="6,4"/>';
   }
-  svg += '<polyline points="' + pts25.join(' ') + '" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-dasharray="6,4"/>';
   
   // Punti 2025
-  for (var m = 1; m <= 12; m++) {
+  for (var m = mesiDa; m <= mesiA; m++) {
     if (t25[m] === 0) continue;
-    var x = padL + (m - 1) * step;
-    var y = padT + ch - ((t25[m] / maxV) * ch);
-    svg += '<circle cx="' + x + '" cy="' + y + '" r="3.5" fill="#C9A84C" stroke="white" stroke-width="1.5"/>';
+    var y25 = padT + ch - ((t25[m] / maxV) * ch);
+    svg += '<circle cx="' + xc(m) + '" cy="' + y25 + '" r="3.5" fill="#C9A84C" stroke="white" stroke-width="1.5"/>';
   }
   
   // Linea 2026 (bordeaux piena)
-  var pts26 = [];
-  var lastMese26 = 0;
-  for (var m = 1; m <= 12; m++) {
-    if (t26[m] > 0 || m === 1) {
-      var x = padL + (m - 1) * step;
-      var y = padT + ch - ((t26[m] / maxV) * ch);
-      pts26.push(x + ',' + y);
-      if (t26[m] > 0) lastMese26 = m;
-    } else if (m > lastMese26) {
-      break;
+  if (nMesi > 1) {
+    var pts26 = [];
+    for (var m = mesiDa; m <= mesiA; m++) {
+      if (t26[m] > 0 || pts26.length > 0) {
+        var y26 = padT + ch - ((t26[m] / maxV) * ch);
+        pts26.push(xc(m) + ',' + y26);
+      }
     }
-  }
-  if (pts26.length > 1) {
-    svg += '<polyline points="' + pts26.join(' ') + '" fill="none" stroke="#722F37" stroke-width="3"/>';
+    if (pts26.length > 1) {
+      svg += '<polyline points="' + pts26.join(' ') + '" fill="none" stroke="#722F37" stroke-width="3"/>';
+    }
   }
   
   // Punti 2026
-  for (var m = 1; m <= 12; m++) {
+  for (var m = mesiDa; m <= mesiA; m++) {
     if (t26[m] === 0) continue;
-    var x = padL + (m - 1) * step;
-    var y = padT + ch - ((t26[m] / maxV) * ch);
-    svg += '<circle cx="' + x + '" cy="' + y + '" r="4" fill="#722F37" stroke="white" stroke-width="2"/>';
+    var y26 = padT + ch - ((t26[m] / maxV) * ch);
+    svg += '<circle cx="' + xc(m) + '" cy="' + y26 + '" r="4" fill="#722F37" stroke="white" stroke-width="2"/>';
   }
   
   svg += '</svg>';
@@ -713,13 +1117,15 @@ function buildChart(t26, t25, anno, annoP) {
 
 function openFV(tipo) {
   var data, title;
-  if (tipo === 'tutti') { data = lastReport.tutti; title = 'Tutti i clienti'; }
-  else if (tipo === 'attivi') { data = lastReport.attivi; title = 'Clienti attivi'; }
-  else if (tipo === 'calo') { data = lastReport.calo; title = 'Clienti in calo'; }
+  var entity = lastReport.isItalia ? 'agenti' : 'clienti';
+  var entityCap = lastReport.isItalia ? 'Agenti' : 'Clienti';
+  if (tipo === 'tutti') { data = lastReport.tutti; title = 'Tutti i ' + entity; }
+  else if (tipo === 'attivi') { data = lastReport.attivi; title = entityCap + ' attivi'; }
+  else if (tipo === 'calo') { data = lastReport.calo; title = entityCap + ' in calo'; }
   else if (tipo === 'assenti') { data = lastReport.assenti; title = 'Non ancora attivi'; }
   
   fvStack = [];
-  showFV({ type: 'lista', data: data, title: title });
+  showFV({ type: 'lista', data: data, title: title, isItalia: lastReport.isItalia });
 }
 
 function showFV(state) {
@@ -742,57 +1148,140 @@ function renderFV() {
 function renderFVLista(state) {
   var data = state.data;
   var title = state.title;
+  var isItalia = state.isItalia;
   window._fvData = data;
   window._fvTitle = title;
   window._fvType = 'lista';
+  window._fvIsItalia = isItalia;
+  
+  var entity = isItalia ? 'agenti' : 'clienti';
   
   document.getElementById('fv-bc').textContent = title + ' · ' + lastReport.vista;
   
-  var f26 = 0, f25 = 0, b26 = 0, b25 = 0;
+  var f26 = 0, f25 = 0, b26 = 0, b25 = 0, b26Eq = 0, b25Eq = 0;
   for (var i = 0; i < data.length; i++) {
     f26 += data[i].f26; f25 += data[i].f25;
-    b26 += data[i].b26; b25 += data[i].b25;
+    b26 += data[i].b26 || 0; b25 += data[i].b25 || 0;
+    b26Eq += data[i].b26Eq || 0; b25Eq += data[i].b25Eq || 0;
   }
-  var pm26 = PM(f26, b26), pm25 = PM(f25, b25);
+  var pm26 = PM(f26, b26Eq), pm25 = PM(f25, b25Eq);
   var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
-  var dB = b25 > 0 ? ((b26 - b25) / b25) * 100 : 0;
+  var dB = b25Eq > 0 ? ((b26Eq - b25Eq) / b25Eq) * 100 : 0;
   var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
-  var html = '<div class="fv-title">' + escapeHTML(title) + '</div><div class="fv-sub">' + escapeHTML(lastReport.vista) + ' · ' + escapeHTML(lastReport.periodo.label) + ' · ' + data.length + ' clienti</div>';
+  var html = '<div class="fv-title">' + escapeHTML(title) + '</div><div class="fv-sub">' + escapeHTML(lastReport.vista) + ' · ' + escapeHTML(lastReport.periodo.label) + ' · ' + data.length + ' ' + entity + '</div>';
   
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato 2026</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + '</div><div class="kpi-sub"><span class="' + (f26-f25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(f26-f25) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie 2026</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + '</div><div class="kpi-sub"><span class="' + (b26-b25>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26-b25) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bott. eq. 0,75L 2026</div><div class="kpi-value">' + NUM(b26Eq) + '</div><div class="kpi-sub">vs ' + NUM(b25Eq) + '</div><div class="kpi-sub"><span class="' + (b26Eq-b25Eq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq-b25Eq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Clienti</div><div class="kpi-value">' + data.length + '</div><div class="kpi-sub">in questa lista</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">' + (isItalia ? 'Agenti' : 'Clienti') + '</div><div class="kpi-value">' + data.length + '</div><div class="kpi-sub">in questa lista</div></div>';
   html += '</div>';
   
-  html += buildTable(data, 'fv-tbl', f26, f25, b26, b25);
+  html += buildFVTable(data, 'fv-tbl', f26, f25, b26Eq, b25Eq, isItalia);
   
   document.getElementById('fv-body').innerHTML = html;
   
   setTimeout(function() {
     initSort('fv-tbl');
     initResize('fv-tbl');
-    bindRowClicks('fv-tbl', data);
+    bindFVRowClicks('fv-tbl', data, isItalia);
   }, 50);
 }
 
-function bindRowClicks(tblId, data) {
+function bindFVRowClicks(tblId, data, isItalia) {
   var rows = document.querySelectorAll('#' + tblId + ' tbody tr:not(.tot-row)');
   for (var i = 0; i < rows.length; i++) {
-    (function(row, idx) {
+    (function(row) {
       row.classList.add('clik');
       row.addEventListener('click', function() {
-        var clienteName = row.cells[0].textContent.trim();
-        var c = null;
-        for (var j = 0; j < data.length; j++) {
-          if (data[j].nome === clienteName) { c = data[j]; break; }
+        var name = row.cells[0].textContent.trim();
+        if (isItalia) {
+          // Click su un agente → cambia vista
+          document.getElementById('vista').value = name;
+          closeFV();
+          fvStack = [];
+          generaReport();
+          window.scrollTo(0, 0);
+        } else {
+          openClienteFV(name);
         }
-        if (c) openClienteFV(c.nome);
       });
-    })(rows[i], i);
+    })(rows[i]);
   }
+}
+
+function buildFVTable(data, tblId, totF26, totF25, totB26Eq, totB25Eq, isItalia) {
+  var html = '<div class="table-wrap"><div class="table-scroll"><table id="' + tblId + '">';
+  html += '<thead><tr>';
+  if (isItalia) {
+    html += '<th data-col="0" data-type="str">Agente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="1" data-type="num" class="text-right">Clienti 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="2" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="4" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+  } else {
+    html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="1" data-type="str">Città <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="2" data-type="str">Agente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="4" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="5" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="6" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="7" data-type="num" class="text-right">Bott. eq. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">Bott. eq. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+    html += '<th data-col="9" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+  }
+  html += '</tr></thead><tbody>';
+  
+  for (var i = 0; i < data.length; i++) {
+    var c = data[i];
+    var varV = c.f26 - c.f25;
+    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    var varColor = varV >= 0 ? 'text-green' : 'text-red';
+    
+    html += '<tr>';
+    html += '<td>' + escapeHTML(c.nome) + '</td>';
+    if (isItalia) {
+      html += '<td class="text-right">' + (c.nClienti26 || 0) + '</td>';
+    } else {
+      html += '<td class="text-muted">' + escapeHTML(c.citta || '') + '</td>';
+      html += '<td class="text-muted">' + escapeHTML(c.agente || '') + '</td>';
+    }
+    html += '<td class="text-right">' + EUR(c.f26) + '</td>';
+    html += '<td class="text-right">' + EUR(c.f25) + '</td>';
+    html += '<td class="text-right ' + varColor + '">' + EURsign(varV) + '</td>';
+    html += '<td class="text-right ' + varColor + '">' + PCTsign(varP) + '</td>';
+    html += '<td class="text-right">' + NUM(c.b26Eq || 0) + '</td>';
+    html += '<td class="text-right">' + NUM(c.b25Eq || 0) + '</td>';
+    html += '<td class="text-right">' + EUR(c.pm26) + '</td>';
+    html += '</tr>';
+  }
+  
+  var totVarV = totF26 - totF25;
+  var totVarP = totF25 > 0 ? ((totF26-totF25)/totF25)*100 : 0;
+  var totPM26 = PM(totF26, totB26Eq);
+  var totColor = totVarV >= 0 ? 'text-green' : 'text-red';
+  
+  html += '<tr class="tot-row">';
+  html += '<td>TOTALE</td>';
+  html += '<td></td>';
+  if (!isItalia) html += '<td></td>';
+  html += '<td class="text-right">' + EUR(totF26) + '</td>';
+  html += '<td class="text-right">' + EUR(totF25) + '</td>';
+  html += '<td class="text-right ' + totColor + '">' + EURsign(totVarV) + '</td>';
+  html += '<td class="text-right ' + totColor + '">' + PCTsign(totVarP) + '</td>';
+  html += '<td class="text-right">' + NUM(totB26Eq) + '</td>';
+  html += '<td class="text-right">' + NUM(totB25Eq) + '</td>';
+  html += '<td class="text-right">' + EUR(totPM26) + '</td>';
+  html += '</tr>';
+  
+  html += '</tbody></table></div></div>';
+  return html;
 }
 
 function openClienteFV(nome) {
@@ -805,30 +1294,32 @@ function renderFVCliente(state) {
   var annoP = lastReport.annoP;
   var periodo = lastReport.periodo;
   
-  // Calcola dati cliente
+  // Calcola dati cliente con filtro giorno-preciso
   var v26 = [], v25 = [];
-  var allCliente = [];
   for (var i = 0; i < D.length; i++) {
     if (D[i].cliente !== nome) continue;
     if (D[i].tipoRiga !== 'Vendita') continue;
-    if (D[i].mese < periodo.da || D[i].mese > periodo.a) continue;
+    if (!inPeriodo(D[i], periodo)) continue;
     if (D[i].anno === anno) v26.push(D[i]);
     if (D[i].anno === annoP) v25.push(D[i]);
-    allCliente.push(D[i]);
   }
   
-  var f26 = 0, b26 = 0, f25 = 0, b25 = 0;
-  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; }
-  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; }
-  var pm26 = PM(f26, b26), pm25 = PM(f25, b25);
+  var f26 = 0, b26 = 0, b26Eq = 0, f25 = 0, b25 = 0, b25Eq = 0;
+  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; b26Eq += v26[i].pezziEq; }
+  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; b25Eq += v25[i].pezziEq; }
+  var pm26 = PM(f26, b26Eq), pm25 = PM(f25, b25Eq);
   var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
-  var dB = b25 > 0 ? ((b26 - b25) / b25) * 100 : 0;
+  var dB = b25Eq > 0 ? ((b26Eq - b25Eq) / b25Eq) * 100 : 0;
   var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
-  // Agente del cliente
-  var agente = '';
-  for (var i = 0; i < v26.length; i++) { if (v26[i].agente) { agente = v26[i].agente; break; } }
-  if (!agente) for (var i = 0; i < v25.length; i++) { if (v25[i].agente) { agente = v25[i].agente; break; } }
+  // Agente, città, provincia
+  var agente = '', citta = '', prov = '';
+  for (var i = 0; i < v26.length; i++) {
+    if (v26[i].agente) { agente = v26[i].agente; citta = v26[i].citta; prov = v26[i].prov; break; }
+  }
+  if (!agente) for (var i = 0; i < v25.length; i++) {
+    if (v25[i].agente) { agente = v25[i].agente; citta = v25[i].citta; prov = v25[i].prov; break; }
+  }
   
   // Referenze
   var refs26 = calcolaReferenze(v26);
@@ -838,48 +1329,37 @@ function renderFVCliente(state) {
   var fatture = {};
   for (var i = 0; i < v26.length; i++) {
     var key = v26[i].numDoc + '|' + v26[i].dataStr;
-    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, importo: 0, pezzi: 0, righe: [] };
+    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, dataISO: v26[i].dataISO, importo: 0, pezzi: 0, pezziEq: 0 };
     fatture[key].importo += v26[i].importo;
     fatture[key].pezzi += v26[i].pezzi;
-    fatture[key].righe.push(v26[i]);
+    fatture[key].pezziEq += v26[i].pezziEq;
   }
-  var fattureArr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
+  var fattureArr = Object.values(fatture).sort(function(a, b) { return (a.dataISO < b.dataISO) ? 1 : -1; });
   
   document.getElementById('fv-bc').textContent = 'Cliente: ' + nome + (agente ? ' · ' + agente : '');
   window._fvData = null;
   window._fvType = 'cliente';
   window._fvCliente = nome;
   
+  var subtitleParts = [];
+  if (agente) subtitleParts.push(escapeHTML(agente));
+  if (citta) subtitleParts.push(escapeHTML(citta) + (prov ? ' (' + escapeHTML(prov) + ')' : ''));
+  subtitleParts.push(escapeHTML(lastReport.periodo.label));
+  
   var html = '<div class="fv-title">' + escapeHTML(nome) + '</div>';
-  html += '<div class="fv-sub">' + (agente ? escapeHTML(agente) + ' · ' : '') + escapeHTML(lastReport.periodo.label) + '</div>';
+  html += '<div class="fv-sub">' + subtitleParts.join(' · ') + '</div>';
   
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + anno + '</div><div class="kpi-value">' + EUR(f26) + '</div><div class="kpi-sub">vs ' + EUR(f25) + '</div><div class="kpi-sub"><span class="' + (f26-f25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(f26-f25) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + anno + '</div><div class="kpi-value">' + NUM(b26) + '</div><div class="kpi-sub">vs ' + NUM(b25) + '</div><div class="kpi-sub"><span class="' + (b26-b25>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26-b25) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
-  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Bott. eq. 0,75L ' + anno + '</div><div class="kpi-value">' + NUM(b26Eq) + '</div><div class="kpi-sub">vs ' + NUM(b25Eq) + ' eq. · ' + NUM(b26) + ' effettive</div><div class="kpi-sub"><span class="' + (b26Eq-b25Eq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq-b25Eq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio (per 0,75L)</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Fatture ' + anno + '</div><div class="kpi-value">' + fattureArr.length + '</div><div class="kpi-sub">documenti emessi</div></div>';
   html += '</div>';
   
-  // Referenze cliente
-  html += '<div class="section"><div class="section-title">Referenze ' + anno + '</div><div class="ref-grid">';
-  var refNames = REFERENZE.map(function(x) { return x.name; });
-  refNames.push('Altro');
-  for (var i = 0; i < refNames.length; i++) {
-    var name = refNames[i];
-    var r26 = refs26[name] || { fatt: 0, btl: 0 };
-    var r25 = refs25[name] || { fatt: 0, btl: 0 };
-    if (r26.btl === 0 && r25.btl === 0) continue;
-    var dRef = r25.btl > 0 ? ((r26.btl - r25.btl) / r25.btl) * 100 : 0;
-    var pctTot = b26 > 0 ? (r26.btl / b26) * 100 : 0;
-    html += '<div class="ref-card">';
-    html += '<div class="ref-name">' + escapeHTML(name) + '</div>';
-    html += '<div class="ref-val">' + NUM(r26.btl) + ' bott.</div>';
-    html += '<div class="ref-meta">' + EUR(r26.fatt) + '<br>';
-    html += pctTot.toFixed(2).replace('.', ',') + '% · ';
-    html += '<span class="' + (dRef>=0?'text-green':'text-red') + '">' + PCTsign(dRef) + '</span> vs ' + annoP;
-    html += '</div></div>';
-  }
-  html += '</div></div>';
+  // Referenze cliente — DONUT
+  html += '<div class="section"><div class="section-title">Rotazione referenze ' + anno + '</div>';
+  html += buildDonutReferenzeCliente(refs26, refs25, b26Eq, anno, annoP);
+  html += '</div>';
   
   // Elenco fatture
   html += '<div class="section"><div class="section-title">Fatture ' + anno + ' (' + fattureArr.length + ')</div>';
@@ -888,13 +1368,14 @@ function renderFVCliente(state) {
   html += '<th data-col="0" data-type="str">Data <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
   html += '<th data-col="1" data-type="str">N. Doc <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
   html += '<th data-col="2" data-type="num" class="text-right">Bottiglie <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="3" data-type="num" class="text-right">Importo <span class="sort-arrow">▼</span></th>';
+  html += '<th data-col="3" data-type="num" class="text-right">Bott. eq. <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="4" data-type="num" class="text-right">Importo <span class="sort-arrow">▼</span></th>';
   html += '</tr></thead><tbody>';
   for (var i = 0; i < fattureArr.length; i++) {
     var f = fattureArr[i];
-    html += '<tr><td>' + escapeHTML(f.data) + '</td><td>' + escapeHTML(f.numDoc) + '</td><td class="text-right">' + NUM(f.pezzi) + '</td><td class="text-right">' + EUR(f.importo) + '</td></tr>';
+    html += '<tr><td>' + escapeHTML(f.data) + '</td><td>' + escapeHTML(f.numDoc) + '</td><td class="text-right">' + NUM(f.pezzi) + '</td><td class="text-right">' + NUM(f.pezziEq) + '</td><td class="text-right">' + EUR(f.importo) + '</td></tr>';
   }
-  html += '<tr class="tot-row"><td>TOTALE</td><td></td><td class="text-right">' + NUM(b26) + '</td><td class="text-right">' + EUR(f26) + '</td></tr>';
+  html += '<tr class="tot-row"><td>TOTALE</td><td></td><td class="text-right">' + NUM(b26) + '</td><td class="text-right">' + NUM(b26Eq) + '</td><td class="text-right">' + EUR(f26) + '</td></tr>';
   html += '</tbody></table></div></div></div>';
   
   document.getElementById('fv-body').innerHTML = html;
@@ -905,60 +1386,85 @@ function renderFVCliente(state) {
   }, 50);
 }
 
-function buildTable(data, tblId, totF26, totF25, totB26, totB25) {
-  var html = '<div class="table-wrap"><div class="table-scroll"><table id="' + tblId + '">';
-  html += '<thead><tr>';
-  html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="1" data-type="str">Città <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="2" data-type="str">Agente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="3" data-type="num" class="text-right">Fatt. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="4" data-type="num" class="text-right">Fatt. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="5" data-type="num" class="text-right">Var € <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="6" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="7" data-type="num" class="text-right">Bott. 2026 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="8" data-type="num" class="text-right">Bott. 2025 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-  html += '<th data-col="9" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
-  html += '</tr></thead><tbody>';
+function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
+  var refNames = REFERENZE.map(function(x) { return x.name; });
+  refNames.push('Altro');
+  var COLORS = ['#722F37', '#C9A84C', '#8B5A3C', '#4A6FA5', '#7E9F3A', '#B47AAE', '#D88B4C', '#5C8A8A', '#A03333', '#6B4E71'];
   
-  for (var i = 0; i < data.length; i++) {
-    var c = data[i];
-    var varV = c.f26 - c.f25;
-    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-    var varColor = varV >= 0 ? 'text-green' : 'text-red';
-    
-    html += '<tr>';
-    html += '<td>' + escapeHTML(c.nome) + '</td>';
-    html += '<td class="text-muted">' + escapeHTML(c.citta || '') + '</td>';
-    html += '<td class="text-muted">' + escapeHTML(c.agente) + '</td>';
-    html += '<td class="text-right">' + EUR(c.f26) + '</td>';
-    html += '<td class="text-right">' + EUR(c.f25) + '</td>';
-    html += '<td class="text-right ' + varColor + '">' + EURsign(varV) + '</td>';
-    html += '<td class="text-right ' + varColor + '">' + PCTsign(varP) + '</td>';
-    html += '<td class="text-right">' + NUM(c.b26) + '</td>';
-    html += '<td class="text-right">' + NUM(c.b25) + '</td>';
-    html += '<td class="text-right">' + EUR(c.pm26) + '</td>';
-    html += '</tr>';
+  var items = [];
+  for (var i = 0; i < refNames.length; i++) {
+    var name = refNames[i];
+    var r26 = refs26[name] || { fatt: 0, btl: 0, btlEq: 0 };
+    var r25 = refs25[name] || { fatt: 0, btl: 0, btlEq: 0 };
+    if (r26.btlEq === 0 && r25.btlEq === 0) continue;
+    items.push({
+      name: name,
+      btlEq26: r26.btlEq, btlEq25: r25.btlEq,
+      fatt26: r26.fatt, fatt25: r25.fatt,
+      pctTot: totalBtl > 0 ? (r26.btlEq / totalBtl) * 100 : 0,
+      dRef: r25.btlEq > 0 ? ((r26.btlEq - r25.btlEq) / r25.btlEq) * 100 : (r26.btlEq > 0 ? 100 : 0),
+      color: COLORS[i % COLORS.length]
+    });
   }
+  items.sort(function(a, b) { return b.btlEq26 - a.btlEq26; });
+  if (items.length === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
   
-  var totVarV = totF26 - totF25;
-  var totVarP = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
-  var totPM26 = PM(totF26, totB26);
-  var totColor = totVarV >= 0 ? 'text-green' : 'text-red';
+  var size = 240, cx = size / 2, cy = size / 2, rOuter = 110, rInner = 70;
+  var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" class="donut-svg">';
+  var startAngle = -90;
+  var totalForDonut = 0;
+  for (var i = 0; i < items.length; i++) totalForDonut += items[i].btlEq26;
   
-  html += '<tr class="tot-row">';
-  html += '<td>TOTALE</td>';
-  html += '<td></td>';
-  html += '<td></td>';
-  html += '<td class="text-right">' + EUR(totF26) + '</td>';
-  html += '<td class="text-right">' + EUR(totF25) + '</td>';
-  html += '<td class="text-right ' + totColor + '">' + EURsign(totVarV) + '</td>';
-  html += '<td class="text-right ' + totColor + '">' + PCTsign(totVarP) + '</td>';
-  html += '<td class="text-right">' + NUM(totB26) + '</td>';
-  html += '<td class="text-right">' + NUM(totB25) + '</td>';
-  html += '<td class="text-right">' + EUR(totPM26) + '</td>';
-  html += '</tr>';
+  if (totalForDonut > 0) {
+    for (var i = 0; i < items.length; i++) {
+      var pct = items[i].btlEq26 / totalForDonut;
+      var angle = pct * 360;
+      var endAngle = startAngle + angle;
+      var startRad = (startAngle * Math.PI) / 180;
+      var endRad = (endAngle * Math.PI) / 180;
+      var x1 = cx + rOuter * Math.cos(startRad), y1 = cy + rOuter * Math.sin(startRad);
+      var x2 = cx + rOuter * Math.cos(endRad), y2 = cy + rOuter * Math.sin(endRad);
+      var x3 = cx + rInner * Math.cos(endRad), y3 = cy + rInner * Math.sin(endRad);
+      var x4 = cx + rInner * Math.cos(startRad), y4 = cy + rInner * Math.sin(startRad);
+      var largeArc = angle > 180 ? 1 : 0;
+      var path = 'M ' + x1 + ' ' + y1 +
+                 ' A ' + rOuter + ' ' + rOuter + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 +
+                 ' L ' + x3 + ' ' + y3 +
+                 ' A ' + rInner + ' ' + rInner + ' 0 ' + largeArc + ' 0 ' + x4 + ' ' + y4 + ' Z';
+      svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="2"/>';
+      startAngle = endAngle;
+    }
+  }
+  svg += '</svg>';
   
-  html += '</tbody></table></div></div>';
+  var html = '<div class="donut-wrap">';
+  html += '<div class="donut-center">' + svg;
+  html += '<div class="donut-total-label">BOTT. EQ. ' + anno + '</div>';
+  html += '<div class="donut-total-val">' + NUM(totalForDonut) + '</div>';
+  html += '</div>';
+  
+  html += '<div class="donut-legend">';
+  var maxBtl = 0;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].btlEq26 > maxBtl) maxBtl = items[i].btlEq26;
+    if (items[i].btlEq25 > maxBtl) maxBtl = items[i].btlEq25;
+  }
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var w26 = maxBtl > 0 ? (it.btlEq26 / maxBtl) * 100 : 0;
+    var w25 = maxBtl > 0 ? (it.btlEq25 / maxBtl) * 100 : 0;
+    html += '<div class="legend-row">';
+    html += '<div class="legend-color" style="background:' + it.color + '"></div>';
+    html += '<div><div class="legend-name">' + escapeHTML(it.name) + '</div>';
+    html += '<div class="legend-bar-wrap">';
+    html += '<div class="legend-bar"><div class="legend-bar-fill cur" style="width:' + w26.toFixed(1) + '%"></div></div>';
+    html += '<div class="legend-bar"><div class="legend-bar-fill prev" style="width:' + w25.toFixed(1) + '%"></div></div>';
+    html += '</div></div>';
+    html += '<div class="legend-val">' + NUM(it.btlEq26) + ' bt<br><span style="font-size:10px;color:var(--muted);font-weight:400">' + EUR(it.fatt26) + '</span></div>';
+    html += '<div class="legend-pct">' + it.pctTot.toFixed(1).replace('.', ',') + '%<br><span class="' + (it.dRef>=0?'text-green':'text-red') + '" style="font-size:10px">' + PCTsign(it.dRef) + '</span></div>';
+    html += '</div>';
+  }
+  html += '</div></div>';
   return html;
 }
 
@@ -1009,9 +1515,11 @@ function sortTable(tblId, colIdx, type) {
   for (var i = 0; i < rows.length; i++) tbody.appendChild(rows[i]);
   if (totRow) tbody.appendChild(totRow);
   
-  // Riattacca click handlers
-  if (window._fvData && tblId === 'fv-tbl') {
-    bindRowClicks(tblId, window._fvData);
+  // Riattacca click handlers dopo il sort
+  if (tblId === 'fv-tbl' && window._fvData) {
+    bindFVRowClicks(tblId, window._fvData, window._fvIsItalia);
+  } else if (tblId === 'main-tbl' && lastReport) {
+    bindMainRowClicks(lastReport);
   }
 }
 
@@ -1115,21 +1623,46 @@ function clearSearch() {
   document.getElementById('search-clear').classList.remove('show');
 }
 
+// Legge l'ordine corrente delle righe della tabella nel DOM e restituisce i dati ordinati
+function readTableOrder(tblId, sourceData) {
+  var rows = document.querySelectorAll('#' + tblId + ' tbody tr:not(.tot-row)');
+  if (!rows.length || !sourceData) return sourceData || [];
+  var ordered = [];
+  for (var i = 0; i < rows.length; i++) {
+    var name = rows[i].cells[0].textContent.trim();
+    for (var j = 0; j < sourceData.length; j++) {
+      if (sourceData[j].nome === name) {
+        ordered.push(sourceData[j]);
+        break;
+      }
+    }
+  }
+  return ordered.length ? ordered : sourceData;
+}
+
 function exportFVExcel() {
   if (window._fvType === 'cliente') {
     exportClienteExcel(window._fvCliente);
     return;
   }
   if (!window._fvData || !window._fvData.length) return;
+  var ordered = readTableOrder('fv-tbl', window._fvData);
+  var isItalia = window._fvIsItalia;
   var wb = XLSX.utils.book_new();
-  var headers = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 2026', 'Bott. 2025', 'PM 2026'];
+  var headers = isItalia
+    ? ['Agente', 'Clienti 2026', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026']
+    : ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026'];
   var rows = [headers];
-  for (var i = 0; i < window._fvData.length; i++) {
-    var c = window._fvData[i];
+  for (var i = 0; i < ordered.length; i++) {
+    var c = ordered[i];
     var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-    rows.push([c.nome, c.citta || '', c.agente, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(2) + '%', c.b26, c.b25, c.pm26]);
+    if (isItalia) {
+      rows.push([c.nome, c.nClienti26 || 0, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(2) + '%', c.b26Eq || 0, c.b25Eq || 0, c.pm26]);
+    } else {
+      rows.push([c.nome, c.citta || '', c.agente, c.f26, c.f25, c.f26 - c.f25, varP.toFixed(2) + '%', c.b26Eq || 0, c.b25Eq || 0, c.pm26]);
+    }
   }
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Clienti');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), isItalia ? 'Agenti' : 'Clienti');
   saveXlsx(wb, 'Mosnel_' + (window._fvTitle || 'Lista') + '.xlsx');
 }
 
@@ -1139,21 +1672,43 @@ function exportClienteExcel(nome) {
   for (var i = 0; i < D.length; i++) {
     if (D[i].cliente !== nome) continue;
     if (D[i].tipoRiga !== 'Vendita') continue;
-    if (D[i].mese < periodo.da || D[i].mese > periodo.a) continue;
+    if (!inPeriodo(D[i], periodo)) continue;
     if (D[i].anno === anno) v26.push(D[i]);
     if (D[i].anno === annoP) v25.push(D[i]);
   }
   var fatture = {};
   for (var i = 0; i < v26.length; i++) {
     var key = v26[i].numDoc + '|' + v26[i].dataStr;
-    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, importo: 0, pezzi: 0 };
+    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, dataISO: v26[i].dataISO, importo: 0, pezzi: 0, pezziEq: 0 };
     fatture[key].importo += v26[i].importo;
     fatture[key].pezzi += v26[i].pezzi;
+    fatture[key].pezziEq += v26[i].pezziEq;
   }
+  // Leggi ordine dalla tabella DOM
+  var arr;
+  var domRows = document.querySelectorAll('#fv-fat-tbl tbody tr:not(.tot-row)');
+  if (domRows.length > 0) {
+    arr = [];
+    var allFat = Object.values(fatture);
+    for (var i = 0; i < domRows.length; i++) {
+      var dataCell = domRows[i].cells[0].textContent.trim();
+      var docCell = domRows[i].cells[1].textContent.trim();
+      for (var j = 0; j < allFat.length; j++) {
+        if (allFat[j].data === dataCell && allFat[j].numDoc === docCell) {
+          arr.push(allFat[j]);
+          break;
+        }
+      }
+    }
+  } else {
+    arr = Object.values(fatture).sort(function(a, b) { return (a.dataISO < b.dataISO) ? 1 : -1; });
+  }
+  
   var wb = XLSX.utils.book_new();
-  var rows = [['Data', 'N. Doc', 'Bottiglie', 'Importo']];
-  var arr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
-  for (var i = 0; i < arr.length; i++) rows.push([arr[i].data, arr[i].numDoc, arr[i].pezzi, arr[i].importo]);
+  var rows = [['Data', 'N. Doc', 'Bottiglie', 'Bott. eq.', 'Importo']];
+  for (var i = 0; i < arr.length; i++) {
+    rows.push([arr[i].data, arr[i].numDoc, arr[i].pezzi, Math.round(arr[i].pezziEq * 100) / 100, arr[i].importo]);
+  }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Fatture');
   saveXlsx(wb, 'Mosnel_Cliente_' + nome.substr(0,30) + '.xlsx');
 }
@@ -1177,25 +1732,30 @@ function exportFVPdf() {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(201, 168, 76);
-  doc.text(lastReport.vista + ' · ' + lastReport.periodo.label + ' · ' + window._fvData.length + ' clienti', margin, 19);
+  doc.text(lastReport.vista + ' · ' + lastReport.periodo.label + ' · ' + window._fvData.length + ' ' + (window._fvIsItalia ? 'agenti' : 'clienti'), margin, 19);
   
-  // KPI riassuntivi
-  var totF26 = 0, totF25 = 0, totB26 = 0, totB25 = 0;
-  for (var i = 0; i < window._fvData.length; i++) {
-    var c = window._fvData[i];
-    totF26 += c.f26; totF25 += c.f25; totB26 += c.b26; totB25 += c.b25;
+  // Usa ordine DOM
+  var ordered = readTableOrder('fv-tbl', window._fvData);
+  var isItalia = window._fvIsItalia;
+  
+  // KPI riassuntivi — usa bottiglie equivalenti
+  var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
+  for (var i = 0; i < ordered.length; i++) {
+    var c = ordered[i];
+    totF26 += c.f26; totF25 += c.f25;
+    totB26Eq += c.b26Eq || 0; totB25Eq += c.b25Eq || 0;
   }
-  var pm26 = PM(totF26, totB26), pm25 = PM(totF25, totB25);
+  var pm26 = PM(totF26, totB26Eq), pm25 = PM(totF25, totB25Eq);
   var dF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
-  var dB = totB25 > 0 ? ((totB26 - totB25) / totB25) * 100 : 0;
+  var dB = totB25Eq > 0 ? ((totB26Eq - totB25Eq) / totB25Eq) * 100 : 0;
   var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
   doc.autoTable({
     head: [['Indicatore', '2026', '2025', 'Var', 'Var %']],
     body: [
       ['Fatturato', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF)],
-      ['Bottiglie', NUM(totB26), NUM(totB25), NUMsign(totB26-totB25), PCTsign(dB)],
-      ['Prezzo Medio', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)]
+      ['Bott. eq. 0,75L', NUM(totB26Eq), NUM(totB25Eq), NUMsign(totB26Eq-totB25Eq), PCTsign(dB)],
+      ['Prezzo Medio (0,75L)', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)]
     ],
     startY: 28,
     theme: 'striped',
@@ -1207,21 +1767,35 @@ function exportFVPdf() {
   
   var y = doc.lastAutoTable.finalY + 6;
   
-  var headers = [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
+  var headers = isItalia
+    ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
+    : [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
+  
   var body = [];
-  for (var i = 0; i < window._fvData.length; i++) {
-    var c = window._fvData[i];
+  for (var i = 0; i < ordered.length; i++) {
+    var c = ordered[i];
     var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-    body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26), NUM(c.b25), EUR(c.pm26)]);
+    if (isItalia) {
+      body.push([c.nome, c.nClienti26 || 0, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+    } else {
+      body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+    }
   }
-  body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF), NUM(totB26), NUM(totB25), EUR(pm26)]);
+  if (isItalia) {
+    body.push(['TOTALE', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF), NUM(totB26Eq), NUM(totB25Eq), EUR(pm26)]);
+  } else {
+    body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(dF), NUM(totB26Eq), NUM(totB25Eq), EUR(pm26)]);
+  }
+  
+  var rightCols = isItalia ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
+                            : { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
   
   doc.autoTable({
     head: headers, body: body, startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
     bodyStyles: { fontSize: 7 },
-    columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+    columnStyles: rightCols,
     styles: { cellPadding: 1.8 },
     margin: { left: margin, right: margin },
     didParseCell: function(data) {
@@ -1241,16 +1815,16 @@ function exportClientePdf(nome) {
   for (var i = 0; i < D.length; i++) {
     if (D[i].cliente !== nome) continue;
     if (D[i].tipoRiga !== 'Vendita') continue;
-    if (D[i].mese < periodo.da || D[i].mese > periodo.a) continue;
+    if (!inPeriodo(D[i], periodo)) continue;
     if (D[i].anno === anno) v26.push(D[i]);
     if (D[i].anno === annoP) v25.push(D[i]);
   }
-  var f26=0,b26=0,f25=0,b25=0;
-  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; }
-  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; }
-  var pm26 = PM(f26, b26), pm25 = PM(f25, b25);
+  var f26=0,b26=0,b26Eq=0,f25=0,b25=0,b25Eq=0;
+  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; b26Eq += v26[i].pezziEq; }
+  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; b25Eq += v25[i].pezziEq; }
+  var pm26 = PM(f26, b26Eq), pm25 = PM(f25, b25Eq);
   var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
-  var dB = b25 > 0 ? ((b26 - b25) / b25) * 100 : 0;
+  var dB = b25Eq > 0 ? ((b26Eq - b25Eq) / b25Eq) * 100 : 0;
   var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
   // Agente e città
@@ -1262,15 +1836,34 @@ function exportClientePdf(nome) {
   var refs26 = calcolaReferenze(v26);
   var refs25 = calcolaReferenze(v25);
   
-  // Fatture
+  // Fatture — leggi ordine DOM
   var fatture = {};
   for (var i = 0; i < v26.length; i++) {
     var key = v26[i].numDoc + '|' + v26[i].dataStr;
-    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, importo: 0, pezzi: 0 };
+    if (!fatture[key]) fatture[key] = { numDoc: v26[i].numDoc, data: v26[i].dataStr, dataISO: v26[i].dataISO, importo: 0, pezzi: 0, pezziEq: 0 };
     fatture[key].importo += v26[i].importo;
     fatture[key].pezzi += v26[i].pezzi;
+    fatture[key].pezziEq += v26[i].pezziEq;
   }
-  var arr = Object.values(fatture).sort(function(a, b) { return a.data < b.data ? 1 : -1; });
+  // Ordina secondo DOM se possibile
+  var arr;
+  var domRows = document.querySelectorAll('#fv-fat-tbl tbody tr:not(.tot-row)');
+  if (domRows.length > 0) {
+    arr = [];
+    var allFat = Object.values(fatture);
+    for (var i = 0; i < domRows.length; i++) {
+      var dataCell = domRows[i].cells[0].textContent.trim();
+      var docCell = domRows[i].cells[1].textContent.trim();
+      for (var j = 0; j < allFat.length; j++) {
+        if (allFat[j].data === dataCell && allFat[j].numDoc === docCell) {
+          arr.push(allFat[j]);
+          break;
+        }
+      }
+    }
+  } else {
+    arr = Object.values(fatture).sort(function(a, b) { return (a.dataISO < b.dataISO) ? 1 : -1; });
+  }
   
   var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   var pageW = 210, pageH = 297, margin = 14;
@@ -1300,8 +1893,9 @@ function exportClientePdf(nome) {
     head: [['Indicatore', anno.toString(), annoP.toString(), 'Var', 'Var %']],
     body: [
       ['Fatturato', EUR(f26), EUR(f25), EURsign(f26-f25), PCTsign(dF)],
-      ['Bottiglie', NUM(b26), NUM(b25), NUMsign(b26-b25), PCTsign(dB)],
-      ['Prezzo Medio', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)],
+      ['Bott. eq. 0,75L', NUM(b26Eq), NUM(b25Eq), NUMsign(b26Eq-b25Eq), PCTsign(dB)],
+      ['Bottiglie effettive', NUM(b26), NUM(b25), NUMsign(b26-b25), ''],
+      ['Prezzo Medio (0,75L)', EUR(pm26), EUR(pm25), EURsign(pm26-pm25), PCTsign(dPM)],
       ['Fatture', arr.length.toString(), '', '', '']
     ],
     startY: y, theme: 'striped',
@@ -1313,7 +1907,7 @@ function exportClientePdf(nome) {
   y = doc.lastAutoTable.finalY + 8;
   
   // Referenze
-  if (b26 > 0 || b25 > 0) {
+  if (b26Eq > 0 || b25Eq > 0) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(114, 47, 55);
@@ -1325,16 +1919,16 @@ function exportClientePdf(nome) {
     refNames.push('Altro');
     for (var i = 0; i < refNames.length; i++) {
       var name = refNames[i];
-      var r26v = refs26[name] || { fatt: 0, btl: 0 };
-      var r25v = refs25[name] || { fatt: 0, btl: 0 };
-      if (r26v.btl === 0 && r25v.btl === 0) continue;
-      var dRef = r25v.btl > 0 ? ((r26v.btl - r25v.btl) / r25v.btl) * 100 : 0;
-      var pctTot = b26 > 0 ? (r26v.btl / b26) * 100 : 0;
-      refRows.push([name, NUM(r26v.btl), EUR(r26v.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+      var r26v = refs26[name] || { fatt: 0, btl: 0, btlEq: 0 };
+      var r25v = refs25[name] || { fatt: 0, btl: 0, btlEq: 0 };
+      if (r26v.btlEq === 0 && r25v.btlEq === 0) continue;
+      var dRef = r25v.btlEq > 0 ? ((r26v.btlEq - r25v.btlEq) / r25v.btlEq) * 100 : 0;
+      var pctTot = b26Eq > 0 ? (r26v.btlEq / b26Eq) * 100 : 0;
+      refRows.push([name, NUM(r26v.btlEq), EUR(r26v.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
     }
     if (refRows.length) {
       doc.autoTable({
-        head: [['Referenza', 'Bott.', 'Fatturato', '% sul tot', 'Var % vs ' + annoP]],
+        head: [['Referenza', 'Bott. eq.', 'Fatturato', '% sul tot', 'Var % vs ' + annoP]],
         body: refRows, startY: y,
         theme: 'striped',
         headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
@@ -1356,15 +1950,15 @@ function exportClientePdf(nome) {
     y += 4;
     
     var body = [];
-    for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), EUR(arr[i].importo)]);
-    body.push(['TOTALE', '', NUM(b26), EUR(f26)]);
+    for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), NUM(arr[i].pezziEq), EUR(arr[i].importo)]);
+    body.push(['TOTALE', '', NUM(b26), NUM(b26Eq), EUR(f26)]);
     
     doc.autoTable({
-      head: [['Data', 'N. Doc', 'Bottiglie', 'Importo']], body: body, startY: y,
+      head: [['Data', 'N. Doc', 'Bottiglie', 'Bott. eq.', 'Importo']], body: body, startY: y,
       theme: 'striped',
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
       bodyStyles: { fontSize: 9 },
-      columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } },
+      columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
       margin: { left: margin, right: margin },
       didParseCell: function(data) {
         if (data.section === 'body' && data.row.index === body.length - 1) {
@@ -1398,20 +1992,27 @@ function exportReportExcel() {
   ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPI');
   
-  // Liste
-  var headers = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 2026', 'Bott. 2025', 'PM 2026'];
+  // Liste — usa ordine DOM per "Tutti" se possibile
+  var orderedTutti = readTableOrder('main-tbl', r.tutti);
+  
+  var headersCli = ['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026'];
+  var headersAg = ['Agente', 'Clienti 2026', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 2026'];
   
   function makeRows(arr) {
-    var rows = [headers];
+    var rows = [r.isItalia ? headersAg : headersCli];
     for (var i = 0; i < arr.length; i++) {
       var c = arr[i];
       var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-      rows.push([c.nome, c.citta || '', c.agente, c.f26, c.f25, c.f26-c.f25, varP.toFixed(2)+'%', c.b26, c.b25, c.pm26]);
+      if (r.isItalia) {
+        rows.push([c.nome, c.nClienti26 || 0, c.f26, c.f25, c.f26-c.f25, varP.toFixed(2)+'%', c.b26Eq || 0, c.b25Eq || 0, c.pm26]);
+      } else {
+        rows.push([c.nome, c.citta || '', c.agente, c.f26, c.f25, c.f26-c.f25, varP.toFixed(2)+'%', c.b26Eq || 0, c.b25Eq || 0, c.pm26]);
+      }
     }
     return rows;
   }
   
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.tutti)), 'Tutti');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(orderedTutti)), r.isItalia ? 'Agenti' : 'Tutti');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.attivi)), 'Attivi');
   if (r.calo.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.calo)), 'In Calo');
   if (r.assenti.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeRows(r.assenti)), 'Non attivi');
@@ -1442,7 +2043,7 @@ function exportReportPdf() {
   
   // KPI cards in griglia 2x2
   var dF = r.d25.fatturato > 0 ? ((r.d26.fatturato - r.d25.fatturato) / r.d25.fatturato) * 100 : 0;
-  var dB = r.d25.bottiglie > 0 ? ((r.d26.bottiglie - r.d25.bottiglie) / r.d25.bottiglie) * 100 : 0;
+  var dB = r.d25.bottiglieEq > 0 ? ((r.d26.bottiglieEq - r.d25.bottiglieEq) / r.d25.bottiglieEq) * 100 : 0;
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
   
   doc.setFont('helvetica', 'bold');
@@ -1453,8 +2054,9 @@ function exportReportPdf() {
   
   var kpi = [
     ['Fatturato ' + r.anno, EUR(r.d26.fatturato), EUR(r.d25.fatturato), EURsign(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
-    ['Bottiglie ' + r.anno, NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUMsign(r.d26.bottiglie-r.d25.bottiglie), PCTsign(dB)],
-    ['Prezzo Medio', EUR(r.d26.pm), EUR(r.d25.pm), EURsign(r.d26.pm-r.d25.pm), PCTsign(dPM)],
+    ['Bott. eq. 0,75L ' + r.anno, NUM(r.d26.bottiglieEq), NUM(r.d25.bottiglieEq), NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq), PCTsign(dB)],
+    ['Bottiglie effettive ' + r.anno, NUM(r.d26.bottiglie), NUM(r.d25.bottiglie), NUMsign(r.d26.bottiglie-r.d25.bottiglie), ''],
+    ['Prezzo Medio (0,75L)', EUR(r.d26.pm), EUR(r.d25.pm), EURsign(r.d26.pm-r.d25.pm), PCTsign(dPM)],
     ['Ordini ' + r.anno, NUM(r.d26.ordini), NUM(r.d25.ordini), NUMsign(r.d26.ordini-r.d25.ordini), '']
   ];
   doc.autoTable({
@@ -1527,14 +2129,17 @@ function addBlocksAndRefsToPdf(doc, r, y) {
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
   for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
   
+  var entityLbl = r.isItalia ? 'agenti' : 'clienti';
+  var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
+  
   var blocks = [
-    ['Tutti i clienti', r.tutti.length, totDeltaTutti],
-    ['Clienti attivi', r.attivi.length, totDeltaAttivi],
-    ['Clienti in calo', r.calo.length, totDeltaCalo],
+    ['Tutti i ' + entityLbl, r.tutti.length, totDeltaTutti],
+    [entityCap + ' attivi', r.attivi.length, totDeltaAttivi],
+    [entityCap + ' in calo', r.calo.length, totDeltaCalo],
     ['Non ancora attivi', r.assenti.length, totDeltaAssenti]
   ];
   doc.autoTable({
-    head: [['Categoria', 'N. Clienti', 'Var € totale']],
+    head: [['Categoria', 'N. ' + entityCap, 'Var € totale']],
     body: blocks.map(function(b) { return [b[0], b[1], EURsign(b[2])]; }),
     startY: y,
     theme: 'striped',
@@ -1545,7 +2150,7 @@ function addBlocksAndRefsToPdf(doc, r, y) {
   });
   y = doc.lastAutoTable.finalY + 8;
   
-  // Rotazione referenze
+  // Rotazione referenze — usa btlEq
   if (y > 230) { doc.addPage(); y = 20; }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -1558,15 +2163,15 @@ function addBlocksAndRefsToPdf(doc, r, y) {
   refNames.push('Altro');
   for (var i = 0; i < refNames.length; i++) {
     var name = refNames[i];
-    var r26 = r.refs26[name] || { fatt: 0, btl: 0 };
-    var r25 = r.refs25[name] || { fatt: 0, btl: 0 };
-    if (r26.btl === 0 && r25.btl === 0) continue;
-    var dRef = r25.btl > 0 ? ((r26.btl - r25.btl) / r25.btl) * 100 : 0;
-    var pctTot = r.d26.bottiglie > 0 ? (r26.btl / r.d26.bottiglie) * 100 : 0;
-    refRows.push([name, NUM(r26.btl), EUR(r26.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+    var r26ref = r.refs26[name] || { fatt: 0, btl: 0, btlEq: 0 };
+    var r25ref = r.refs25[name] || { fatt: 0, btl: 0, btlEq: 0 };
+    if (r26ref.btlEq === 0 && r25ref.btlEq === 0) continue;
+    var dRef = r25ref.btlEq > 0 ? ((r26ref.btlEq - r25ref.btlEq) / r25ref.btlEq) * 100 : 0;
+    var pctTot = r.d26.bottiglieEq > 0 ? (r26ref.btlEq / r.d26.bottiglieEq) * 100 : 0;
+    refRows.push([name, NUM(r26ref.btlEq), EUR(r26ref.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
   }
   doc.autoTable({
-    head: [['Referenza', 'Bott. ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
+    head: [['Referenza', 'Bott. eq. ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
     body: refRows, startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
@@ -1575,8 +2180,9 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     margin: { left: margin, right: margin }
   });
   
-  // Tabella clienti completa (in pagina aggiuntiva landscape)
-  if (r.tutti.length > 0) {
+  // Tabella in pagina aggiuntiva — usa ordine DOM e supporta Italia/Agente
+  var orderedTutti = readTableOrder('main-tbl', r.tutti);
+  if (orderedTutti.length > 0) {
     doc.addPage('a4', 'landscape');
     var pW = 297;
     doc.setFillColor(114, 47, 55);
@@ -1584,27 +2190,43 @@ function addBlocksAndRefsToPdf(doc, r, y) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
-    doc.text('Elenco clienti — ' + r.vista, margin, 11);
+    doc.text('Elenco ' + entityLbl + ' — ' + r.vista, margin, 11);
     
-    var totF26 = 0, totF25 = 0, totB26 = 0, totB25 = 0;
+    var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
     var body = [];
-    for (var i = 0; i < r.tutti.length; i++) {
-      var c = r.tutti[i];
+    for (var i = 0; i < orderedTutti.length; i++) {
+      var c = orderedTutti[i];
       var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-      body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26), NUM(c.b25), EUR(c.pm26)]);
-      totF26 += c.f26; totF25 += c.f25; totB26 += c.b26; totB25 += c.b25;
+      if (r.isItalia) {
+        body.push([c.nome, c.nClienti26 || 0, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+      } else {
+        body.push([c.nome, c.citta || '', c.agente, EUR(c.f26), EUR(c.f25), EURsign(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EUR(c.pm26)]);
+      }
+      totF26 += c.f26; totF25 += c.f25;
+      totB26Eq += c.b26Eq || 0; totB25Eq += c.b25Eq || 0;
     }
-    var totPM = PM(totF26, totB26);
+    var totPM = PM(totF26, totB26Eq);
     var totDF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
-    body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(totDF), NUM(totB26), NUM(totB25), EUR(totPM)]);
+    if (r.isItalia) {
+      body.push(['TOTALE', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EUR(totPM)]);
+    } else {
+      body.push(['TOTALE', '', '', EUR(totF26), EUR(totF25), EURsign(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EUR(totPM)]);
+    }
+    
+    var heads = r.isItalia
+      ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']]
+      : [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. eq. 26', 'Bott. eq. 25', 'PM 26']];
+    
+    var colStyles = r.isItalia
+      ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
+      : { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
     
     doc.autoTable({
-      head: [['Cliente', 'Città', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var €', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']],
-      body: body, startY: 22,
+      head: heads, body: body, startY: 22,
       theme: 'striped',
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 7 },
-      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+      columnStyles: colStyles,
       styles: { cellPadding: 1.5 },
       margin: { left: margin, right: margin },
       didParseCell: function(data) {
