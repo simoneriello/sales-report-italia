@@ -157,10 +157,10 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--wine);border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.donut-wrap{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:center}
-@media(max-width:700px){.donut-wrap{grid-template-columns:1fr}}
+.donut-wrap{display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:center}
+@media(max-width:900px){.donut-wrap{grid-template-columns:1fr}}
 .donut-center{display:flex;flex-direction:column;align-items:center;justify-content:center}
-.donut-svg{width:240px;height:240px}
+.donut-svg{width:100%;max-width:420px;height:auto}
 .donut-total-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-top:8px;letter-spacing:0.5px}
 .donut-total-val{font-family:'DM Sans',sans-serif;font-size:1.6rem;font-weight:700;color:var(--wine);letter-spacing:-0.02em}
 .donut-legend{display:flex;flex-direction:column;gap:6px}
@@ -1022,25 +1022,34 @@ function buildDonutReferenze(r) {
   
   if (items.length === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
   
-  // Costruisci donut SVG
-  var size = 240;
-  var cx = size / 2, cy = size / 2;
-  var rOuter = 110, rInner = 70;
+  // Donut SVG con callout labels esterne (stile Bloomberg/Power BI)
+  // ViewBox più larga della precedente (400x320) per accogliere le etichette laterali
+  var W = 420, H = 320;
+  var cx = W / 2, cy = H / 2;
+  var rOuter = 90, rInner = 55;
+  var rLabelLine1 = rOuter + 12; // primo punto della linea (subito fuori dal donut)
+  var rLabelLine2 = rOuter + 28; // secondo punto (gomito della linea)
+  var labelX_offset = 6; // distanza testo dal gomito
   
-  var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" class="donut-svg">';
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="donut-svg" preserveAspectRatio="xMidYMid meet">';
   
   var startAngle = -90;
   var totalForDonut = 0;
   for (var i = 0; i < items.length; i++) totalForDonut += items[i].btlEq26;
+  
+  // Memorizzo info per le label da disegnare DOPO le fette (per non essere coperte)
+  var labelsToDraw = [];
   
   if (totalForDonut > 0) {
     for (var i = 0; i < items.length; i++) {
       var pct = items[i].btlEq26 / totalForDonut;
       var angle = pct * 360;
       var endAngle = startAngle + angle;
+      var midAngle = startAngle + angle / 2;
       
       var startRad = (startAngle * Math.PI) / 180;
       var endRad = (endAngle * Math.PI) / 180;
+      var midRad = (midAngle * Math.PI) / 180;
       
       var x1 = cx + rOuter * Math.cos(startRad);
       var y1 = cy + rOuter * Math.sin(startRad);
@@ -1059,44 +1068,101 @@ function buildDonutReferenze(r) {
                  ' A ' + rInner + ' ' + rInner + ' 0 ' + largeArc + ' 0 ' + x4 + ' ' + y4 +
                  ' Z';
       
-      svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="2"/>';
+      svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="1.5"/>';
+      
+      // Prepara label solo se fetta >= 3%
+      var pctValue = pct * 100;
+      if (pctValue >= 3) {
+        // Punto sull'arco esterno (start della linea callout)
+        var lx1 = cx + rLabelLine1 * Math.cos(midRad);
+        var ly1 = cy + rLabelLine1 * Math.sin(midRad);
+        // Gomito orizzontale (estende verso sinistra o destra in base alla posizione)
+        var isRightSide = Math.cos(midRad) >= 0;
+        var lx2 = cx + (isRightSide ? rLabelLine2 + 30 : -(rLabelLine2 + 30)) * Math.abs(Math.cos(midRad)) * 0 + cx;
+        // Per semplicità il gomito orizzontale lo metto a x fisso laterale
+        var elbowX = isRightSide ? cx + rLabelLine2 + 8 : cx - rLabelLine2 - 8;
+        // ma se il punto è molto in alto o in basso, lascio elbowX più vicino al punto
+        var labelTextX = isRightSide ? elbowX + labelX_offset : elbowX - labelX_offset;
+        var labelTextAnchor = isRightSide ? 'start' : 'end';
+        
+        labelsToDraw.push({
+          // Linea: punto arco → punto orizzontale a elbowX (stessa Y) → estremità
+          startX: lx1, startY: ly1,
+          elbowX: elbowX, elbowY: ly1,
+          textX: labelTextX, textY: ly1,
+          textAnchor: labelTextAnchor,
+          color: items[i].color,
+          name: items[i].name,
+          pct: pctValue
+        });
+      }
+      
       startAngle = endAngle;
     }
   }
   
+  // Risolvo collisioni Y tra label vicine (separazione minima 13px)
+  // Separo per lato
+  function adjustLabels(labels) {
+    labels.sort(function(a, b) { return a.elbowY - b.elbowY; });
+    var minGap = 13;
+    for (var i = 1; i < labels.length; i++) {
+      if (labels[i].elbowY - labels[i-1].elbowY < minGap) {
+        labels[i].elbowY = labels[i-1].elbowY + minGap;
+        labels[i].textY = labels[i].elbowY;
+      }
+    }
+    // Vincolo bounds verticali
+    for (var i = 0; i < labels.length; i++) {
+      if (labels[i].elbowY < 10) labels[i].elbowY = labels[i].textY = 10;
+      if (labels[i].elbowY > H - 10) labels[i].elbowY = labels[i].textY = H - 10;
+    }
+  }
+  
+  var rightLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'start'; });
+  var leftLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'end'; });
+  adjustLabels(rightLabels);
+  adjustLabels(leftLabels);
+  
+  // Disegna linee + testo
+  var allLabels = rightLabels.concat(leftLabels);
+  for (var i = 0; i < allLabels.length; i++) {
+    var l = allLabels[i];
+    // Linea a tre segmenti: dal punto sull'arco → gomito orizzontale → testo
+    svg += '<polyline points="' + l.startX + ',' + l.startY + ' ' + l.elbowX + ',' + l.elbowY + '" ';
+    svg += 'fill="none" stroke="' + l.color + '" stroke-width="1.2" opacity="0.8"/>';
+    // Pallino al gomito
+    svg += '<circle cx="' + l.elbowX + '" cy="' + l.elbowY + '" r="2" fill="' + l.color + '"/>';
+    // Testo nome
+    svg += '<text x="' + l.textX + '" y="' + (l.textY - 1) + '" ';
+    svg += 'text-anchor="' + l.textAnchor + '" font-size="10" font-weight="600" fill="#333">';
+    svg += escapeHTML(l.name);
+    svg += '</text>';
+    // Testo percentuale (sotto, più piccolo)
+    svg += '<text x="' + l.textX + '" y="' + (l.textY + 10) + '" ';
+    svg += 'text-anchor="' + l.textAnchor + '" font-size="9" fill="' + l.color + '" font-weight="700">';
+    svg += l.pct.toFixed(1).replace('.', ',') + '%';
+    svg += '</text>';
+  }
+  
+  // Totale al centro del donut
+  svg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="9" fill="#7a6b6c" font-weight="600" letter-spacing="1">BOTTIGLIE ' + r.anno + '</text>';
+  svg += '<text x="' + cx + '" y="' + (cy + 12) + '" text-anchor="middle" font-size="18" fill="#722F37" font-weight="700" font-family="DM Sans, sans-serif">' + NUM(totalForDonut) + '</text>';
+  
   svg += '</svg>';
   
   var html = '<div class="donut-wrap">';
-  html += '<div class="donut-center">' + svg;
-  html += '<div class="donut-total-label">TOTALE BOTT. EQ. ' + r.anno + '</div>';
-  html += '<div class="donut-total-val">' + NUM(totalForDonut) + '</div>';
-  html += '</div>';
+  html += '<div class="donut-center">' + svg + '</div>';
   
-  // Legenda
+  // Legenda tabellare a destra del donut
   html += '<div class="donut-legend">';
-  
-  // Trova max per scalare le barre
-  var maxBtl = 0;
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].btlEq26 > maxBtl) maxBtl = items[i].btlEq26;
-    if (items[i].btlEq25 > maxBtl) maxBtl = items[i].btlEq25;
-  }
-  
   for (var i = 0; i < items.length; i++) {
     var it = items[i];
-    var w26 = maxBtl > 0 ? (it.btlEq26 / maxBtl) * 100 : 0;
-    var w25 = maxBtl > 0 ? (it.btlEq25 / maxBtl) * 100 : 0;
-    
     html += '<div class="legend-row">';
     html += '<div class="legend-color" style="background:' + it.color + '"></div>';
-    html += '<div>';
-    html += '<div class="legend-name">' + escapeHTML(it.name) + '</div>';
-    html += '<div class="legend-bar-wrap">';
-    html += '<div class="legend-bar"><div class="legend-bar-fill cur" style="width:' + w26.toFixed(1) + '%"></div></div>';
-    html += '<div class="legend-bar"><div class="legend-bar-fill prev" style="width:' + w25.toFixed(1) + '%"></div></div>';
-    html += '</div>';
-    html += '</div>';
-    html += '<div class="legend-val">' + NUM(it.btlEq26) + ' bt<br><span style="font-size:10px;color:var(--muted);font-weight:400">' + EUR(it.fatt26) + '</span></div>';
+    html += '<div><div class="legend-name">' + escapeHTML(it.name) + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:2px">' + EUR(it.fatt26) + '</div></div>';
+    html += '<div class="legend-val">' + NUM(it.btlEq26) + ' bt</div>';
     html += '<div class="legend-pct">' + it.pctTot.toFixed(1).replace('.', ',') + '%<br><span class="' + (it.dRef>=0?'text-green':'text-red') + '" style="font-size:10px">' + PCTsign(it.dRef) + '</span></div>';
     html += '</div>';
   }
@@ -1512,19 +1578,30 @@ function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
   items.sort(function(a, b) { return b.btlEq26 - a.btlEq26; });
   if (items.length === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
   
-  var size = 240, cx = size / 2, cy = size / 2, rOuter = 110, rInner = 70;
-  var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" class="donut-svg">';
+  // Donut con callout labels esterne (stesso stile del report principale)
+  var W = 420, H = 320;
+  var cx = W / 2, cy = H / 2;
+  var rOuter = 90, rInner = 55;
+  var rLabelLine1 = rOuter + 12;
+  var rLabelLine2 = rOuter + 28;
+  var labelX_offset = 6;
+  
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="donut-svg" preserveAspectRatio="xMidYMid meet">';
   var startAngle = -90;
   var totalForDonut = 0;
   for (var i = 0; i < items.length; i++) totalForDonut += items[i].btlEq26;
+  
+  var labelsToDraw = [];
   
   if (totalForDonut > 0) {
     for (var i = 0; i < items.length; i++) {
       var pct = items[i].btlEq26 / totalForDonut;
       var angle = pct * 360;
       var endAngle = startAngle + angle;
+      var midAngle = startAngle + angle / 2;
       var startRad = (startAngle * Math.PI) / 180;
       var endRad = (endAngle * Math.PI) / 180;
+      var midRad = (midAngle * Math.PI) / 180;
       var x1 = cx + rOuter * Math.cos(startRad), y1 = cy + rOuter * Math.sin(startRad);
       var x2 = cx + rOuter * Math.cos(endRad), y2 = cy + rOuter * Math.sin(endRad);
       var x3 = cx + rInner * Math.cos(endRad), y3 = cy + rInner * Math.sin(endRad);
@@ -1534,36 +1611,84 @@ function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
                  ' A ' + rOuter + ' ' + rOuter + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 +
                  ' L ' + x3 + ' ' + y3 +
                  ' A ' + rInner + ' ' + rInner + ' 0 ' + largeArc + ' 0 ' + x4 + ' ' + y4 + ' Z';
-      svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="2"/>';
+      svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="1.5"/>';
+      
+      var pctValue = pct * 100;
+      if (pctValue >= 3) {
+        var lx1 = cx + rLabelLine1 * Math.cos(midRad);
+        var ly1 = cy + rLabelLine1 * Math.sin(midRad);
+        var isRightSide = Math.cos(midRad) >= 0;
+        var elbowX = isRightSide ? cx + rLabelLine2 + 8 : cx - rLabelLine2 - 8;
+        var labelTextX = isRightSide ? elbowX + labelX_offset : elbowX - labelX_offset;
+        var labelTextAnchor = isRightSide ? 'start' : 'end';
+        labelsToDraw.push({
+          startX: lx1, startY: ly1,
+          elbowX: elbowX, elbowY: ly1,
+          textX: labelTextX, textY: ly1,
+          textAnchor: labelTextAnchor,
+          color: items[i].color,
+          name: items[i].name,
+          pct: pctValue
+        });
+      }
       startAngle = endAngle;
     }
   }
+  
+  function adjustLabels(labels) {
+    labels.sort(function(a, b) { return a.elbowY - b.elbowY; });
+    var minGap = 13;
+    for (var i = 1; i < labels.length; i++) {
+      if (labels[i].elbowY - labels[i-1].elbowY < minGap) {
+        labels[i].elbowY = labels[i-1].elbowY + minGap;
+        labels[i].textY = labels[i].elbowY;
+      }
+    }
+    for (var i = 0; i < labels.length; i++) {
+      if (labels[i].elbowY < 10) labels[i].elbowY = labels[i].textY = 10;
+      if (labels[i].elbowY > H - 10) labels[i].elbowY = labels[i].textY = H - 10;
+    }
+  }
+  
+  var rightLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'start'; });
+  var leftLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'end'; });
+  adjustLabels(rightLabels);
+  adjustLabels(leftLabels);
+  
+  var allLabels = rightLabels.concat(leftLabels);
+  for (var i = 0; i < allLabels.length; i++) {
+    var l = allLabels[i];
+    svg += '<polyline points="' + l.startX + ',' + l.startY + ' ' + l.elbowX + ',' + l.elbowY + '" ';
+    svg += 'fill="none" stroke="' + l.color + '" stroke-width="1.2" opacity="0.8"/>';
+    svg += '<circle cx="' + l.elbowX + '" cy="' + l.elbowY + '" r="2" fill="' + l.color + '"/>';
+    svg += '<text x="' + l.textX + '" y="' + (l.textY - 1) + '" ';
+    svg += 'text-anchor="' + l.textAnchor + '" font-size="10" font-weight="600" fill="#333">';
+    svg += escapeHTML(l.name);
+    svg += '</text>';
+    svg += '<text x="' + l.textX + '" y="' + (l.textY + 10) + '" ';
+    svg += 'text-anchor="' + l.textAnchor + '" font-size="9" fill="' + l.color + '" font-weight="700">';
+    svg += l.pct.toFixed(1).replace('.', ',') + '%';
+    svg += '</text>';
+  }
+  
+  // Totale al centro
+  svg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="9" fill="#7a6b6c" font-weight="600" letter-spacing="1">BOTTIGLIE ' + anno + '</text>';
+  svg += '<text x="' + cx + '" y="' + (cy + 12) + '" text-anchor="middle" font-size="18" fill="#722F37" font-weight="700" font-family="DM Sans, sans-serif">' + NUM(totalForDonut) + '</text>';
+  
   svg += '</svg>';
   
   var html = '<div class="donut-wrap">';
-  html += '<div class="donut-center">' + svg;
-  html += '<div class="donut-total-label">BOTT. EQ. ' + anno + '</div>';
-  html += '<div class="donut-total-val">' + NUM(totalForDonut) + '</div>';
-  html += '</div>';
+  html += '<div class="donut-center">' + svg + '</div>';
   
+  // Legenda tabellare a destra: nome | bott. | fatturato | % | var %
   html += '<div class="donut-legend">';
-  var maxBtl = 0;
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].btlEq26 > maxBtl) maxBtl = items[i].btlEq26;
-    if (items[i].btlEq25 > maxBtl) maxBtl = items[i].btlEq25;
-  }
   for (var i = 0; i < items.length; i++) {
     var it = items[i];
-    var w26 = maxBtl > 0 ? (it.btlEq26 / maxBtl) * 100 : 0;
-    var w25 = maxBtl > 0 ? (it.btlEq25 / maxBtl) * 100 : 0;
     html += '<div class="legend-row">';
     html += '<div class="legend-color" style="background:' + it.color + '"></div>';
     html += '<div><div class="legend-name">' + escapeHTML(it.name) + '</div>';
-    html += '<div class="legend-bar-wrap">';
-    html += '<div class="legend-bar"><div class="legend-bar-fill cur" style="width:' + w26.toFixed(1) + '%"></div></div>';
-    html += '<div class="legend-bar"><div class="legend-bar-fill prev" style="width:' + w25.toFixed(1) + '%"></div></div>';
-    html += '</div></div>';
-    html += '<div class="legend-val">' + NUM(it.btlEq26) + ' bt<br><span style="font-size:10px;color:var(--muted);font-weight:400">' + EUR(it.fatt26) + '</span></div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:2px">' + EUR(it.fatt26) + '</div></div>';
+    html += '<div class="legend-val">' + NUM(it.btlEq26) + ' bt</div>';
     html += '<div class="legend-pct">' + it.pctTot.toFixed(1).replace('.', ',') + '%<br><span class="' + (it.dRef>=0?'text-green':'text-red') + '" style="font-size:10px">' + PCTsign(it.dRef) + '</span></div>';
     html += '</div>';
   }
@@ -1870,19 +1995,22 @@ function exportFVPdf() {
   }
   if (!window._fvData) return;
   var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  var pageW = 297, margin = 14;
+  var pageW = 297, pageH = 210, margin = 14;
   
-  // Header bordeaux
-  doc.setFillColor(114, 47, 55);
-  doc.rect(0, 0, pageW, 24, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Mosnel - ' + window._fvTitle, margin, 12);
+  // Header coordinato con stile uniforme
+  var rFake = {
+    vista: window._fvTitle,
+    anno: lastReport.anno,
+    annoP: lastReport.annoP,
+    periodo: { label: lastReport.periodo.label }
+  };
+  drawHeader(doc, rFake, pageW);
+  
+  // Sotto-titolo a destra
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(201, 168, 76);
-  doc.text(lastReport.vista + ' - ' + lastReport.periodo.label + ' - ' + window._fvData.length + ' ' + (window._fvIsItalia ? 'agenti' : 'clienti'), margin, 19);
+  doc.setFontSize(9);
+  doc.setTextColor(220, 200, 130);
+  doc.text(lastReport.vista + '  -  ' + window._fvData.length + ' ' + (window._fvIsItalia ? 'agenti' : 'clienti'), pageW - margin, 12, { align: 'right' });
   
   // Usa ordine DOM
   var ordered = readTableOrder('fv-tbl', window._fvData);
@@ -1900,6 +2028,10 @@ function exportFVPdf() {
   var dB = totB25Eq > 0 ? ((totB26Eq - totB25Eq) / totB25Eq) * 100 : 0;
   var dPM = pm25 > 0 ? ((pm26 - pm25) / pm25) * 100 : 0;
   
+  var y = 30;
+  drawSectionTitle(doc, 'Indicatori chiave', margin, y);
+  y += 5;
+  
   doc.autoTable({
     head: [['Indicatore', '2026', '2025', 'Var', 'Var %']],
     body: [
@@ -1907,7 +2039,7 @@ function exportFVPdf() {
       ['Bottiglie', NUM(totB26Eq), NUM(totB25Eq), NUMsign(totB26Eq-totB25Eq), PCTsign(dB)],
       ['Prezzo Medio', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)]
     ],
-    startY: 28,
+    startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 9 },
@@ -1916,10 +2048,13 @@ function exportFVPdf() {
     didParseCell: colorNegativesCallback
   });
   
-  var y = doc.lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 7;
+  
+  drawSectionTitle(doc, 'Elenco ' + (isItalia ? 'agenti' : 'clienti') + ' (' + ordered.length + ')', margin, y);
+  y += 5;
   
   var headers = isItalia
-    ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
+    ? [['Agente', 'Clienti', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
     : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
   
   var body = [];
@@ -1955,10 +2090,16 @@ function exportFVPdf() {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fillColor = [240, 230, 230];
       }
+    },
+    didDrawPage: function() {
+      // Header su ogni pagina aggiuntiva (per liste lunghe)
+      drawHeader(doc, rFake, pageW);
     }
   });
   
-  doc.save('Mosnel_' + window._fvTitle + '.pdf');
+  addPageNumbers(doc, pageW, pageH);
+  
+  doc.save('Mosnel_' + window._fvTitle.replace(/\s+/g, '_') + '.pdf');
 }
 
 // Callback per autoTable: colora di rosso le celle con valori negativi
@@ -1980,7 +2121,7 @@ function colorNegativesCallback(data) {
 function exportClientePdf(nome) {
   // Pre-converto il donut della scheda cliente (se visibile) prima di costruire il PDF
   var donutSvg = document.querySelector('.donut-svg');
-  var donutPromise = donutSvg ? svgToPng(donutSvg, 600, 600) : Promise.resolve(null);
+  var donutPromise = donutSvg ? svgToPng(donutSvg, 1050, 800) : Promise.resolve(null);
   donutPromise.then(function(donutImg) {
     _exportClientePdfBody(nome, donutImg);
   }).catch(function(err) {
@@ -2045,69 +2186,90 @@ function _exportClientePdfBody(nome, donutImg) {
     arr = Object.values(fatture).sort(function(a, b) { return (a.dataISO < b.dataISO) ? 1 : -1; });
   }
   
-  var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  var pageW = 210, pageH = 297, margin = 14;
+  var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var pageW = 297, pageH = 210, margin = 14;
   
-  // Header bordeaux
-  doc.setFillColor(114, 47, 55);
-  doc.rect(0, 0, pageW, 28, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.setTextColor(255, 255, 255);
-  var nomeShort = nome.length > 60 ? nome.substr(0, 58) + '..' : nome;
-  doc.text(nomeShort, margin, 13);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(201, 168, 76);
+  // Costruisco un finto "r" per riusare drawHeader
+  var rFake = {
+    vista: nomeShort = nome.length > 50 ? nome.substr(0, 48) + '..' : nome,
+    anno: anno,
+    annoP: annoP,
+    periodo: { label: lastReport.periodo.label }
+  };
+  drawHeader(doc, rFake, pageW);
+  
+  // Sotto-titolo: città · agente
   var subtitle = '';
-  if (citta) subtitle += citta + (prov ? ' (' + prov + ')' : '') + ' · ';
-  if (agente) subtitle += agente + ' · ';
-  subtitle += lastReport.periodo.label;
-  doc.text(subtitle, margin, 20);
-  doc.text('Cliente Mosnel - ' + anno + ' vs ' + annoP, margin, 25);
+  if (citta) subtitle += citta + (prov ? ' (' + prov + ')' : '');
+  if (agente) subtitle += (subtitle ? '  -  ' : '') + agente;
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(220, 200, 130);
+    doc.text(subtitle, pageW - margin, 12, { align: 'right' });
+  }
   
-  var y = 36;
+  var y = 32;
   
-  // KPI riepilogo
+  // ============ SEZIONE 1: KPI + STATISTICHE CLIENTE (affiancati) ============
+  var halfW = 130;
+  drawSectionTitle(doc, 'Indicatori chiave', margin, y);
+  drawSectionTitle(doc, 'Statistiche cliente', margin + halfW + 6, y);
+  y += 5;
+  
+  // KPI (sinistra)
   doc.autoTable({
     head: [['Indicatore', anno.toString(), annoP.toString(), 'Var', 'Var %']],
     body: [
       ['Fatturato', EURpdf(f26), EURpdf(f25), EURsignPdf(f26-f25), PCTsign(dF)],
       ['Bottiglie', NUM(b26Eq), NUM(b25Eq), NUMsign(b26Eq-b25Eq), PCTsign(dB)],
-      ['Prezzo Medio', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)],
-      ['Fatture', arr.length.toString(), '', '', '']
+      ['Prezzo Medio', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)]
     ],
     startY: y, theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 9 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin },
-    didParseCell: colorNegativesCallback
+    margin: { left: margin, right: pageW - margin - halfW },
+    didParseCell: colorNegativesCallback,
+    tableWidth: halfW
   });
-  y = doc.lastAutoTable.finalY + 8;
+  var yKpiEnd = doc.lastAutoTable.finalY;
   
-  // Referenze
+  // Statistiche cliente (destra)
+  doc.autoTable({
+    head: [['Dato', 'Valore']],
+    body: [
+      ['Fatture emesse ' + anno, arr.length.toString()],
+      ['Citta', citta + (prov ? ' (' + prov + ')' : '') || '-'],
+      ['Agente', agente || '-'],
+      ['Periodo analizzato', lastReport.periodo.label]
+    ],
+    startY: y, theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 0: { fontStyle: 'bold' } },
+    margin: { left: margin + halfW + 6, right: margin },
+    tableWidth: pageW - 2*margin - halfW - 6
+  });
+  var yStatsEnd = doc.lastAutoTable.finalY;
+  
+  y = Math.max(yKpiEnd, yStatsEnd) + 8;
+  
+  // ============ SEZIONE 2: REFERENZE (DONUT + TABELLA AFFIANCATI) ============
   if (b26Eq > 0 || b25Eq > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(114, 47, 55);
-    doc.text('Rotazione referenze ' + anno, margin, y);
-    y += 5;
+    if (y > 140) { doc.addPage('a4', 'landscape'); drawHeader(doc, rFake, pageW); y = 32; }
     
-    // Donut chart
+    drawSectionTitle(doc, 'Rotazione referenze ' + anno, margin, y);
+    y += 6;
+    
+    // Donut rettangolare con callout labels esterne (aspect ratio 420x320 ~ 1.31)
+    var donutBoxW = 130;
+    var donutBoxH = 100;
+    var tableX = margin + donutBoxW + 6;
+    var tableW = pageW - margin - tableX;
+    
     if (donutImg) {
-      var donutSize = 55;
-      var donutX = (pageW - donutSize) / 2;
-      if (y + donutSize + 12 > pageH - 15) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.addImage(donutImg, 'PNG', donutX, y, donutSize, donutSize);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(120, 100, 100);
-      doc.text('Totale bottiglie ' + anno + ': ' + NUM(b26Eq), pageW/2, y + donutSize + 4, { align: 'center' });
-      y = y + donutSize + 9;
+      doc.addImage(donutImg, 'PNG', margin, y, donutBoxW, donutBoxH);
     }
     
     var refRows = [];
@@ -2130,28 +2292,27 @@ function _exportClientePdfBody(nome, donutImg) {
         headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 9 },
         columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-        margin: { left: margin, right: margin },
-        didParseCell: colorNegativesCallback
+        margin: { left: tableX, right: margin },
+        didParseCell: colorNegativesCallback,
+        tableWidth: tableW
       });
-      y = doc.lastAutoTable.finalY + 8;
     }
   }
   
-  // Fatture
+  // ============ SEZIONE 3: FATTURE (nuova pagina) ============
   if (arr.length) {
-    if (y > 240) { doc.addPage(); y = 20; }
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(114, 47, 55);
-    doc.text('Fatture ' + anno + ' (' + arr.length + ')', margin, y);
-    y += 4;
+    doc.addPage('a4', 'landscape');
+    drawHeader(doc, rFake, pageW);
+    var yFat = 32;
+    drawSectionTitle(doc, 'Fatture ' + anno + ' (' + arr.length + ')', margin, yFat);
+    yFat += 5;
     
     var body = [];
     for (var i = 0; i < arr.length; i++) body.push([arr[i].data, arr[i].numDoc, NUM(arr[i].pezzi), NUM(arr[i].pezziEq), EURpdf(arr[i].importo)]);
     body.push(['TOTALE', '', NUM(b26), NUM(b26Eq), EURpdf(f26)]);
     
     doc.autoTable({
-      head: [['Data', 'N. Doc', 'Bottiglie', 'Bott.', 'Importo']], body: body, startY: y,
+      head: [['Data', 'N. Doc', 'Bottiglie', 'Bott. equiv.', 'Importo']], body: body, startY: yFat,
       theme: 'striped',
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
       bodyStyles: { fontSize: 9 },
@@ -2166,13 +2327,10 @@ function _exportClientePdfBody(nome, donutImg) {
     });
   }
   
-  // Footer
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Mosnel Sales Intelligence - generato ' + new Date().toLocaleDateString('it-IT'), margin, pageH - 8);
+  // Footer paginato
+  addPageNumbers(doc, pageW, pageH);
   
-  doc.save('Mosnel_Cliente_' + nome.substr(0,30) + '.pdf');
+  doc.save('Mosnel_Cliente_' + nome.substr(0,30).replace(/\s+/g, '_') + '.pdf');
 }
 
 function exportReportExcel() {
@@ -2246,239 +2404,260 @@ function svgToPng(svgEl, width, height) {
 function exportReportPdf() {
   if (!lastReport) return;
   var r = lastReport;
-  var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  var pageW = 210;
+  // Tutto in LANDSCAPE A4 per layout uniforme professionale
+  var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var pageW = 297, pageH = 210;
   var margin = 14;
   
-  // Header
-  doc.setFillColor(114, 47, 55);
-  doc.rect(0, 0, pageW, 28, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Mosnel — ' + r.vista, margin, 14);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(201, 168, 76);
-  doc.text(r.anno + ' vs ' + r.annoP + ' · ' + r.periodo.label, margin, 22);
+  // ============ PAGINA 1: HEADER + KPI + GRAFICO ============
+  drawHeader(doc, r, pageW);
   
   var y = 36;
   
-  // KPI cards in griglia 2x2
+  // KPI + 4 blocchi affiancati (sinistra: KPI, destra: blocchi)
   var dF = r.d25.fatturato > 0 ? ((r.d26.fatturato - r.d25.fatturato) / r.d25.fatturato) * 100 : 0;
   var dB = r.d25.bottiglieEq > 0 ? ((r.d26.bottiglieEq - r.d25.bottiglieEq) / r.d25.bottiglieEq) * 100 : 0;
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
   
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(114, 47, 55);
-  doc.text('Indicatori chiave', margin, y);
-  y += 4;
-  
-  var kpi = [
-    ['Fatturato ' + r.anno, EURpdf(r.d26.fatturato), EURpdf(r.d25.fatturato), EURsignPdf(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
-    ['Bottiglie ' + r.anno, NUM(r.d26.bottiglieEq), NUM(r.d25.bottiglieEq), NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq), PCTsign(dB)],
-    ['Prezzo Medio', EURpdf(r.d26.pm), EURpdf(r.d25.pm), EURsignPdf(r.d26.pm-r.d25.pm), PCTsign(dPM)],
-    ['Ordini ' + r.anno, NUM(r.d26.ordini), NUM(r.d25.ordini), NUMsign(r.d26.ordini-r.d25.ordini), '']
-  ];
-  doc.autoTable({
-    head: [['', r.anno.toString(), r.annoP.toString(), 'Var', 'Var %']],
-    body: kpi, startY: y,
-    theme: 'striped',
-    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 10 },
-    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin },
-    didParseCell: colorNegativesCallback
-  });
-  y = doc.lastAutoTable.finalY + 8;
-  
-  // Pre-converto chart SVG + donut SVG in PNG, poi aggiungo tutto al PDF
-  var chartSvg = document.querySelector('.chart-wrap svg');
-  var donutSvg = document.querySelector('.donut-svg');
-  
-  var chartPromise = chartSvg ? svgToPng(chartSvg, 1200, 380) : Promise.resolve(null);
-  var donutPromise = donutSvg ? svgToPng(donutSvg, 600, 600) : Promise.resolve(null);
-  
-  Promise.all([chartPromise, donutPromise]).then(function(images) {
-    var chartImg = images[0];
-    var donutImg = images[1];
-    var yPos = y;
-    
-    // Aggiungi grafico
-    if (chartImg) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(114, 47, 55);
-      doc.text('Andamento mensile fatturato', margin, yPos);
-      yPos += 4;
-      doc.addImage(chartImg, 'PNG', margin, yPos, pageW - 2*margin, 60);
-      yPos += 64;
-    }
-    
-    addBlocksAndRefsToPdf(doc, r, yPos, donutImg);
-  }).catch(function(err) {
-    console.warn('Errore conversione SVG:', err);
-    addBlocksAndRefsToPdf(doc, r, y, null);
-  });
-}
-
-function addBlocksAndRefsToPdf(doc, r, y, donutImg) {
-  var pageW = 210, pageH = 297, margin = 14;
-  var entityLbl = r.isItalia ? 'agenti' : 'clienti';
-  var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
-  
-  // 4 blocchi riepilogo
-  if (y > 230) { doc.addPage(); y = 20; }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(114, 47, 55);
-  doc.text('Riepilogo ' + entityLbl, margin, y);
-  y += 4;
-  
+  // Calcolo blocchi
   var totDeltaTutti = 0, totDeltaAttivi = 0, totDeltaCalo = 0, totDeltaAssenti = 0;
   for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
   for (var i = 0; i < r.attivi.length; i++) totDeltaAttivi += (r.attivi[i].f26 - r.attivi[i].f25);
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
   for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
   
-  var blocks = [
-    ['Tutti i ' + entityLbl, r.tutti.length, totDeltaTutti],
-    [entityCap + ' attivi', r.attivi.length, totDeltaAttivi],
-    [entityCap + ' in calo', r.calo.length, totDeltaCalo],
-    ['Non ancora attivi', r.assenti.length, totDeltaAssenti]
-  ];
-  doc.autoTable({
-    head: [['Categoria', 'N. ' + entityCap, 'Var EUR totale']],
-    body: blocks.map(function(b) { return [b[0], b[1], EURsignPdf(b[2])]; }),
-    startY: y,
-    theme: 'striped',
-    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 10 },
-    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' } },
-    margin: { left: margin, right: margin },
-    didParseCell: colorNegativesCallback
-  });
-  y = doc.lastAutoTable.finalY + 8;
+  var entityLbl = r.isItalia ? 'agenti' : 'clienti';
+  var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
   
-  // Rotazione referenze: titolo + (eventuale) donut + tabella
-  if (y > 200) { doc.addPage(); y = 20; }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(114, 47, 55);
-  doc.text('Rotazione referenze ' + r.anno, margin, y);
+  // Sezione superiore: KPI a sinistra (larghezza 140mm), Blocchi a destra (larghezza 125mm)
+  var halfW = 140;
+  
+  // Titolo KPI
+  drawSectionTitle(doc, 'Indicatori chiave', margin, y);
+  // Titolo blocchi
+  drawSectionTitle(doc, 'Riepilogo ' + entityLbl, margin + halfW + 4, y);
   y += 5;
   
-  // Inserisci il donut se disponibile
-  if (donutImg) {
-    var donutSize = 65;
-    var donutX = (pageW - donutSize) / 2;
-    // Controlla se c'è spazio nella pagina corrente
-    if (y + donutSize + 15 > pageH - 15) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.addImage(donutImg, 'PNG', donutX, y, donutSize, donutSize);
-    
-    // Sotto al donut: totale bottiglie
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(120, 100, 100);
-    doc.text('Totale bottiglie ' + r.anno + ': ' + NUM(r.d26.bottiglieEq), pageW/2, y + donutSize + 5, { align: 'center' });
-    
-    y = y + donutSize + 10;
-  }
-  
-  var refRows = [];
-  var refNames = REFERENZE.map(function(x) { return x.name; });
-  refNames.push('Altro');
-  for (var i = 0; i < refNames.length; i++) {
-    var name = refNames[i];
-    var r26ref = r.refs26[name] || { fatt: 0, btl: 0, btlEq: 0 };
-    var r25ref = r.refs25[name] || { fatt: 0, btl: 0, btlEq: 0 };
-    if (r26ref.btlEq === 0 && r25ref.btlEq === 0) continue;
-    var dRef = r25ref.btlEq > 0 ? ((r26ref.btlEq - r25ref.btlEq) / r25ref.btlEq) * 100 : 0;
-    var pctTot = r.d26.bottiglieEq > 0 ? (r26ref.btlEq / r.d26.bottiglieEq) * 100 : 0;
-    refRows.push([name, NUM(r26ref.btlEq), EURpdf(r26ref.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
-  }
+  // Tabella KPI (sinistra)
   doc.autoTable({
-    head: [['Referenza', 'Bottiglie ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
-    body: refRows, startY: y,
+    head: [['', r.anno.toString(), r.annoP.toString(), 'Var', 'Var %']],
+    body: [
+      ['Fatturato', EURpdf(r.d26.fatturato), EURpdf(r.d25.fatturato), EURsignPdf(r.d26.fatturato-r.d25.fatturato), PCTsign(dF)],
+      ['Bottiglie', NUM(r.d26.bottiglieEq), NUM(r.d25.bottiglieEq), NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq), PCTsign(dB)],
+      ['Prezzo Medio', EURpdf(r.d26.pm), EURpdf(r.d25.pm), EURsignPdf(r.d26.pm-r.d25.pm), PCTsign(dPM)],
+      ['Ordini', NUM(r.d26.ordini), NUM(r.d25.ordini), NUMsign(r.d26.ordini-r.d25.ordini), '']
+    ],
+    startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
     bodyStyles: { fontSize: 9 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    margin: { left: margin, right: margin },
-    didParseCell: colorNegativesCallback
+    margin: { left: margin, right: pageW - margin - halfW },
+    didParseCell: colorNegativesCallback,
+    tableWidth: halfW
   });
+  var yKpiEnd = doc.lastAutoTable.finalY;
   
-  // Tabella in pagina aggiuntiva
-  var orderedTutti = readTableOrder('main-tbl', r.tutti);
-  if (orderedTutti.length > 0) {
+  // Tabella blocchi (destra)
+  doc.autoTable({
+    head: [['Categoria', 'N.', 'Var EUR totale']],
+    body: [
+      ['Tutti i ' + entityLbl, r.tutti.length, EURsignPdf(totDeltaTutti)],
+      [entityCap + ' attivi', r.attivi.length, EURsignPdf(totDeltaAttivi)],
+      [entityCap + ' in calo', r.calo.length, EURsignPdf(totDeltaCalo)],
+      ['Non ancora attivi', r.assenti.length, EURsignPdf(totDeltaAssenti)]
+    ],
+    startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' } },
+    margin: { left: margin + halfW + 4, right: margin },
+    didParseCell: colorNegativesCallback,
+    tableWidth: pageW - 2*margin - halfW - 4
+  });
+  var yBlocksEnd = doc.lastAutoTable.finalY;
+  
+  y = Math.max(yKpiEnd, yBlocksEnd) + 8;
+  
+  // Pre-converto chart + donut
+  var chartSvg = document.querySelector('.chart-wrap svg');
+  var donutSvg = document.querySelector('.donut-svg');
+  
+  var chartPromise = chartSvg ? svgToPng(chartSvg, 1600, 480) : Promise.resolve(null);
+  var donutPromise = donutSvg ? svgToPng(donutSvg, 1050, 800) : Promise.resolve(null);
+  
+  Promise.all([chartPromise, donutPromise]).then(function(images) {
+    var chartImg = images[0];
+    var donutImg = images[1];
+    
+    // Grafico mensile a tutta larghezza (parte inferiore pagina 1)
+    if (chartImg) {
+      drawSectionTitle(doc, 'Andamento mensile fatturato', margin, y);
+      y += 5;
+      // Calcolo altezza disponibile: pageH - y - margine inferiore
+      var availH = pageH - y - 18;
+      var chartH = Math.min(availH, 70);
+      doc.addImage(chartImg, 'PNG', margin, y, pageW - 2*margin, chartH);
+    }
+    
+    // ============ PAGINA 2: REFERENZE (DONUT + TABELLA AFFIANCATI) ============
     doc.addPage('a4', 'landscape');
-    var pW = 297;
-    doc.setFillColor(114, 47, 55);
-    doc.rect(0, 0, pW, 18, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Elenco ' + entityLbl + ' - ' + r.vista, margin, 11);
+    drawHeader(doc, r, pageW);
+    var y2 = 36;
     
-    var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
-    var body = [];
-    for (var i = 0; i < orderedTutti.length; i++) {
-      var c = orderedTutti[i];
-      var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
-      if (r.isItalia) {
-        body.push([c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
-      } else {
-        body.push([c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
-      }
-      totF26 += c.f26; totF25 += c.f25;
-      totB26Eq += c.b26Eq || 0; totB25Eq += c.b25Eq || 0;
-    }
-    var totPM = PM(totF26, totB26Eq);
-    var totDF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
-    if (r.isItalia) {
-      body.push(['TOTALE', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
-    } else {
-      body.push(['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
+    drawSectionTitle(doc, 'Rotazione referenze ' + r.anno, margin, y2);
+    y2 += 6;
+    
+    // Donut rettangolare con callout labels esterne
+    var donutBoxW = 145;
+    var donutBoxH = 110;
+    var tableX = margin + donutBoxW + 6;
+    var tableW = pageW - margin - tableX;
+    
+    if (donutImg) {
+      doc.addImage(donutImg, 'PNG', margin, y2, donutBoxW, donutBoxH);
     }
     
-    var heads = r.isItalia
-      ? [['Agente', 'Clienti 26', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
-      : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
-    
-    var colStyles = r.isItalia
-      ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
-      : { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
-    
+    // Tabella referenze a destra del donut
+    var refRows = [];
+    var refNames = REFERENZE.map(function(x) { return x.name; });
+    refNames.push('Altro');
+    for (var i = 0; i < refNames.length; i++) {
+      var name = refNames[i];
+      var r26ref = r.refs26[name] || { fatt: 0, btl: 0, btlEq: 0 };
+      var r25ref = r.refs25[name] || { fatt: 0, btl: 0, btlEq: 0 };
+      if (r26ref.btlEq === 0 && r25ref.btlEq === 0) continue;
+      var dRef = r25ref.btlEq > 0 ? ((r26ref.btlEq - r25ref.btlEq) / r25ref.btlEq) * 100 : 0;
+      var pctTot = r.d26.bottiglieEq > 0 ? (r26ref.btlEq / r.d26.bottiglieEq) * 100 : 0;
+      refRows.push([name, NUM(r26ref.btlEq), EURpdf(r26ref.fatt), pctTot.toFixed(2).replace('.', ',') + '%', PCTsign(dRef)]);
+    }
     doc.autoTable({
-      head: heads, body: body, startY: 22,
+      head: [['Referenza', 'Bottiglie ' + r.anno, 'Fatturato', '% sul totale', 'Var % vs ' + r.annoP]],
+      body: refRows, startY: y2,
       theme: 'striped',
-      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 7 },
-      columnStyles: colStyles,
-      styles: { cellPadding: 1.5 },
-      margin: { left: margin, right: margin },
-      didParseCell: function(data) {
-        colorNegativesCallback(data);
-        if (data.section === 'body' && data.row.index === body.length - 1) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [240, 230, 230];
-        }
-      }
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+      margin: { left: tableX, right: margin },
+      didParseCell: colorNegativesCallback,
+      tableWidth: tableW
     });
+    
+    // ============ PAGINA 3: TABELLA CLIENTI/AGENTI ============
+    addClientiTablePage(doc, r, pageW, margin);
+    
+    // ============ FOOTER PAGINATO ============
+    addPageNumbers(doc, pageW, pageH);
+    
+    doc.save('Mosnel_' + r.vista.replace(/\s+/g, '_') + '_' + r.anno + '.pdf');
+  }).catch(function(err) {
+    console.warn('Errore conversione SVG:', err);
+    addClientiTablePage(doc, r, pageW, margin);
+    addPageNumbers(doc, pageW, pageH);
+    doc.save('Mosnel_' + r.vista.replace(/\s+/g, '_') + '_' + r.anno + '.pdf');
+  });
+}
+
+// Header bordeaux uniforme per tutte le pagine PDF
+function drawHeader(doc, r, pageW) {
+  doc.setFillColor(114, 47, 55);
+  doc.rect(0, 0, pageW, 24, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Mosnel - ' + r.vista, 14, 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(201, 168, 76);
+  doc.text(r.anno + ' vs ' + r.annoP + ' - ' + r.periodo.label, 14, 19);
+}
+
+// Titolo sezione con filetto bordeaux sottostante
+function drawSectionTitle(doc, text, x, y) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(114, 47, 55);
+  doc.text(text, x, y);
+  doc.setDrawColor(201, 168, 76);
+  doc.setLineWidth(0.5);
+  var textW = doc.getTextWidth(text);
+  doc.line(x, y + 1.2, x + textW, y + 1.2);
+}
+
+// Aggiunge la pagina con la tabella clienti/agenti
+function addClientiTablePage(doc, r, pageW, margin) {
+  var orderedTutti = readTableOrder('main-tbl', r.tutti);
+  if (!orderedTutti.length) return;
+  
+  doc.addPage('a4', 'landscape');
+  drawHeader(doc, r, pageW);
+  
+  var y = 30;
+  var entityLbl = r.isItalia ? 'agenti' : 'clienti';
+  drawSectionTitle(doc, 'Elenco ' + entityLbl + ' (' + orderedTutti.length + ')', margin, y);
+  y += 5;
+  
+  var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
+  var body = [];
+  for (var i = 0; i < orderedTutti.length; i++) {
+    var c = orderedTutti[i];
+    var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    if (r.isItalia) {
+      body.push([c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
+    } else {
+      body.push([c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
+    }
+    totF26 += c.f26; totF25 += c.f25;
+    totB26Eq += c.b26Eq || 0; totB25Eq += c.b25Eq || 0;
+  }
+  var totPM = PM(totF26, totB26Eq);
+  var totDF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
+  if (r.isItalia) {
+    body.push(['TOTALE', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
+  } else {
+    body.push(['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
   }
   
-  // Footer
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Mosnel Sales Intelligence · generato ' + new Date().toLocaleDateString('it-IT'), margin, pageH - 8);
+  var heads = r.isItalia
+    ? [['Agente', 'Clienti', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
+    : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
   
-  doc.save('Mosnel_Report_' + r.vista + '.pdf');
+  var colStyles = r.isItalia
+    ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
+    : { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
+  
+  doc.autoTable({
+    head: heads, body: body, startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+    bodyStyles: { fontSize: 7 },
+    columnStyles: colStyles,
+    styles: { cellPadding: 1.5 },
+    margin: { left: margin, right: margin },
+    didParseCell: function(data) {
+      colorNegativesCallback(data);
+      if (data.section === 'body' && data.row.index === body.length - 1) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [240, 230, 230];
+      }
+    }
+  });
 }
+
+// Numerazione pagine in basso a destra
+function addPageNumbers(doc, pageW, pageH) {
+  var n = doc.internal.getNumberOfPages();
+  for (var i = 1; i <= n; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('Mosnel Sales Intelligence  -  generato ' + new Date().toLocaleDateString('it-IT'), 14, pageH - 6);
+    doc.text('Pagina ' + i + ' di ' + n, pageW - 14, pageH - 6, { align: 'right' });
+  }
+}
+
 
 function saveXlsx(wb, name) {
   try { XLSX.writeFile(wb, name); }
