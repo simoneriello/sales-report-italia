@@ -157,10 +157,10 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--wine);border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.donut-wrap{display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:center}
-@media(max-width:900px){.donut-wrap{grid-template-columns:1fr}}
+.donut-wrap{display:grid;grid-template-columns:460px 1fr;gap:24px;align-items:center}
+@media(max-width:960px){.donut-wrap{grid-template-columns:1fr}}
 .donut-center{display:flex;flex-direction:column;align-items:center;justify-content:center}
-.donut-svg{width:100%;max-width:420px;height:auto}
+.donut-svg{width:100%;max-width:460px;height:auto}
 .donut-total-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-top:8px;letter-spacing:0.5px}
 .donut-total-val{font-family:'DM Sans',sans-serif;font-size:1.6rem;font-weight:700;color:var(--wine);letter-spacing:-0.02em}
 .donut-legend{display:flex;flex-direction:column;gap:6px}
@@ -1022,14 +1022,12 @@ function buildDonutReferenze(r) {
   
   if (items.length === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
   
-  // Donut SVG con callout labels esterne (stile Bloomberg/Power BI)
-  // ViewBox più larga della precedente (400x320) per accogliere le etichette laterali
-  var W = 420, H = 320;
+  // Donut SVG con callout labels esterne L-shape (no overlap)
+  // ViewBox 460x360 con donut centrato — più spazio verticale per le label
+  var W = 460, H = 360;
   var cx = W / 2, cy = H / 2;
-  var rOuter = 90, rInner = 55;
-  var rLabelLine1 = rOuter + 12; // primo punto della linea (subito fuori dal donut)
-  var rLabelLine2 = rOuter + 28; // secondo punto (gomito della linea)
-  var labelX_offset = 6; // distanza testo dal gomito
+  var rOuter = 95, rInner = 58;
+  var rLabelStart = rOuter + 4;
   
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="donut-svg" preserveAspectRatio="xMidYMid meet">';
   
@@ -1037,7 +1035,7 @@ function buildDonutReferenze(r) {
   var totalForDonut = 0;
   for (var i = 0; i < items.length; i++) totalForDonut += items[i].btlEq26;
   
-  // Memorizzo info per le label da disegnare DOPO le fette (per non essere coperte)
+  // Memorizzo info per le label da disegnare DOPO le fette
   var labelsToDraw = [];
   
   if (totalForDonut > 0) {
@@ -1070,27 +1068,18 @@ function buildDonutReferenze(r) {
       
       svg += '<path d="' + path + '" fill="' + items[i].color + '" stroke="white" stroke-width="1.5"/>';
       
-      // Prepara label solo se fetta >= 3%
+      // Prepara label se fetta >= 0.5%
       var pctValue = pct * 100;
       if (pctValue >= 0.5) {
-        // Punto sull'arco esterno (start della linea callout)
-        var lx1 = cx + rLabelLine1 * Math.cos(midRad);
-        var ly1 = cy + rLabelLine1 * Math.sin(midRad);
-        // Gomito orizzontale (estende verso sinistra o destra in base alla posizione)
+        // Punto di ancora: appena fuori dalla fetta (lungo il raggio midRad)
+        var anchorX = cx + rLabelStart * Math.cos(midRad);
+        var anchorY = cy + rLabelStart * Math.sin(midRad);
         var isRightSide = Math.cos(midRad) >= 0;
-        var lx2 = cx + (isRightSide ? rLabelLine2 + 30 : -(rLabelLine2 + 30)) * Math.abs(Math.cos(midRad)) * 0 + cx;
-        // Per semplicità il gomito orizzontale lo metto a x fisso laterale
-        var elbowX = isRightSide ? cx + rLabelLine2 + 8 : cx - rLabelLine2 - 8;
-        // ma se il punto è molto in alto o in basso, lascio elbowX più vicino al punto
-        var labelTextX = isRightSide ? elbowX + labelX_offset : elbowX - labelX_offset;
-        var labelTextAnchor = isRightSide ? 'start' : 'end';
         
         labelsToDraw.push({
-          // Linea: punto arco → punto orizzontale a elbowX (stessa Y) → estremità
-          startX: lx1, startY: ly1,
-          elbowX: elbowX, elbowY: ly1,
-          textX: labelTextX, textY: ly1,
-          textAnchor: labelTextAnchor,
+          anchorX: anchorX, anchorY: anchorY,
+          labelY: anchorY, // sarà aggiustata dall'anti-collision
+          isRight: isRightSide,
           color: items[i].color,
           name: items[i].name,
           pct: pctValue
@@ -1101,46 +1090,83 @@ function buildDonutReferenze(r) {
     }
   }
   
-  // Risolvo collisioni Y tra label vicine (separazione minima 13px)
-  // Separo per lato
-  function adjustLabels(labels) {
-    labels.sort(function(a, b) { return a.elbowY - b.elbowY; });
-    var minGap = 14;
+  // Anti-collision bidirezionale: ordina per Y, poi sweep dall'alto in basso e dal basso in alto
+  function antiCollide(labels, minGap, topY, bottomY) {
+    if (labels.length === 0) return;
+    // Ordina per anchorY (Y nativa della fetta)
+    labels.sort(function(a, b) { return a.anchorY - b.anchorY; });
+    // Pass 1: Y native
+    for (var i = 0; i < labels.length; i++) labels[i].labelY = labels[i].anchorY;
+    // Pass 2: top-down — se troppo vicino al precedente, sposta in giù
     for (var i = 1; i < labels.length; i++) {
-      if (labels[i].elbowY - labels[i-1].elbowY < minGap) {
-        labels[i].elbowY = labels[i-1].elbowY + minGap;
-        labels[i].textY = labels[i].elbowY;
+      if (labels[i].labelY < labels[i-1].labelY + minGap) {
+        labels[i].labelY = labels[i-1].labelY + minGap;
       }
     }
-    // Vincolo bounds verticali
-    for (var i = 0; i < labels.length; i++) {
-      if (labels[i].elbowY < 10) labels[i].elbowY = labels[i].textY = 10;
-      if (labels[i].elbowY > H - 10) labels[i].elbowY = labels[i].textY = H - 10;
+    // Pass 3: bottom-up — se l'ultima sfora il limite inferiore, comprimi verso l'alto
+    if (labels[labels.length-1].labelY > bottomY) {
+      labels[labels.length-1].labelY = bottomY;
+      for (var i = labels.length - 2; i >= 0; i--) {
+        if (labels[i].labelY > labels[i+1].labelY - minGap) {
+          labels[i].labelY = labels[i+1].labelY - minGap;
+        }
+      }
+    }
+    // Pass 4: clamp top
+    if (labels[0].labelY < topY) {
+      labels[0].labelY = topY;
+      for (var i = 1; i < labels.length; i++) {
+        if (labels[i].labelY < labels[i-1].labelY + minGap) {
+          labels[i].labelY = labels[i-1].labelY + minGap;
+        }
+      }
     }
   }
   
-  var rightLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'start'; });
-  var leftLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'end'; });
-  adjustLabels(rightLabels);
-  adjustLabels(leftLabels);
+  var rightLabels = labelsToDraw.filter(function(l) { return l.isRight; });
+  var leftLabels = labelsToDraw.filter(function(l) { return !l.isRight; });
+  var minGap = 22;
+  antiCollide(rightLabels, minGap, 14, H - 14);
+  antiCollide(leftLabels, minGap, 14, H - 14);
   
-  // Disegna linee + testo
+  // X posizione testo: ben fuori dal donut (35px dal bordo arco esterno)
+  var rightLabelX = cx + rOuter + 35;
+  var leftLabelX = cx - rOuter - 35;
+  
+  // Disegna linee L-shape + testo
   var allLabels = rightLabels.concat(leftLabels);
   for (var i = 0; i < allLabels.length; i++) {
     var l = allLabels[i];
-    // Linea a tre segmenti: dal punto sull'arco → gomito orizzontale → testo
-    svg += '<polyline points="' + l.startX + ',' + l.startY + ' ' + l.elbowX + ',' + l.elbowY + '" ';
-    svg += 'fill="none" stroke="' + l.color + '" stroke-width="1.2" opacity="0.8"/>';
-    // Pallino al gomito
-    svg += '<circle cx="' + l.elbowX + '" cy="' + l.elbowY + '" r="2" fill="' + l.color + '"/>';
+    var dirSign = l.isRight ? 1 : -1;
+    var labelX = l.isRight ? rightLabelX : leftLabelX;
+    var textAnchor = l.isRight ? 'start' : 'end';
+    var textX = l.isRight ? labelX + 6 : labelX - 6;
+    
+    // L-shape: anchor → punto orizzontale corto → punto verticale → punto testo
+    // p1: ancora (sull'arco)
+    // p2: 10px in orizzontale verso il lato (anchorX + 10*dirSign, anchorY)
+    // p3: stessa X di p2, ma Y = labelY (segmento verticale)
+    // p4: labelX, labelY (segmento orizzontale corto fino al pallino)
+    var p1x = l.anchorX, p1y = l.anchorY;
+    var p2x = l.anchorX + dirSign * 8;
+    var p2y = l.anchorY;
+    var p3x = labelX - dirSign * 6;
+    var p3y = l.labelY;
+    var p4x = labelX;
+    var p4y = l.labelY;
+    
+    svg += '<polyline points="' + p1x + ',' + p1y + ' ' + p2x + ',' + p2y + ' ' + p3x + ',' + p3y + ' ' + p4x + ',' + p4y + '" ';
+    svg += 'fill="none" stroke="' + l.color + '" stroke-width="1.2" opacity="0.75"/>';
+    // Pallino all'estremità della linea (inizio testo)
+    svg += '<circle cx="' + p4x + '" cy="' + p4y + '" r="2.2" fill="' + l.color + '"/>';
     // Testo nome
-    svg += '<text x="' + l.textX + '" y="' + (l.textY - 1) + '" ';
-    svg += 'text-anchor="' + l.textAnchor + '" font-size="10" font-weight="600" font-family="Arial, sans-serif" fill="#333">';
+    svg += '<text x="' + textX + '" y="' + (l.labelY - 1) + '" ';
+    svg += 'text-anchor="' + textAnchor + '" font-size="10" font-weight="600" font-family="Arial, sans-serif" fill="#333">';
     svg += escapeHTML(l.name);
     svg += '</text>';
-    // Testo percentuale (sotto, più piccolo)
-    svg += '<text x="' + l.textX + '" y="' + (l.textY + 10) + '" ';
-    svg += 'text-anchor="' + l.textAnchor + '" font-size="9" font-weight="700" font-family="Arial, sans-serif" fill="' + l.color + '">';
+    // Testo percentuale (sotto, più piccolo, colorato come la fetta)
+    svg += '<text x="' + textX + '" y="' + (l.labelY + 10) + '" ';
+    svg += 'text-anchor="' + textAnchor + '" font-size="9" font-weight="700" font-family="Arial, sans-serif" fill="' + l.color + '">';
     svg += l.pct.toFixed(1).replace('.', ',') + '%';
     svg += '</text>';
   }
@@ -1578,13 +1604,11 @@ function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
   items.sort(function(a, b) { return b.btlEq26 - a.btlEq26; });
   if (items.length === 0) return '<p style="color:var(--muted);font-size:12px">Nessun dato</p>';
   
-  // Donut con callout labels esterne (stesso stile del report principale)
-  var W = 420, H = 320;
+  // Donut con callout labels esterne L-shape (stesso stile del report)
+  var W = 460, H = 360;
   var cx = W / 2, cy = H / 2;
-  var rOuter = 90, rInner = 55;
-  var rLabelLine1 = rOuter + 12;
-  var rLabelLine2 = rOuter + 28;
-  var labelX_offset = 6;
+  var rOuter = 95, rInner = 58;
+  var rLabelStart = rOuter + 4;
   
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="donut-svg" preserveAspectRatio="xMidYMid meet">';
   var startAngle = -90;
@@ -1615,17 +1639,13 @@ function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
       
       var pctValue = pct * 100;
       if (pctValue >= 0.5) {
-        var lx1 = cx + rLabelLine1 * Math.cos(midRad);
-        var ly1 = cy + rLabelLine1 * Math.sin(midRad);
+        var anchorX = cx + rLabelStart * Math.cos(midRad);
+        var anchorY = cy + rLabelStart * Math.sin(midRad);
         var isRightSide = Math.cos(midRad) >= 0;
-        var elbowX = isRightSide ? cx + rLabelLine2 + 8 : cx - rLabelLine2 - 8;
-        var labelTextX = isRightSide ? elbowX + labelX_offset : elbowX - labelX_offset;
-        var labelTextAnchor = isRightSide ? 'start' : 'end';
         labelsToDraw.push({
-          startX: lx1, startY: ly1,
-          elbowX: elbowX, elbowY: ly1,
-          textX: labelTextX, textY: ly1,
-          textAnchor: labelTextAnchor,
+          anchorX: anchorX, anchorY: anchorY,
+          labelY: anchorY,
+          isRight: isRightSide,
           color: items[i].color,
           name: items[i].name,
           pct: pctValue
@@ -1635,38 +1655,68 @@ function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
     }
   }
   
-  function adjustLabels(labels) {
-    labels.sort(function(a, b) { return a.elbowY - b.elbowY; });
-    var minGap = 14;
+  // Anti-collision bidirezionale
+  function antiCollide(labels, minGap, topY, bottomY) {
+    if (labels.length === 0) return;
+    labels.sort(function(a, b) { return a.anchorY - b.anchorY; });
+    for (var i = 0; i < labels.length; i++) labels[i].labelY = labels[i].anchorY;
     for (var i = 1; i < labels.length; i++) {
-      if (labels[i].elbowY - labels[i-1].elbowY < minGap) {
-        labels[i].elbowY = labels[i-1].elbowY + minGap;
-        labels[i].textY = labels[i].elbowY;
+      if (labels[i].labelY < labels[i-1].labelY + minGap) {
+        labels[i].labelY = labels[i-1].labelY + minGap;
       }
     }
-    for (var i = 0; i < labels.length; i++) {
-      if (labels[i].elbowY < 10) labels[i].elbowY = labels[i].textY = 10;
-      if (labels[i].elbowY > H - 10) labels[i].elbowY = labels[i].textY = H - 10;
+    if (labels[labels.length-1].labelY > bottomY) {
+      labels[labels.length-1].labelY = bottomY;
+      for (var i = labels.length - 2; i >= 0; i--) {
+        if (labels[i].labelY > labels[i+1].labelY - minGap) {
+          labels[i].labelY = labels[i+1].labelY - minGap;
+        }
+      }
+    }
+    if (labels[0].labelY < topY) {
+      labels[0].labelY = topY;
+      for (var i = 1; i < labels.length; i++) {
+        if (labels[i].labelY < labels[i-1].labelY + minGap) {
+          labels[i].labelY = labels[i-1].labelY + minGap;
+        }
+      }
     }
   }
   
-  var rightLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'start'; });
-  var leftLabels = labelsToDraw.filter(function(l) { return l.textAnchor === 'end'; });
-  adjustLabels(rightLabels);
-  adjustLabels(leftLabels);
+  var rightLabels = labelsToDraw.filter(function(l) { return l.isRight; });
+  var leftLabels = labelsToDraw.filter(function(l) { return !l.isRight; });
+  var minGap = 22;
+  antiCollide(rightLabels, minGap, 14, H - 14);
+  antiCollide(leftLabels, minGap, 14, H - 14);
+  
+  var rightLabelX = cx + rOuter + 35;
+  var leftLabelX = cx - rOuter - 35;
   
   var allLabels = rightLabels.concat(leftLabels);
   for (var i = 0; i < allLabels.length; i++) {
     var l = allLabels[i];
-    svg += '<polyline points="' + l.startX + ',' + l.startY + ' ' + l.elbowX + ',' + l.elbowY + '" ';
-    svg += 'fill="none" stroke="' + l.color + '" stroke-width="1.2" opacity="0.8"/>';
-    svg += '<circle cx="' + l.elbowX + '" cy="' + l.elbowY + '" r="2" fill="' + l.color + '"/>';
-    svg += '<text x="' + l.textX + '" y="' + (l.textY - 1) + '" ';
-    svg += 'text-anchor="' + l.textAnchor + '" font-size="10" font-weight="600" font-family="Arial, sans-serif" fill="#333">';
+    var dirSign = l.isRight ? 1 : -1;
+    var labelX = l.isRight ? rightLabelX : leftLabelX;
+    var textAnchor = l.isRight ? 'start' : 'end';
+    var textX = l.isRight ? labelX + 6 : labelX - 6;
+    
+    var p1x = l.anchorX, p1y = l.anchorY;
+    var p2x = l.anchorX + dirSign * 8;
+    var p2y = l.anchorY;
+    var p3x = labelX - dirSign * 6;
+    var p3y = l.labelY;
+    var p4x = labelX;
+    var p4y = l.labelY;
+    
+    svg += '<polyline points="' + p1x + ',' + p1y + ' ' + p2x + ',' + p2y + ' ' + p3x + ',' + p3y + ' ' + p4x + ',' + p4y + '" ';
+    svg += 'fill="none" stroke="' + l.color + '" stroke-width="1.2" opacity="0.75"/>';
+    svg += '<circle cx="' + p4x + '" cy="' + p4y + '" r="2.2" fill="' + l.color + '"/>';
+    svg += '<text x="' + textX + '" y="' + (l.labelY - 1) + '" ';
+    svg += 'text-anchor="' + textAnchor + '" font-size="10" font-weight="600" font-family="Arial, sans-serif" fill="#333">';
     svg += escapeHTML(l.name);
     svg += '</text>';
-    svg += '<text x="' + l.textX + '" y="' + (l.textY + 10) + '" ';
-    svg += 'text-anchor="' + l.textAnchor + '" font-size="9" font-weight="700" font-family="Arial, sans-serif" fill="' + l.color + '">';
+    svg += '<text x="' + textX + '" y="' + (l.labelY + 10) + '" ';
+    svg += 'text-anchor="' + textAnchor + '" font-size="9" font-weight="700" font-family="Arial, sans-serif" fill="' + l.color + '">';
     svg += l.pct.toFixed(1).replace('.', ',') + '%';
     svg += '</text>';
   }
@@ -2121,7 +2171,7 @@ function colorNegativesCallback(data) {
 function exportClientePdf(nome) {
   // Pre-converto il donut della scheda cliente (se visibile) prima di costruire il PDF
   var donutSvg = document.querySelector('.donut-svg');
-  var donutPromise = donutSvg ? svgToPng(donutSvg, 1050, 800) : Promise.resolve(null);
+  var donutPromise = donutSvg ? svgToPng(donutSvg, 1150, 900) : Promise.resolve(null);
   donutPromise.then(function(donutImg) {
     _exportClientePdfBody(nome, donutImg);
   }).catch(function(err) {
@@ -2508,7 +2558,7 @@ function exportReportPdf() {
   var donutSvg = document.querySelector('.donut-svg');
   
   var chartPromise = chartSvg ? svgToPng(chartSvg, 1600, 480) : Promise.resolve(null);
-  var donutPromise = donutSvg ? svgToPng(donutSvg, 1050, 800) : Promise.resolve(null);
+  var donutPromise = donutSvg ? svgToPng(donutSvg, 1150, 900) : Promise.resolve(null);
   
   Promise.all([chartPromise, donutPromise]).then(function(images) {
     var chartImg = images[0];
