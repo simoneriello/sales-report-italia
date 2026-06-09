@@ -47,6 +47,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .btn-exp:hover{background:var(--wine);color:white}
 
 .searchbar{background:var(--wine-light);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:12px;align-items:center}
+
+.data-info-banner{background:linear-gradient(to right, #f9f3e4, #fdfafa);border-bottom:1px solid var(--border);border-left:3px solid var(--gold);padding:10px 24px;display:flex;align-items:center;gap:14px}
+.data-info-icon{font-size:20px}
+.data-info-content{display:flex;flex-direction:column;gap:1px}
+.data-info-label{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.data-info-text{font-size:13px;color:var(--wine);font-weight:600}
+.data-info-text strong{font-weight:700}
+.data-info-warn{color:#b86c00}
+@media(max-width:600px){.data-info-banner{padding:8px 12px}.data-info-text{font-size:12px}}
 .search-wrapper{position:relative;flex:1;max-width:500px}
 .search-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 36px 8px 36px;font-size:13px;font-family:'DM Sans',sans-serif;background:white}
 .search-input:focus{outline:none;border-color:var(--wine)}
@@ -228,6 +237,14 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
     <button class="btn-gen" onclick="generaReport()">Genera Report</button>
   </div>
   
+  <div class="data-info-banner" id="data-info-banner" style="display:none">
+    <div class="data-info-icon">📅</div>
+    <div class="data-info-content">
+      <div class="data-info-label">DATI CARICATI</div>
+      <div class="data-info-text" id="data-info-text">—</div>
+    </div>
+  </div>
+  
   <div class="searchbar">
     <div class="search-wrapper">
       <span class="search-icon">🔍</span>
@@ -263,17 +280,37 @@ var lastReport = null;
 var sortStates = {};
 var fvStack = [];
 
-var REFERENZE = [
-  { name: 'Brut', keys: ['brut'], exclude: ['nature', 'pas dos', 'dosage'] },
-  { name: 'Pas Dosé', keys: ['pas dos', 'pas dose', 'dosage zero'], exclude: [] },
-  { name: 'Brut Nature', keys: ['brut nature'], exclude: [] },
-  { name: 'Rosé', keys: ['rose', 'rosé'], exclude: ['pas'] },
-  { name: 'Pas Rosé', keys: ['pas ros'], exclude: [] },
-  { name: 'Satèn', keys: ['saten', 'satèn'], exclude: [] },
-  { name: 'EBB', keys: ['ebb'], exclude: [] },
-  { name: 'Parosé', keys: ['parose', 'parosé'], exclude: [] },
-  { name: 'Millesimato', keys: ['millesim'], exclude: [] }
-];
+// Lista ordinata delle categorie referenze (usata per iterare nelle visualizzazioni)
+var REFERENZE_NAMES = ['Brut', 'Pas Dosé', 'Satèn', 'Rosé', 'Parosé', 'Brut Nature', 'EBB', 'Riserva'];
+
+// Compatibilità con codice esistente che usa REFERENZE.map(x => x.name)
+var REFERENZE = REFERENZE_NAMES.map(function(n) { return { name: n }; });
+
+// Classifica un articolo nella categoria corretta usando la categoria merceologica
+// del gestionale (Descr_Merceologica) come fonte primaria, con disambiguazione articolo.
+// Restituisce null se l'articolo va escluso (es. FONTECOLO).
+function classificaReferenza(merceo, articolo) {
+  var m = String(merceo || '').toUpperCase().trim();
+  var a = String(articolo || '').toUpperCase();
+  
+  // Escludi FONTECOLO (non è bottiglia conteggiata)
+  if (m === 'FONTECOLO') return null;
+  
+  // Riserva: priorità all'articolo (gestisce anche righe con merceo non = RISERVA)
+  if (a.indexOf('RISERVA') !== -1) return 'Riserva';
+  if (m === 'RISERVA') return 'Riserva';
+  
+  // Mappa diretta merceologica → categoria Mosnel
+  if (m === 'BRUT') return 'Brut';
+  if (m.indexOf('PAS DOSE') !== -1) return 'Pas Dosé';
+  if (m === 'SATEN') return 'Satèn';
+  if (m === "ROSE' BRUT") return 'Rosé';
+  if (m === "ROSE'") return 'Parosé'; // la merceologica ROSE' contiene solo articoli PAROSE'
+  if (m === 'BRUT BIO') return 'Brut Nature';
+  if (m === 'EBB') return 'EBB';
+  
+  return 'Altro';
+}
 
 function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
 function EUR0(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0}).format(n); }
@@ -332,6 +369,7 @@ document.getElementById('fi').addEventListener('change', function(e) {
           document.getElementById('upload-screen').style.display = 'none';
           document.getElementById('app-screen').style.display = 'flex';
           fillViste();
+          updateDataInfoBanner();
           document.getElementById('progress-wrap').style.display = 'none';
         }, 600);
       } catch (err) {
@@ -365,6 +403,10 @@ function cleanData(raw) {
     if (XC.indexOf(categoria) !== -1) continue;
     if (stato && stato !== '_Italia') continue;
     if (anno !== 2025 && anno !== 2026) continue;
+    
+    // Escludi merceologica FONTECOLO (non è bottiglia da conteggiare nelle vendite)
+    var merceoCheck = String(r.Descr_Merceologica || '').toUpperCase().trim();
+    if (merceoCheck === 'FONTECOLO') continue;
     
     var mese = 0, giorno = 0;
     var d = r.Data_Doc;
@@ -467,6 +509,62 @@ function fillViste() {
   }
 }
 
+// Banner informativo: data ultimo movimento + giorni di scarto rispetto a oggi
+function updateDataInfoBanner() {
+  if (!D || !D.length) return;
+  
+  // Trova la data MAX nel dataset (anno corrente preferito)
+  var maxISO = '';
+  var maxMese = 0, maxGiorno = 0, maxAnno = 0;
+  var countLastDay = 0;
+  
+  // Prima cerca nel 2026
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].anno === 2026 && D[i].dataISO && D[i].dataISO > maxISO) {
+      maxISO = D[i].dataISO;
+      maxMese = D[i].mese;
+      maxGiorno = D[i].giorno;
+      maxAnno = D[i].anno;
+    }
+  }
+  // Fallback: se nessuna riga 2026, prendi la max generale
+  if (!maxISO) {
+    for (var i = 0; i < D.length; i++) {
+      if (D[i].dataISO && D[i].dataISO > maxISO) {
+        maxISO = D[i].dataISO;
+        maxMese = D[i].mese;
+        maxGiorno = D[i].giorno;
+        maxAnno = D[i].anno;
+      }
+    }
+  }
+  if (!maxISO) return;
+  
+  // Conta righe nel giorno più recente
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].dataISO === maxISO) countLastDay++;
+  }
+  
+  // Calcola giorni di scarto rispetto a oggi
+  var oggi = new Date();
+  var oggiISO = isoDate(oggi);
+  var giorniScarto = Math.floor((oggi - new Date(maxISO + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+  
+  // Costruisci testo del banner
+  var dataFormat = maxGiorno + ' ' + meseNome(maxMese).toLowerCase() + ' ' + maxAnno;
+  var totaleMovimenti = D.length.toLocaleString('it-IT');
+  
+  var html = 'Ultimo movimento: <strong>' + dataFormat + '</strong> (' + countLastDay + ' righe in quel giorno) · ' + totaleMovimenti + ' movimenti totali nel file';
+  
+  // Avviso se i dati hanno più di 2 giorni di scarto
+  if (giorniScarto >= 2) {
+    html += ' · <span class="data-info-warn">⚠ il file potrebbe non essere aggiornato (oggi è ' + oggi.getDate() + ' ' + meseNome(oggi.getMonth()+1).toLowerCase() + ')</span>';
+  }
+  
+  document.getElementById('data-info-text').innerHTML = html;
+  document.getElementById('data-info-banner').style.display = 'flex';
+}
+
 function togglePeriodo() {
   var p = document.getElementById('periodo').value;
   document.getElementById('from-group').style.display = p === 'RANGE' ? 'flex' : 'none';
@@ -563,42 +661,22 @@ function calcolaDati(dati, anno, periodo) {
 
 function calcolaReferenze(vendite) {
   var refs = {};
-  for (var i = 0; i < REFERENZE.length; i++) {
-    refs[REFERENZE[i].name] = { fatt: 0, btl: 0, btlEq: 0 };
+  for (var i = 0; i < REFERENZE_NAMES.length; i++) {
+    refs[REFERENZE_NAMES[i]] = { fatt: 0, btl: 0, btlEq: 0 };
   }
-  var altro = { fatt: 0, btl: 0, btlEq: 0 };
+  refs['Altro'] = { fatt: 0, btl: 0, btlEq: 0 };
   
   for (var i = 0; i < vendite.length; i++) {
     var v = vendite[i];
-    var art = (v.articolo + ' ' + v.tipologia).toLowerCase();
-    var matched = false;
-    for (var j = 0; j < REFERENZE.length; j++) {
-      var ref = REFERENZE[j];
-      var found = false;
-      for (var k = 0; k < ref.keys.length; k++) {
-        if (art.indexOf(ref.keys[k]) !== -1) { found = true; break; }
-      }
-      if (found) {
-        var excluded = false;
-        for (var k = 0; k < ref.exclude.length; k++) {
-          if (art.indexOf(ref.exclude[k]) !== -1) { excluded = true; break; }
-        }
-        if (!excluded) {
-          refs[ref.name].fatt += v.importo;
-          refs[ref.name].btl += v.pezzi;
-          refs[ref.name].btlEq += v.pezziEq;
-          matched = true;
-          break;
-        }
-      }
-    }
-    if (!matched) {
-      altro.fatt += v.importo;
-      altro.btl += v.pezzi;
-      altro.btlEq += v.pezziEq;
-    }
+    // Classifica usando la merceologica del gestionale (v.tipologia) + articolo
+    var ref = classificaReferenza(v.tipologia, v.articolo);
+    // ref può essere null se FONTECOLO → escluso dal conteggio referenze
+    if (ref === null) continue;
+    if (!refs[ref]) refs[ref] = { fatt: 0, btl: 0, btlEq: 0 };
+    refs[ref].fatt += v.importo;
+    refs[ref].btl += v.pezzi;
+    refs[ref].btlEq += v.pezziEq;
   }
-  refs['Altro'] = altro;
   return refs;
 }
 
@@ -2759,6 +2837,8 @@ function resetApp() {
   document.getElementById('placeholder').style.display = 'block';
   document.getElementById('progress-wrap').style.display = 'none';
   document.getElementById('fv').classList.remove('open');
+  var banner = document.getElementById('data-info-banner');
+  if (banner) banner.style.display = 'none';
   clearSearch();
 }
 </script>
