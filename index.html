@@ -144,6 +144,25 @@ tr.clik{cursor:pointer}
 .text-muted{color:var(--muted)}
 tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine);border-bottom:none;color:var(--ink)}
 
+/* Vendite per formato — sezione dedicata */
+.fmt-cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+@media(max-width:900px){.fmt-cards-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.fmt-cards-row{grid-template-columns:1fr}}
+.fmt-card{background:white;border:1px solid var(--border);border-left:4px solid var(--wine);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+.fmt-card-label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.fmt-card-main{font-family:'DM Sans',sans-serif;font-size:1.7rem;font-weight:700;color:var(--wine);line-height:1;letter-spacing:-0.02em}
+.fmt-card-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.fmt-card-eq{font-size:11px;color:var(--wine);font-weight:600;margin-top:2px}
+.fmt-card-bottom{margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.fmt-card-pct{font-size:11px;color:var(--ink);font-weight:600}
+.fmt-card-var{font-size:11px;font-weight:700}
+.fmt-card-fatt{font-size:12px;font-weight:600;color:var(--ink);margin-top:6px}
+
+.fmt-matrix-wrap{margin-top:18px}
+.fmt-matrix-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.fmt-matrix th{font-size:10px}
+.fmt-matrix td{font-size:13px;padding:8px 14px}
+
 #fv{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:1000;flex-direction:column}
 #fv.open{display:flex}
 .fv-bar{background:var(--wine);color:white;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
@@ -680,6 +699,50 @@ function calcolaReferenze(vendite) {
   return refs;
 }
 
+// Costanti formati: ordine + label visualizzata
+var FORMATI_NAMES = ['0,375L', '0,75L', 'Magnum (1,5L)', 'Jeroboam (3L)', 'Altro formato'];
+
+// Normalizza la stringa formato letta da Excel (colonna Q "Descr_Vuoto")
+function normalizzaFormato(formato) {
+  var f = String(formato || '').toUpperCase().trim();
+  if (f.indexOf('0.375') !== -1 || f.indexOf('0,375') !== -1) return '0,375L';
+  if (f.indexOf('0.75') !== -1 || f.indexOf('0,75') !== -1) return '0,75L';
+  if (f.indexOf('1.5') !== -1 || f.indexOf('1,5') !== -1) return 'Magnum (1,5L)';
+  if (f.indexOf('JEROBOAM') !== -1 || f === '3' || f.indexOf(' 3') !== -1) return 'Jeroboam (3L)';
+  return 'Altro formato';
+}
+
+// Calcola le vendite per formato:
+// - totali per ogni formato (bottiglie effettive, bottiglie eq, fatturato)
+// - matrice referenza × formato (bottiglie effettive)
+function calcolaFormati(vendite) {
+  var totali = {};
+  var matrix = {}; // matrix[referenza][formato] = {btl, btlEq, fatt}
+  
+  for (var i = 0; i < FORMATI_NAMES.length; i++) {
+    totali[FORMATI_NAMES[i]] = { btl: 0, btlEq: 0, fatt: 0 };
+  }
+  
+  for (var i = 0; i < vendite.length; i++) {
+    var v = vendite[i];
+    var ref = classificaReferenza(v.tipologia, v.articolo);
+    if (ref === null) continue; // FONTECOLO escluso
+    var fmt = normalizzaFormato(v.formato);
+    
+    totali[fmt].btl += v.pezzi;
+    totali[fmt].btlEq += v.pezziEq;
+    totali[fmt].fatt += v.importo;
+    
+    if (!matrix[ref]) matrix[ref] = {};
+    if (!matrix[ref][fmt]) matrix[ref][fmt] = { btl: 0, btlEq: 0, fatt: 0 };
+    matrix[ref][fmt].btl += v.pezzi;
+    matrix[ref][fmt].btlEq += v.pezziEq;
+    matrix[ref][fmt].fatt += v.importo;
+  }
+  
+  return { totali: totali, matrix: matrix };
+}
+
 function calcolaTrendMensile(dati, anno, periodo) {
   var trend = {};
   for (var m = 1; m <= 12; m++) trend[m] = 0;
@@ -715,6 +778,8 @@ function generaReport() {
     
     var refs26 = calcolaReferenze(d26.vendite);
     var refs25 = calcolaReferenze(d25.vendite);
+    var fmt26 = calcolaFormati(d26.vendite);
+    var fmt25 = calcolaFormati(d25.vendite);
     
     var trend26 = calcolaTrendMensile(dati, anno, periodo);
     var trend25 = calcolaTrendMensile(dati, annoP, periodo);
@@ -812,6 +877,7 @@ function generaReport() {
     lastReport = {
       vista: vista, anno: anno, annoP: annoP, periodo: periodo, dati: dati,
       d26: d26, d25: d25, refs26: refs26, refs25: refs25,
+      fmt26: fmt26, fmt25: fmt25,
       trend26: trend26, trend25: trend25,
       tutti: listaItems, attivi: attivi, calo: calo, assenti: assenti,
       isItalia: vista === 'ITALIA'
@@ -881,6 +947,11 @@ function renderReport() {
   // Rotazione referenze — DONUT
   html += '<div class="section"><div class="section-title">Rotazione referenze ' + r.anno + '</div>';
   html += buildDonutReferenze(r);
+  html += '</div>';
+  
+  // Suddivisione per formato (KPI cards + matrice referenze × formato)
+  html += '<div class="section"><div class="section-title">Vendite per formato ' + r.anno + '</div>';
+  html += buildFormatiSection(r);
   html += '</div>';
   
   document.getElementById('report-wrapper').innerHTML = html;
@@ -1271,6 +1342,128 @@ function buildDonutReferenze(r) {
     html += '</div>';
   }
   html += '</div>';
+  html += '</div>';
+  
+  return html;
+}
+
+// Sezione "Vendite per formato": 4 KPI card + matrice referenza × formato
+function buildFormatiSection(r) {
+  var fmt26 = r.fmt26, fmt25 = r.fmt25;
+  
+  // Calcolo totale bottiglie equivalenti per percentuali
+  var totBtlEq26 = 0, totBtl26 = 0, totFatt26 = 0;
+  for (var i = 0; i < FORMATI_NAMES.length; i++) {
+    totBtlEq26 += fmt26.totali[FORMATI_NAMES[i]].btlEq;
+    totBtl26 += fmt26.totali[FORMATI_NAMES[i]].btl;
+    totFatt26 += fmt26.totali[FORMATI_NAMES[i]].fatt;
+  }
+  
+  // Colori per i 4 formati (uniformi e riconoscibili)
+  var COLORI_FORMATO = {
+    '0,375L': '#B47AAE',
+    '0,75L': '#722F37',
+    'Magnum (1,5L)': '#C9A84C',
+    'Jeroboam (3L)': '#4A6FA5',
+    'Altro formato': '#7a6b6c'
+  };
+  
+  // ============ PARTE A: 4 KPI CARD ============
+  var html = '<div class="fmt-cards-row">';
+  
+  // Solo formati con vendite
+  for (var i = 0; i < FORMATI_NAMES.length; i++) {
+    var name = FORMATI_NAMES[i];
+    var d26 = fmt26.totali[name];
+    var d25 = fmt25.totali[name];
+    if (d26.btl === 0 && d25.btl === 0) continue;
+    
+    var pctTot = totBtlEq26 > 0 ? (d26.btlEq / totBtlEq26) * 100 : 0;
+    var dVar = d25.btlEq > 0 ? ((d26.btlEq - d25.btlEq) / d25.btlEq) * 100 : (d26.btlEq > 0 ? 100 : 0);
+    var dVarColor = dVar >= 0 ? 'text-green' : 'text-red';
+    var color = COLORI_FORMATO[name] || '#7a6b6c';
+    
+    html += '<div class="fmt-card" style="border-left-color:' + color + '">';
+    html += '<div class="fmt-card-label">' + escapeHTML(name) + '</div>';
+    html += '<div class="fmt-card-main">' + NUM(d26.btl) + '</div>';
+    html += '<div class="fmt-card-sub">bottiglie effettive</div>';
+    if (d26.btl !== d26.btlEq) {
+      html += '<div class="fmt-card-eq">= ' + NUM(d26.btlEq) + ' eq. 0,75L</div>';
+    }
+    html += '<div class="fmt-card-bottom">';
+    html += '<div class="fmt-card-pct">' + pctTot.toFixed(1).replace('.', ',') + '% del totale</div>';
+    html += '<div class="fmt-card-var ' + dVarColor + '">' + PCTsign(dVar) + ' vs ' + r.annoP + '</div>';
+    html += '</div>';
+    html += '<div class="fmt-card-fatt">' + EUR(d26.fatt) + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  
+  // ============ PARTE B: MATRICE REFERENZA × FORMATO ============
+  html += '<div class="fmt-matrix-wrap">';
+  html += '<div class="fmt-matrix-title">Suddivisione formati per referenza (bottiglie effettive)</div>';
+  html += '<div class="table-wrap"><div class="table-scroll"><table class="fmt-matrix">';
+  html += '<thead><tr>';
+  html += '<th class="text-left">Referenza</th>';
+  // Solo formati con almeno 1 bottiglia totale
+  var formatiAttivi = [];
+  for (var i = 0; i < FORMATI_NAMES.length; i++) {
+    var name = FORMATI_NAMES[i];
+    if (fmt26.totali[name].btl > 0 || fmt25.totali[name].btl > 0) {
+      formatiAttivi.push(name);
+    }
+  }
+  for (var i = 0; i < formatiAttivi.length; i++) {
+    var color = COLORI_FORMATO[formatiAttivi[i]] || '#7a6b6c';
+    html += '<th class="text-right" style="border-bottom:2px solid ' + color + '">' + escapeHTML(formatiAttivi[i]) + '</th>';
+  }
+  html += '<th class="text-right">Totale eq.</th>';
+  html += '<th class="text-right">Fatturato</th>';
+  html += '</tr></thead><tbody>';
+  
+  // Righe: una per referenza con vendite
+  var refsArr = REFERENZE_NAMES.slice();
+  refsArr.push('Altro');
+  for (var j = 0; j < refsArr.length; j++) {
+    var ref = refsArr[j];
+    var rData = fmt26.matrix[ref] || {};
+    var totRefEq = 0, totRefFatt = 0;
+    var hasData = false;
+    for (var i = 0; i < formatiAttivi.length; i++) {
+      var d = rData[formatiAttivi[i]] || { btl: 0, btlEq: 0, fatt: 0 };
+      if (d.btl > 0) hasData = true;
+      totRefEq += d.btlEq;
+      totRefFatt += d.fatt;
+    }
+    if (!hasData) continue;
+    
+    html += '<tr>';
+    html += '<td><strong>' + escapeHTML(ref) + '</strong></td>';
+    for (var i = 0; i < formatiAttivi.length; i++) {
+      var d = rData[formatiAttivi[i]] || { btl: 0, btlEq: 0, fatt: 0 };
+      if (d.btl === 0) {
+        html += '<td class="text-right text-muted">—</td>';
+      } else {
+        html += '<td class="text-right">' + NUM(d.btl) + '</td>';
+      }
+    }
+    html += '<td class="text-right"><strong>' + NUM(totRefEq) + '</strong></td>';
+    html += '<td class="text-right">' + EUR(totRefFatt) + '</td>';
+    html += '</tr>';
+  }
+  
+  // Riga totale
+  html += '<tr class="tot-row">';
+  html += '<td>TOTALE</td>';
+  for (var i = 0; i < formatiAttivi.length; i++) {
+    var d = fmt26.totali[formatiAttivi[i]];
+    html += '<td class="text-right">' + NUM(d.btl) + '</td>';
+  }
+  html += '<td class="text-right">' + NUM(totBtlEq26) + '</td>';
+  html += '<td class="text-right">' + EUR(totFatt26) + '</td>';
+  html += '</tr>';
+  
+  html += '</tbody></table></div></div>';
   html += '</div>';
   
   return html;
@@ -2695,7 +2888,10 @@ function exportReportPdf() {
       tableWidth: tableW
     });
     
-    // ============ PAGINA 3: TABELLA CLIENTI/AGENTI ============
+    // ============ PAGINA 3: VENDITE PER FORMATO ============
+    addFormatiPage(doc, r, pageW, margin);
+    
+    // ============ PAGINA 4: TABELLA CLIENTI/AGENTI ============
     addClientiTablePage(doc, r, pageW, margin);
     
     // ============ FOOTER PAGINATO ============
@@ -2704,6 +2900,7 @@ function exportReportPdf() {
     doc.save('Mosnel_' + r.vista.replace(/\s+/g, '_') + '_' + r.anno + '.pdf');
   }).catch(function(err) {
     console.warn('Errore conversione SVG:', err);
+    addFormatiPage(doc, r, pageW, margin);
     addClientiTablePage(doc, r, pageW, margin);
     addPageNumbers(doc, pageW, pageH);
     doc.save('Mosnel_' + r.vista.replace(/\s+/g, '_') + '_' + r.anno + '.pdf');
@@ -2734,6 +2931,126 @@ function drawSectionTitle(doc, text, x, y) {
   doc.setLineWidth(0.5);
   var textW = doc.getTextWidth(text);
   doc.line(x, y + 1.2, x + textW, y + 1.2);
+}
+
+// Aggiunge la pagina "Vendite per formato": KPI cards + matrice referenza × formato
+function addFormatiPage(doc, r, pageW, margin) {
+  if (!r.fmt26 || !r.fmt25) return;
+  
+  doc.addPage('a4', 'landscape');
+  drawHeader(doc, r, pageW);
+  
+  var y = 30;
+  drawSectionTitle(doc, 'Vendite per formato ' + r.anno, margin, y);
+  y += 6;
+  
+  // Calcola totali
+  var totBtlEq26 = 0, totFatt26 = 0;
+  for (var i = 0; i < FORMATI_NAMES.length; i++) {
+    totBtlEq26 += r.fmt26.totali[FORMATI_NAMES[i]].btlEq;
+    totFatt26 += r.fmt26.totali[FORMATI_NAMES[i]].fatt;
+  }
+  
+  // Formati attivi (con vendite)
+  var formatiAttivi = [];
+  for (var i = 0; i < FORMATI_NAMES.length; i++) {
+    var name = FORMATI_NAMES[i];
+    if (r.fmt26.totali[name].btl > 0 || r.fmt25.totali[name].btl > 0) {
+      formatiAttivi.push(name);
+    }
+  }
+  
+  // ============ TABELLA RIEPILOGO PER FORMATO ============
+  var kpiBody = [];
+  for (var i = 0; i < formatiAttivi.length; i++) {
+    var name = formatiAttivi[i];
+    var d26 = r.fmt26.totali[name];
+    var d25 = r.fmt25.totali[name];
+    var pctTot = totBtlEq26 > 0 ? (d26.btlEq / totBtlEq26) * 100 : 0;
+    var dVar = d25.btlEq > 0 ? ((d26.btlEq - d25.btlEq) / d25.btlEq) * 100 : (d26.btlEq > 0 ? 100 : 0);
+    kpiBody.push([
+      name,
+      NUM(d26.btl),
+      NUM(d26.btlEq),
+      pctTot.toFixed(1).replace('.', ',') + '%',
+      EURpdf(d26.fatt),
+      NUM(d25.btl),
+      PCTsign(dVar)
+    ]);
+  }
+  
+  doc.autoTable({
+    head: [['Formato', 'Bott. ' + r.anno, 'Eq. 0,75L ' + r.anno, '% sul totale', 'Fatturato', 'Bott. ' + r.annoP, 'Var % vs ' + r.annoP]],
+    body: kpiBody, startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: {
+      0: { fontStyle: 'bold' },
+      1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' },
+      4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }
+    },
+    margin: { left: margin, right: margin },
+    didParseCell: colorNegativesCallback
+  });
+  
+  y = doc.lastAutoTable.finalY + 8;
+  
+  // ============ MATRICE REFERENZA × FORMATO ============
+  drawSectionTitle(doc, 'Suddivisione formati per referenza (bottiglie effettive)', margin, y);
+  y += 5;
+  
+  var refsArr = REFERENZE_NAMES.slice();
+  refsArr.push('Altro');
+  var matrixBody = [];
+  
+  for (var j = 0; j < refsArr.length; j++) {
+    var ref = refsArr[j];
+    var rData = r.fmt26.matrix[ref] || {};
+    var hasData = false;
+    var totRefEq = 0, totRefFatt = 0;
+    var row = [ref];
+    for (var i = 0; i < formatiAttivi.length; i++) {
+      var d = rData[formatiAttivi[i]] || { btl: 0, btlEq: 0, fatt: 0 };
+      if (d.btl > 0) hasData = true;
+      totRefEq += d.btlEq;
+      totRefFatt += d.fatt;
+      row.push(d.btl > 0 ? NUM(d.btl) : '—');
+    }
+    row.push(NUM(totRefEq));
+    row.push(EURpdf(totRefFatt));
+    if (hasData) matrixBody.push(row);
+  }
+  
+  // Riga totale
+  var totRow = ['TOTALE'];
+  for (var i = 0; i < formatiAttivi.length; i++) {
+    totRow.push(NUM(r.fmt26.totali[formatiAttivi[i]].btl));
+  }
+  totRow.push(NUM(totBtlEq26));
+  totRow.push(EURpdf(totFatt26));
+  matrixBody.push(totRow);
+  
+  var head = ['Referenza'].concat(formatiAttivi).concat(['Totale eq.', 'Fatturato']);
+  var colStyles = { 0: { fontStyle: 'bold' } };
+  for (var i = 1; i < head.length; i++) colStyles[i] = { halign: 'right' };
+  
+  doc.autoTable({
+    head: [head], body: matrixBody, startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+    bodyStyles: { fontSize: 8 },
+    columnStyles: colStyles,
+    styles: { cellPadding: 1.8 },
+    margin: { left: margin, right: margin },
+    didParseCell: function(data) {
+      // Riga TOTALE in grassetto
+      if (data.section === 'body' && data.row.index === matrixBody.length - 1) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [240, 230, 230];
+      }
+    }
+  });
 }
 
 // Aggiunge la pagina con la tabella clienti/agenti
