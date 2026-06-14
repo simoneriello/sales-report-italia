@@ -307,13 +307,40 @@ var REFERENZE = REFERENZE_NAMES.map(function(n) { return { name: n }; });
 
 // Classifica un articolo nella categoria corretta usando la categoria merceologica
 // del gestionale (Descr_Merceologica) come fonte primaria, con disambiguazione articolo.
-// Restituisce null se l'articolo va escluso (es. FONTECOLO).
+// Valori speciali restituiti:
+//   null          → riga da ESCLUDERE totalmente (FONTECOLO, storni IVA, righe descrittive)
+//   'Accessori'   → accessori/packaging (astucci, cofanetti, cassette): NON sono bottiglie
+//   altrimenti    → nome categoria referenza (Brut, Pas Dosé, ...) o 'Altro'
 function classificaReferenza(merceo, articolo) {
   var m = String(merceo || '').toUpperCase().trim();
-  var a = String(articolo || '').toUpperCase();
+  var a = String(articolo || '').toUpperCase().trim();
   
   // Escludi FONTECOLO (non è bottiglia conteggiata)
   if (m === 'FONTECOLO') return null;
+  
+  // --- FIX 1: escludi righe rumorose (storni IVA, addebiti, righe descrittive) ---
+  // Storni e rettifiche IVA
+  if (a.indexOf('STORNO') !== -1) return null;
+  if (a.indexOf('EX ART') !== -1) return null;
+  if (a.indexOf('RIVALSA') !== -1) return null;
+  if (a.indexOf('ADDEBITO') !== -1) return null;
+  if (a.indexOf('DPR 633') !== -1) return null;
+  // Righe puramente descrittive (es. "DEL 14/05/2025", "1 BT DI BRUT", "6 BT DI SATEN")
+  // Pattern: iniziano con "N BT" oppure "DEL "
+  if (/^\d+\s*BT/.test(a)) return null;       // "1 BT DI BRUT", "2BT DI BRUT", "6 BT DI ROSE'"
+  if (/^DEL\s/.test(a)) return null;          // "DEL 14/05/2025"
+  
+  // --- FIX 4: riconosci ACCESSORI / PACKAGING dal nome articolo ---
+  // Questi generano fatturato ma NON sono bottiglie: categoria separata.
+  if (m === '' || m === 'NONE') {
+    if (a.indexOf('AST.') !== -1 || a.indexOf('ASTUCCIO') !== -1) return 'Accessori';
+    if (a.indexOf('COFANETTO') !== -1) return 'Accessori';
+    if (a.indexOf('COF.') !== -1) return 'Accessori';           // COF. EBB 0,75 / COF. PAROSE' 0,75
+    if (a.indexOf('CASSETTA') !== -1) return 'Accessori';
+    if (a.indexOf('BORSA') !== -1) return 'Accessori';
+    if (a.indexOf('SECURE BOX') !== -1) return 'Accessori';
+    if (a.indexOf('BARRIQUE') !== -1) return 'Accessori';
+  }
   
   // Riserva: priorità all'articolo (gestisce anche righe con merceo non = RISERVA)
   if (a.indexOf('RISERVA') !== -1) return 'Riserva';
@@ -328,7 +355,29 @@ function classificaReferenza(merceo, articolo) {
   if (m === 'BRUT BIO') return 'Brut Nature';
   if (m === 'EBB') return 'EBB';
   
+  // --- FIX 2 (parziale): bottiglie reali con merceologica VUOTA ma nome articolo riconoscibile ---
+  // (es. "DEMI' BRUT F.TA DOCG", "F.TA EBB MILL.TO DOCG 2016 SUR LATTES")
+  if (m === '' || m === 'NONE') {
+    if (a.indexOf('EBB') !== -1) return 'EBB';
+    if (a.indexOf('PAROSE') !== -1) return 'Parosé';
+    if (a.indexOf("ROSE' BRUT") !== -1 || a.indexOf('ROSE BRUT') !== -1) return 'Rosé';
+    if (a.indexOf('SATEN') !== -1) return 'Satèn';
+    if (a.indexOf('PAS DOSE') !== -1) return 'Pas Dosé';
+    if (a.indexOf('NATURE') !== -1) return 'Brut Nature';
+    if (a.indexOf('BRUT') !== -1) return 'Brut';   // include "DEMI' BRUT"
+  }
+  
   return 'Altro';
+}
+
+// True se la riga di vendita rappresenta bottiglie reali (esclude accessori e righe rumorose).
+function isRigaBottiglia(v) {
+  var ref = classificaReferenza(v.tipologia, v.articolo);
+  return ref !== null && ref !== 'Accessori';
+}
+// True se la riga genera fatturato valido (esclude solo storni/righe descrittive, INCLUDE accessori).
+function isRigaFatturato(v) {
+  return classificaReferenza(v.tipologia, v.articolo) !== null;
 }
 
 function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
@@ -446,9 +495,11 @@ function cleanData(raw) {
     if (qKey && r[qKey] !== undefined && r[qKey] !== '') {
       formato = String(r[qKey]).trim();
     }
+    var articoloStr = String(r.Descr_Articolo || '').trim();
     
     // Calcola fattore equivalenza alla bottiglia standard 0,75L
-    var fattore = calcolaFattoreEquiv(formato);
+    // (usa anche il nome articolo per dedurre Magnum/Jeroboam con formato mancante)
+    var fattore = calcolaFattoreEquiv(formato, articoloStr);
     
     var pezzi = parseFloat(r.Qta_Pezzi) || 0;
     
@@ -470,34 +521,42 @@ function cleanData(raw) {
       tipoDoc: tipoDoc,
       numDoc: String(r.Num_Doc || '').trim(),
       dataStr: dataStr,
-      articolo: String(r.Descr_Articolo || '').trim(),
+      articolo: articoloStr,
       tipologia: String(r.Descr_Merceologica || '').trim()
     });
   }
   return result;
 }
 
-function calcolaFattoreEquiv(formato) {
-  if (!formato) return 1;
-  var f = formato.toLowerCase().replace(',', '.').trim();
-  // Cerca numeri tipo "0.375", "0.75", "1.5", "3", "6"
-  var numMatch = f.match(/\d+(?:\.\d+)?/);
-  if (numMatch) {
-    var litri = parseFloat(numMatch[0]);
-    // Se è un numero plausibile come capacità in litri
-    if (litri >= 0.1 && litri <= 30) {
-      return litri / 0.75;
+function calcolaFattoreEquiv(formato, articolo) {
+  var f = String(formato || '').toLowerCase().replace(',', '.').trim();
+  // 1) Formato esplicito: cerca numeri tipo "0.375", "0.75", "1.5", "3", "6"
+  if (f) {
+    var numMatch = f.match(/\d+(?:\.\d+)?/);
+    if (numMatch) {
+      var litri = parseFloat(numMatch[0]);
+      if (litri >= 0.1 && litri <= 30) {
+        return litri / 0.75;
+      }
     }
+    if (f.indexOf('magnum') !== -1) return 1.5 / 0.75; // 2
+    if (f.indexOf('jeroboam') !== -1 || f.indexOf('doppio magnum') !== -1) return 3.0 / 0.75; // 4
+    if (f.indexOf('rehoboam') !== -1) return 4.5 / 0.75; // 6
+    if (f.indexOf('mathusalem') !== -1 || f.indexOf('matusalem') !== -1) return 6.0 / 0.75; // 8
+    if (f.indexOf('salmanazar') !== -1) return 9.0 / 0.75; // 12
+    if (f.indexOf('balthazar') !== -1) return 12.0 / 0.75; // 16
+    if (f.indexOf('nabuchodonosor') !== -1 || f.indexOf('nabucodonosor') !== -1) return 15.0 / 0.75; // 20
+    if (f.indexOf('mezza') !== -1 || f.indexOf('demi') !== -1) return 0.375 / 0.75; // 0.5
   }
-  // Cerca per nome formato
-  if (f.indexOf('magnum') !== -1) return 1.5 / 0.75; // 2
-  if (f.indexOf('jeroboam') !== -1 || f.indexOf('doppio magnum') !== -1) return 3.0 / 0.75; // 4
-  if (f.indexOf('rehoboam') !== -1) return 4.5 / 0.75; // 6
-  if (f.indexOf('mathusalem') !== -1 || f.indexOf('matusalem') !== -1) return 6.0 / 0.75; // 8
-  if (f.indexOf('salmanazar') !== -1) return 9.0 / 0.75; // 12
-  if (f.indexOf('balthazar') !== -1) return 12.0 / 0.75; // 16
-  if (f.indexOf('nabuchodonosor') !== -1 || f.indexOf('nabucodonosor') !== -1) return 15.0 / 0.75; // 20
-  if (f.indexOf('mezza') !== -1 || f.indexOf('demi') !== -1) return 0.375 / 0.75; // 0.5
+  
+  // 2) Formato mancante → deduci dal nome articolo (coerente con normalizzaFormato)
+  var a = String(articolo || '').toLowerCase();
+  if (a) {
+    if (a.indexOf('jeroboam') !== -1 || a.indexOf(' je ') !== -1 || a.indexOf('1 je') !== -1) return 3.0 / 0.75; // 4
+    if (a.indexOf('magnum') !== -1 || /\bmg\b/.test(a)) return 1.5 / 0.75; // 2
+    if (a.indexOf('demi') !== -1) return 0.375 / 0.75; // 0.5
+  }
+  
   return 1;
 }
 
@@ -656,14 +715,20 @@ function calcolaDati(dati, anno, periodo) {
   var fatturato = 0, bottiglie = 0, bottiglieEq = 0;
   var clienti = {};
   for (var i = 0; i < vend.length; i++) {
+    if (!isRigaFatturato(vend[i])) continue; // esclude storni/righe descrittive/FONTECOLO
+    var isBottiglia = isRigaBottiglia(vend[i]); // esclude accessori dal conteggio bottiglie
     fatturato += vend[i].importo;
-    bottiglie += vend[i].pezzi;
-    bottiglieEq += vend[i].pezziEq;
+    if (isBottiglia) {
+      bottiglie += vend[i].pezzi;
+      bottiglieEq += vend[i].pezziEq;
+    }
     var c = vend[i].cliente;
     if (!clienti[c]) clienti[c] = { fatt: 0, btl: 0, btlEq: 0, ordini: 0, agente: vend[i].agente, citta: vend[i].citta, prov: vend[i].prov };
     clienti[c].fatt += vend[i].importo;
-    clienti[c].btl += vend[i].pezzi;
-    clienti[c].btlEq += vend[i].pezziEq;
+    if (isBottiglia) {
+      clienti[c].btl += vend[i].pezzi;
+      clienti[c].btlEq += vend[i].pezziEq;
+    }
     clienti[c].ordini++;
   }
   
@@ -702,13 +767,31 @@ function calcolaReferenze(vendite) {
 // Costanti formati: ordine + label visualizzata
 var FORMATI_NAMES = ['0,375L', '0,75L', 'Magnum (1,5L)', 'Jeroboam (3L)', 'Altro formato'];
 
-// Normalizza la stringa formato letta da Excel (colonna Q "Descr_Vuoto")
-function normalizzaFormato(formato) {
+// Normalizza la stringa formato letta da Excel (colonna Q "Descr_Vuoto").
+// Riceve anche l'articolo per recuperare il formato quando la colonna è vuota:
+//   - FIX 3: Magnum/Jeroboam riconosciuti dal nome articolo (es. "MAGNUM SATEN", "JEROBOAM SATEN")
+//   - FIX 2: bottiglie con formato vuoto ma merceologica valida → assunte 0,75L (standard)
+function normalizzaFormato(formato, articolo) {
   var f = String(formato || '').toUpperCase().trim();
+  var a = String(articolo || '').toUpperCase();
+  
+  // 1) Formato esplicito dalla colonna Descr_Vuoto
   if (f.indexOf('0.375') !== -1 || f.indexOf('0,375') !== -1) return '0,375L';
   if (f.indexOf('0.75') !== -1 || f.indexOf('0,75') !== -1) return '0,75L';
   if (f.indexOf('1.5') !== -1 || f.indexOf('1,5') !== -1) return 'Magnum (1,5L)';
   if (f.indexOf('JEROBOAM') !== -1 || f === '3' || f.indexOf(' 3') !== -1) return 'Jeroboam (3L)';
+  
+  // 2) Formato vuoto → prova a dedurlo dal nome articolo
+  if (f === '' || f === 'NONE') {
+    // FIX 3: Magnum / Jeroboam espliciti nel nome
+    if (a.indexOf('JEROBOAM') !== -1 || a.indexOf(' JE ') !== -1 || a.indexOf('1 JE') !== -1) return 'Jeroboam (3L)';
+    if (a.indexOf('MAGNUM') !== -1 || /\bMG\b/.test(a)) return 'Magnum (1,5L)';
+    // Mezza bottiglia
+    if (a.indexOf('DEMI') !== -1 || a.indexOf("DEMI'") !== -1) return '0,375L';
+    // FIX 2: bottiglia "vera" (nome con F.TA DOCG o SUR LATTES) ma formato mancante → 0,75L standard
+    if (a.indexOf('F.TA') !== -1 || a.indexOf('DOCG') !== -1 || a.indexOf('SUR LATTES') !== -1) return '0,75L';
+  }
+  
   return 'Altro formato';
 }
 
@@ -727,7 +810,8 @@ function calcolaFormati(vendite) {
     var v = vendite[i];
     var ref = classificaReferenza(v.tipologia, v.articolo);
     if (ref === null) continue; // FONTECOLO escluso
-    var fmt = normalizzaFormato(v.formato);
+    if (ref === 'Accessori') continue; // accessori esclusi dalla matrice formati (non sono bottiglie)
+    var fmt = normalizzaFormato(v.formato, v.articolo);
     
     totali[fmt].btl += v.pezzi;
     totali[fmt].btlEq += v.pezziEq;
@@ -792,19 +876,25 @@ function generaReport() {
       for (var i = 0; i < d26.vendite.length; i++) {
         var v = d26.vendite[i];
         if (!v.agente) continue;
+        if (!isRigaFatturato(v)) continue;
         if (!ag26[v.agente]) ag26[v.agente] = { fatt: 0, btl: 0, btlEq: 0, clienti: {} };
         ag26[v.agente].fatt += v.importo;
-        ag26[v.agente].btl += v.pezzi;
-        ag26[v.agente].btlEq += v.pezziEq;
+        if (isRigaBottiglia(v)) {
+          ag26[v.agente].btl += v.pezzi;
+          ag26[v.agente].btlEq += v.pezziEq;
+        }
         ag26[v.agente].clienti[v.cliente] = true;
       }
       for (var i = 0; i < d25.vendite.length; i++) {
         var v = d25.vendite[i];
         if (!v.agente) continue;
+        if (!isRigaFatturato(v)) continue;
         if (!ag25[v.agente]) ag25[v.agente] = { fatt: 0, btl: 0, btlEq: 0, clienti: {} };
         ag25[v.agente].fatt += v.importo;
-        ag25[v.agente].btl += v.pezzi;
-        ag25[v.agente].btlEq += v.pezziEq;
+        if (isRigaBottiglia(v)) {
+          ag25[v.agente].btl += v.pezzi;
+          ag25[v.agente].btlEq += v.pezziEq;
+        }
         ag25[v.agente].clienti[v.cliente] = true;
       }
       
@@ -1771,8 +1861,16 @@ function renderFVCliente(state) {
   }
   
   var f26 = 0, b26 = 0, b26Eq = 0, f25 = 0, b25 = 0, b25Eq = 0;
-  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; b26Eq += v26[i].pezziEq; }
-  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; b25Eq += v25[i].pezziEq; }
+  for (var i = 0; i < v26.length; i++) {
+    if (!isRigaFatturato(v26[i])) continue;
+    f26 += v26[i].importo;
+    if (isRigaBottiglia(v26[i])) { b26 += v26[i].pezzi; b26Eq += v26[i].pezziEq; }
+  }
+  for (var i = 0; i < v25.length; i++) {
+    if (!isRigaFatturato(v25[i])) continue;
+    f25 += v25[i].importo;
+    if (isRigaBottiglia(v25[i])) { b25 += v25[i].pezzi; b25Eq += v25[i].pezziEq; }
+  }
   var pm26 = PM(f26, b26Eq), pm25 = PM(f25, b25Eq);
   var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
   var dB = b25Eq > 0 ? ((b26Eq - b25Eq) / b25Eq) * 100 : 0;
@@ -2462,8 +2560,16 @@ function _exportClientePdfBody(nome, donutImg) {
     if (D[i].anno === annoP) v25.push(D[i]);
   }
   var f26=0,b26=0,b26Eq=0,f25=0,b25=0,b25Eq=0;
-  for (var i = 0; i < v26.length; i++) { f26 += v26[i].importo; b26 += v26[i].pezzi; b26Eq += v26[i].pezziEq; }
-  for (var i = 0; i < v25.length; i++) { f25 += v25[i].importo; b25 += v25[i].pezzi; b25Eq += v25[i].pezziEq; }
+  for (var i = 0; i < v26.length; i++) {
+    if (!isRigaFatturato(v26[i])) continue;
+    f26 += v26[i].importo;
+    if (isRigaBottiglia(v26[i])) { b26 += v26[i].pezzi; b26Eq += v26[i].pezziEq; }
+  }
+  for (var i = 0; i < v25.length; i++) {
+    if (!isRigaFatturato(v25[i])) continue;
+    f25 += v25[i].importo;
+    if (isRigaBottiglia(v25[i])) { b25 += v25[i].pezzi; b25Eq += v25[i].pezziEq; }
+  }
   var pm26 = PM(f26, b26Eq), pm25 = PM(f25, b25Eq);
   var dF = f25 > 0 ? ((f26 - f25) / f25) * 100 : 0;
   var dB = b25Eq > 0 ? ((b26Eq - b25Eq) / b25Eq) * 100 : 0;
