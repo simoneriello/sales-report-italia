@@ -1150,23 +1150,27 @@ function renderReport() {
   
   if (r.isItalia) {
     // ITALIA: blocchi AGENTI + blocchi CLIENTI
+    // Blocco 1: universo completo agenti = r.tutti.length (portafoglio + persi)
+    // Verifica: nuovi+crescita+calo+persi = r.tutti.length sempre
     html += '<div class="section-title">Agenti</div><div class="summary-grid">';
-    html += '<div class="summ-block blue" onclick="openFV(\'portafoglio\')" style="cursor:pointer">';
-    html += '<div class="summ-top"><h4>Totale agenti</h4><span class="summ-arrow">›</span></div>';
-    html += '<div class="summ-num">' + r.portafoglio.length + '</div>';
-    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.persi.length + ' senza ordini nel periodo</div>';
+    html += '<div class="summ-block blue" onclick="openFV(\'tutti\')" style="cursor:pointer">';
+    html += '<div class="summ-top"><h4>Tutti gli agenti</h4><span class="summ-arrow">›</span></div>';
+    html += '<div class="summ-num">' + r.tutti.length + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.portafoglio.length + ' attivi &nbsp;·&nbsp; ' + r.persi.length + ' senza ordini</div>';
     html += '</div>';
     html += buildSummBlock('teal',  'Nuovi',       r.nuovi.length,    totDeltaNuovi,    'nuovi',    r.nuovi.length > 0);
     html += buildSummBlock('green', 'In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
-    html += buildSummBlock(r.calo.length   ? 'red'   : 'green', 'In calo',       r.calo.length,   totDeltaCalo,   'calo',  r.calo.length > 0);
-    html += buildSummBlock(r.persi.length  ? 'amber' : 'green', 'Senza ordini',  r.persi.length,  totDeltaPersi,  'persi', r.persi.length > 0);
+    html += buildSummBlock(r.calo.length   ? 'red'   : 'green', 'In calo',      r.calo.length,   totDeltaCalo,   'calo',  r.calo.length > 0);
+    html += buildSummBlock(r.persi.length  ? 'amber' : 'green', 'Senza ordini', r.persi.length,  totDeltaPersi,  'persi', r.persi.length > 0);
     html += '</div>';
     
+    // Blocchi CLIENTI: universo = attivi + senza ordini
+    var nClientiTotale = r.nClientiAttivi26 + r.nClientiPersi;
     html += '<div style="margin-top:14px"><div class="section-title" style="margin-bottom:6px">Clienti</div><div class="summary-grid">';
     html += '<div class="summ-block blue">';
-    html += '<div class="summ-top"><h4>Totale clienti</h4></div>';
-    html += '<div class="summ-num">' + r.nClientiAttivi26 + '</div>';
-    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.nClientiPersi + ' senza ordini nel periodo</div>';
+    html += '<div class="summ-top"><h4>Tutti i clienti</h4></div>';
+    html += '<div class="summ-num">' + nClientiTotale + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.nClientiAttivi26 + ' attivi &nbsp;·&nbsp; ' + r.nClientiPersi + ' senza ordini</div>';
     html += '</div>';
     html += buildSummBlock('teal',  'Nuovi',       r.nClientiNuovi,    0, null, false);
     html += buildSummBlock('green', 'In crescita', r.nClientiCrescita, 0, null, false);
@@ -1175,12 +1179,12 @@ function renderReport() {
     html += '</div></div>';
     
   } else {
-    // AGENTE: mostra solo i blocchi CLIENTI (i blocchi si riferiscono già ai suoi clienti)
+    // AGENTE: universo clienti = portafoglio + persi = r.tutti.length
     html += '<div class="section-title">Clienti</div><div class="summary-grid">';
-    html += '<div class="summ-block blue" onclick="openFV(\'portafoglio\')" style="cursor:pointer">';
-    html += '<div class="summ-top"><h4>Totale clienti</h4><span class="summ-arrow">›</span></div>';
-    html += '<div class="summ-num">' + r.portafoglio.length + '</div>';
-    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.persi.length + ' senza ordini nel periodo</div>';
+    html += '<div class="summ-block blue" onclick="openFV(\'tutti\')" style="cursor:pointer">';
+    html += '<div class="summ-top"><h4>Tutti i clienti</h4><span class="summ-arrow">›</span></div>';
+    html += '<div class="summ-num">' + r.tutti.length + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.portafoglio.length + ' attivi &nbsp;·&nbsp; ' + r.persi.length + ' senza ordini</div>';
     html += '</div>';
     html += buildSummBlock('teal',  'Nuovi',       r.nuovi.length,    totDeltaNuovi,    'nuovi',    r.nuovi.length > 0);
     html += buildSummBlock('green', 'In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
@@ -3337,38 +3341,35 @@ function exportReportPdf() {
   });
   var yKpiEnd = doc.lastAutoTable.finalY;
   
-  // Blocchi riepilogo
-  var retStr = r.universo25 > 0 ? r.retention + '%' : '';
-  var ytdLabelPdf = r.periodo.mode === 'YTD' ? 'Clienti attivi ' + r.anno : 'Clienti attivi YTD';
-  
+  // Blocchi riepilogo PDF — universo corretto: tutti.length = portafoglio + persi
   var blocksBody;
+  var totDeltaTotale = 0;
+  for (var i = 0; i < r.tutti.length; i++) totDeltaTotale += (r.tutti[i].f26 - r.tutti[i].f25);
+  
   if (r.isItalia) {
+    var nClientiTotale = r.nClientiAttivi26 + r.nClientiPersi;
     blocksBody = [
-      // Agenti
-      ['AGENTI', '', ''],
-      ['Totale agenti',       r.portafoglio.length, ''],
-      ['  Nuovi',             r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
-      ['  In crescita',       r.crescita.length, EURsignPdf(totDeltaCrescita)],
-      ['  In calo',           r.calo.length,     EURsignPdf(totDeltaCalo)],
-      ['  Senza ordini',      r.persi.length,    EURsignPdf(totDeltaPersi)],
-      // Clienti
-      ['CLIENTI', '', ''],
-      ['Totale clienti',      r.nClientiAttivi26, ''],
-      ['  Nuovi',             r.nClientiNuovi,    ''],
-      ['  In crescita',       r.nClientiCrescita, ''],
-      ['  In calo',           r.nClientiCalo,     ''],
-      ['  Senza ordini',      r.nClientiPersi,    ''],
-      // YTD
-      [ytdLabelPdf,           r.ytdClienti26,     '+' + r.ytdNuoviClienti + ' nuovi / -' + r.ytdPersiClienti + ' senza ordini']
+      // AGENTI: universo = tutti (portafoglio + persi)
+      ['Tutti gli agenti',    r.tutti.length,        EURsignPdf(totDeltaTotale)],
+      ['  Nuovi',             r.nuovi.length,        EURsignPdf(totDeltaNuovi)],
+      ['  In crescita',       r.crescita.length,     EURsignPdf(totDeltaCrescita)],
+      ['  In calo',           r.calo.length,         EURsignPdf(totDeltaCalo)],
+      ['  Senza ordini',      r.persi.length,        EURsignPdf(totDeltaPersi)],
+      // CLIENTI
+      ['Tutti i clienti',     nClientiTotale,        ''],
+      ['  Nuovi',             r.nClientiNuovi,       ''],
+      ['  In crescita',       r.nClientiCrescita,    ''],
+      ['  In calo',           r.nClientiCalo,        ''],
+      ['  Senza ordini',      r.nClientiPersi,       '']
     ];
   } else {
+    // AGENTE: tutti i clienti = portafoglio + persi = r.tutti.length
     blocksBody = [
-      ['Totale clienti',     r.portafoglio.length, EURpdf(r.fattPortafoglio)],
-      ['  Nuovi',            r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
-      ['  In crescita',      r.crescita.length, EURsignPdf(totDeltaCrescita)],
-      ['  In calo',          r.calo.length,     EURsignPdf(totDeltaCalo)],
-      ['  Senza ordini',     r.persi.length,    EURsignPdf(totDeltaPersi)],
-      [ytdLabelPdf,          r.ytdClienti26,    '+' + r.ytdNuoviClienti + ' nuovi / -' + r.ytdPersiClienti + ' senza ordini']
+      ['Tutti i clienti',   r.tutti.length,       EURsignPdf(totDeltaTotale)],
+      ['  Nuovi',           r.nuovi.length,       EURsignPdf(totDeltaNuovi)],
+      ['  In crescita',     r.crescita.length,    EURsignPdf(totDeltaCrescita)],
+      ['  In calo',         r.calo.length,        EURsignPdf(totDeltaCalo)],
+      ['  Senza ordini',    r.persi.length,       EURsignPdf(totDeltaPersi)]
     ];
   }
   
@@ -3383,14 +3384,14 @@ function exportReportPdf() {
     margin: { left: margin + halfW + 4, right: margin },
     didParseCell: function(data) {
       colorNegativesCallback(data);
-      // Prima riga (Totale clienti/agenti) in evidenza
-      if (data.section === 'body' && (data.row.index === 0 || (r.isItalia && data.row.index === 6))) {
-        data.cell.styles.fillColor = [114, 47, 55];
-        data.cell.styles.textColor = [255, 255, 255];
-        data.cell.styles.fontStyle = 'bold';
-      } else if (data.section === 'body' && data.row.index === 0) {
-        data.cell.styles.fillColor = [235, 240, 255];
-        data.cell.styles.fontStyle = 'bold';
+      // Righe "Tutti gli agenti" e "Tutti i clienti" in evidenza (bordeaux)
+      if (data.section === 'body') {
+        var raw = String(data.cell.raw || '');
+        if (raw === 'Tutti gli agenti' || raw === 'Tutti i clienti') {
+          data.cell.styles.fillColor = [114, 47, 55];
+          data.cell.styles.textColor = [255, 255, 255];
+          data.cell.styles.fontStyle = 'bold';
+        }
       }
     },
     tableWidth: pageW - 2*margin - halfW - 4
