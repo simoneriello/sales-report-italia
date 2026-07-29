@@ -1020,8 +1020,19 @@ function generaReport() {
         else crescita.push(c);
       } else if (c.f26 === 0 && c.f25 > 0) persi.push(c);
     }
-    var attivi = nuovi.concat(crescita);
+    // Portafoglio 2026: tutti i clienti/agenti che hanno EFFETTIVAMENTE comprato nel periodo
+    var portafoglio = nuovi.concat(crescita).concat(calo);
+    var attivi = portafoglio;   // retrocompatibilità
     var assenti = persi;
+    
+    // Tasso di ritenzione: clienti confermati (attivi in entrambi gli anni) su universo 2025
+    var confermati = crescita.length + calo.length;
+    var universo25 = confermati + persi.length; // clienti con storico 2025
+    var retention = universo25 > 0 ? Math.round(confermati / universo25 * 100) : 0;
+    
+    // Fatturato portafoglio 2026
+    var fattPortafoglio = 0;
+    for (var i = 0; i < portafoglio.length; i++) fattPortafoglio += portafoglio[i].f26;
     
     // Calcolo clienti attivi YTD (sempre, indipendentemente dal periodo selezionato)
     var ytdClienti26 = 0, ytdClienti25 = 0;
@@ -1074,6 +1085,9 @@ function generaReport() {
       trend26: trend26, trend25: trend25,
       tutti: listaItems, attivi: attivi, calo: calo, assenti: assenti,
       nuovi: nuovi, crescita: crescita, persi: persi,
+      portafoglio: portafoglio, confermati: confermati,
+      universo25: universo25, retention: retention,
+      fattPortafoglio: fattPortafoglio,
       isItalia: vista === 'ITALIA',
       // Statistiche clienti (livello cliente, non agente)
       ytdClienti26: ytdClienti26, ytdClienti25: ytdClienti25,
@@ -1125,39 +1139,53 @@ function renderReport() {
   var entityLabel = r.isItalia ? 'agenti' : 'clienti';
   var entityLabelCap = r.isItalia ? 'Agenti' : 'Clienti';
   
-  // 5 blocchi riepilogo (rimosso "Non att." che duplicava "Persi")
-  html += '<div class="section"><div class="section-title">Riepilogo ' + entityLabel + '</div><div class="summary-grid">';
+  // ===== RIEPILOGO =====
+  html += '<div class="section">';
   
-  var totDeltaTutti = 0;
-  for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
-  var totDeltaCrescita = 0;
+  var totDeltaCrescita = 0, totDeltaCalo = 0, totDeltaNuovi = 0, totDeltaPersi = 0;
   for (var i = 0; i < r.crescita.length; i++) totDeltaCrescita += (r.crescita[i].f26 - r.crescita[i].f25);
-  var totDeltaCalo = 0;
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
-  var totDeltaNuovi = 0;
   for (var i = 0; i < r.nuovi.length; i++) totDeltaNuovi += r.nuovi[i].f26;
-  var totDeltaPersi = 0;
   for (var i = 0; i < r.persi.length; i++) totDeltaPersi -= r.persi[i].f25;
   
-  html += buildSummBlock('blue',  'Tutti i ' + entityLabel, r.tutti.length, totDeltaTutti, 'tutti', true);
-  html += buildSummBlock('green', 'In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
-  html += buildSummBlock(r.calo.length ? 'red' : 'green', 'In calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
-  html += buildSummBlock('teal',  'Nuovi ' + r.anno, r.nuovi.length, totDeltaNuovi, 'nuovi', r.nuovi.length > 0);
-  html += buildSummBlock(r.persi.length ? 'amber' : 'green', 'Persi', r.persi.length, totDeltaPersi, 'persi', r.persi.length > 0);
-  
-  html += '</div>';
-  
-  // Per vista Italia: aggiunge anche i blocchi a livello CLIENTE (non agente)
   if (r.isItalia) {
-    html += '<div style="margin-top:10px">';
-    html += '<div class="section-title" style="font-size:11px;margin-bottom:6px">Riepilogo clienti (livello cliente)</div>';
-    html += '<div class="summary-grid">';
-    html += buildSummBlock('blue', 'Clienti attivi', r.nClientiAttivi26, 0, null, false);
-    html += buildSummBlock('green', 'In crescita', r.nClientiCrescita, 0, null, false);
-    html += buildSummBlock('red', 'In calo', r.nClientiCalo, 0, null, false);
-    html += buildSummBlock('teal', 'Nuovi ' + r.anno, r.nClientiNuovi, 0, null, false);
-    html += buildSummBlock('amber', 'Persi', r.nClientiPersi, 0, null, false);
+    // ITALIA: blocchi AGENTI + blocchi CLIENTI
+    html += '<div class="section-title">Agenti</div><div class="summary-grid">';
+    html += '<div class="summ-block blue" onclick="openFV(\'portafoglio\')" style="cursor:pointer">';
+    html += '<div class="summ-top"><h4>Totale agenti</h4><span class="summ-arrow">›</span></div>';
+    html += '<div class="summ-num">' + r.portafoglio.length + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.persi.length + ' senza ordini nel periodo</div>';
     html += '</div>';
+    html += buildSummBlock('teal',  'Nuovi',       r.nuovi.length,    totDeltaNuovi,    'nuovi',    r.nuovi.length > 0);
+    html += buildSummBlock('green', 'In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
+    html += buildSummBlock(r.calo.length   ? 'red'   : 'green', 'In calo',       r.calo.length,   totDeltaCalo,   'calo',  r.calo.length > 0);
+    html += buildSummBlock(r.persi.length  ? 'amber' : 'green', 'Senza ordini',  r.persi.length,  totDeltaPersi,  'persi', r.persi.length > 0);
+    html += '</div>';
+    
+    html += '<div style="margin-top:14px"><div class="section-title" style="margin-bottom:6px">Clienti</div><div class="summary-grid">';
+    html += '<div class="summ-block blue">';
+    html += '<div class="summ-top"><h4>Totale clienti</h4></div>';
+    html += '<div class="summ-num">' + r.nClientiAttivi26 + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.nClientiPersi + ' senza ordini nel periodo</div>';
+    html += '</div>';
+    html += buildSummBlock('teal',  'Nuovi',       r.nClientiNuovi,    0, null, false);
+    html += buildSummBlock('green', 'In crescita', r.nClientiCrescita, 0, null, false);
+    html += buildSummBlock(r.nClientiCalo   ? 'red'   : 'green', 'In calo',      r.nClientiCalo,  0, null, false);
+    html += buildSummBlock(r.nClientiPersi  ? 'amber' : 'green', 'Senza ordini', r.nClientiPersi, 0, null, false);
+    html += '</div></div>';
+    
+  } else {
+    // AGENTE: mostra solo i blocchi CLIENTI (i blocchi si riferiscono già ai suoi clienti)
+    html += '<div class="section-title">Clienti</div><div class="summary-grid">';
+    html += '<div class="summ-block blue" onclick="openFV(\'portafoglio\')" style="cursor:pointer">';
+    html += '<div class="summ-top"><h4>Totale clienti</h4><span class="summ-arrow">›</span></div>';
+    html += '<div class="summ-num">' + r.portafoglio.length + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + r.persi.length + ' senza ordini nel periodo</div>';
+    html += '</div>';
+    html += buildSummBlock('teal',  'Nuovi',       r.nuovi.length,    totDeltaNuovi,    'nuovi',    r.nuovi.length > 0);
+    html += buildSummBlock('green', 'In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
+    html += buildSummBlock(r.calo.length  ? 'red'   : 'green', 'In calo',      r.calo.length,  totDeltaCalo,  'calo',  r.calo.length > 0);
+    html += buildSummBlock(r.persi.length ? 'amber' : 'green', 'Senza ordini', r.persi.length, totDeltaPersi, 'persi', r.persi.length > 0);
     html += '</div>';
   }
   
@@ -1817,13 +1845,14 @@ function openFV(tipo) {
   var data, title;
   var entity = lastReport.isItalia ? 'agenti' : 'clienti';
   var entityCap = lastReport.isItalia ? 'Agenti' : 'Clienti';
-  if (tipo === 'tutti')    { data = lastReport.tutti;    title = 'Tutti i ' + entity; }
-  else if (tipo === 'attivi')   { data = lastReport.attivi;   title = entityCap + ' attivi'; }
-  else if (tipo === 'crescita') { data = lastReport.crescita; title = entityCap + ' in crescita'; }
-  else if (tipo === 'calo')     { data = lastReport.calo;     title = entityCap + ' in calo'; }
-  else if (tipo === 'nuovi')    { data = lastReport.nuovi;    title = entityCap + ' nuovi ' + lastReport.anno; }
-  else if (tipo === 'persi')    { data = lastReport.persi;    title = entityCap + ' persi (non attivi ' + lastReport.anno + ')'; }
-  else if (tipo === 'assenti')  { data = lastReport.assenti;  title = 'Non ancora attivi'; }
+  if (tipo === 'tutti')         { data = lastReport.tutti;       title = 'Universo ' + entity + ' (attivi + persi)'; }
+  else if (tipo === 'portafoglio') { data = lastReport.portafoglio; title = 'Portafoglio ' + lastReport.anno + ' — ' + entityCap + ' attivi'; }
+  else if (tipo === 'attivi')   { data = lastReport.attivi;      title = entityCap + ' attivi'; }
+  else if (tipo === 'crescita') { data = lastReport.crescita;    title = entityCap + ' in crescita'; }
+  else if (tipo === 'calo')     { data = lastReport.calo;        title = entityCap + ' in calo'; }
+  else if (tipo === 'nuovi')    { data = lastReport.nuovi;       title = entityCap + ' nuovi ' + lastReport.anno; }
+  else if (tipo === 'persi')    { data = lastReport.persi;       title = entityCap + ' persi (non attivi ' + lastReport.anno + ')'; }
+  else if (tipo === 'assenti')  { data = lastReport.assenti;     title = 'Non ancora attivi'; }
   
   // Salva snapshot della vista corrente prima di aprire FV
   window._mainSnapshot = {
@@ -3270,9 +3299,11 @@ function exportReportPdf() {
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
   
   // Calcolo blocchi
-  var totDeltaTutti = 0, totDeltaCalo = 0;
-  for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
+  var totDeltaCalo = 0, totDeltaCrescita = 0, totDeltaNuovi = 0, totDeltaPersi = 0;
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
+  for (var i = 0; i < r.crescita.length; i++) totDeltaCrescita += (r.crescita[i].f26 - r.crescita[i].f25);
+  for (var i = 0; i < r.nuovi.length; i++) totDeltaNuovi += r.nuovi[i].f26;
+  for (var i = 0; i < r.persi.length; i++) totDeltaPersi -= r.persi[i].f25;
   
   var entityLbl = r.isItalia ? 'agenti' : 'clienti';
   var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
@@ -3306,51 +3337,60 @@ function exportReportPdf() {
   });
   var yKpiEnd = doc.lastAutoTable.finalY;
   
-  // Calcola delta per nuovi e persi
-  var totDeltaNuovi = 0;
-  for (var i = 0; i < r.nuovi.length; i++) totDeltaNuovi += r.nuovi[i].f26;
-  var totDeltaPersi = 0;
-  for (var i = 0; i < r.persi.length; i++) totDeltaPersi -= r.persi[i].f25;
-  var totDeltaCrescita = 0;
-  for (var i = 0; i < r.crescita.length; i++) totDeltaCrescita += (r.crescita[i].f26 - r.crescita[i].f25);
-  
-  // Tabella blocchi (destra): 5 categorie (rimosso duplicato "Non att.")
+  // Blocchi riepilogo
+  var retStr = r.universo25 > 0 ? r.retention + '%' : '';
   var ytdLabelPdf = r.periodo.mode === 'YTD' ? 'Clienti attivi ' + r.anno : 'Clienti attivi YTD';
-  var blocksBody = [
-    ['Tutti i ' + entityLbl,   r.tutti.length,    EURsignPdf(totDeltaTutti)],
-    ['In crescita',            r.crescita.length, EURsignPdf(totDeltaCrescita)],
-    ['In calo',                r.calo.length,     EURsignPdf(totDeltaCalo)],
-    ['Nuovi ' + r.anno,        r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
-    ['Persi',                  r.persi.length,    EURsignPdf(totDeltaPersi)],
-    [ytdLabelPdf,              r.ytdClienti26,    '+' + r.ytdNuoviClienti + ' nuovi / -' + r.ytdPersiClienti + ' persi']
-  ];
-  // Per vista Italia aggiungo anche riga clienti
+  
+  var blocksBody;
   if (r.isItalia) {
-    blocksBody.push(['---Clienti---', '', '']);
-    blocksBody.push(['Clienti attivi', r.nClientiAttivi26, '']);
-    blocksBody.push(['Clienti nuovi ' + r.anno, r.nClientiNuovi, '']);
-    blocksBody.push(['Clienti persi', r.nClientiPersi, '']);
-    blocksBody.push(['Clienti crescita', r.nClientiCrescita, '']);
-    blocksBody.push(['Clienti calo', r.nClientiCalo, '']);
+    blocksBody = [
+      // Agenti
+      ['AGENTI', '', ''],
+      ['Totale agenti',       r.portafoglio.length, ''],
+      ['  Nuovi',             r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
+      ['  In crescita',       r.crescita.length, EURsignPdf(totDeltaCrescita)],
+      ['  In calo',           r.calo.length,     EURsignPdf(totDeltaCalo)],
+      ['  Senza ordini',      r.persi.length,    EURsignPdf(totDeltaPersi)],
+      // Clienti
+      ['CLIENTI', '', ''],
+      ['Totale clienti',      r.nClientiAttivi26, ''],
+      ['  Nuovi',             r.nClientiNuovi,    ''],
+      ['  In crescita',       r.nClientiCrescita, ''],
+      ['  In calo',           r.nClientiCalo,     ''],
+      ['  Senza ordini',      r.nClientiPersi,    ''],
+      // YTD
+      [ytdLabelPdf,           r.ytdClienti26,     '+' + r.ytdNuoviClienti + ' nuovi / -' + r.ytdPersiClienti + ' senza ordini']
+    ];
+  } else {
+    blocksBody = [
+      ['Totale clienti',     r.portafoglio.length, EURpdf(r.fattPortafoglio)],
+      ['  Nuovi',            r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
+      ['  In crescita',      r.crescita.length, EURsignPdf(totDeltaCrescita)],
+      ['  In calo',          r.calo.length,     EURsignPdf(totDeltaCalo)],
+      ['  Senza ordini',     r.persi.length,    EURsignPdf(totDeltaPersi)],
+      [ytdLabelPdf,          r.ytdClienti26,    '+' + r.ytdNuoviClienti + ' nuovi / -' + r.ytdPersiClienti + ' senza ordini']
+    ];
   }
   
   doc.autoTable({
-    head: [['Categoria', 'N.', 'Var EUR / Note']],
+    head: [['Categoria', 'N.', 'Var EUR']],
     body: blocksBody,
     startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 8.5 },
+    bodyStyles: { fontSize: 8 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' } },
     margin: { left: margin + halfW + 4, right: margin },
     didParseCell: function(data) {
       colorNegativesCallback(data);
-      // Riga separatore "---Clienti---"
-      if (data.section === 'body' && data.cell.raw === '---Clienti---') {
+      // Prima riga (Totale clienti/agenti) in evidenza
+      if (data.section === 'body' && (data.row.index === 0 || (r.isItalia && data.row.index === 6))) {
         data.cell.styles.fillColor = [114, 47, 55];
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = 'bold';
-        data.cell.text = ['Dettaglio clienti'];
+      } else if (data.section === 'body' && data.row.index === 0) {
+        data.cell.styles.fillColor = [235, 240, 255];
+        data.cell.styles.fontStyle = 'bold';
       }
     },
     tableWidth: pageW - 2*margin - halfW - 4
