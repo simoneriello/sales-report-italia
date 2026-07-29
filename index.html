@@ -3028,13 +3028,18 @@ function exportMultiPeriodoPdf() {
   itemsA.sort(function(a, b) {
     var ia = domNomi.indexOf(a.nome);
     var ib = domNomi.indexOf(b.nome);
-    if (ia === -1 && ib === -1) return b.f26 - a.f26; // entrambi non in DOM → per fatturato desc
-    if (ia === -1) return 1;  // a non in DOM → va in fondo
-    if (ib === -1) return -1; // b non in DOM → va in fondo
-    return ia - ib; // rispetta ordine DOM
+    if (ia === -1 && ib === -1) return b.f26 - a.f26;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
   });
-  // itemsB: ordine per fatturato 2026 decrescente (YTD ha logica propria)
-  itemsB.sort(function(a, b) { return b.f26 - a.f26; });
+  // itemsB (YTD): ordina per variazione EUR crescente = perdite maggiori in cima
+  // (stesso criterio "fatturato perso crescente" che l'utente applica nell'interfaccia)
+  itemsB.sort(function(a, b) {
+    var deltaA = a.f26 - a.f25;
+    var deltaB = b.f26 - b.f25;
+    return deltaA - deltaB; // ascending: più negativo prima
+  });
   
   // ============ COSTRUZIONE PDF ============
   var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -3245,10 +3250,10 @@ function exportReportPdf() {
     head: [['Categoria', 'N.', 'Var EUR']],
     body: [
       ['Tutti i ' + entityLbl,      r.tutti.length,    EURsignPdf(totDeltaTutti)],
-      ['★ Nuovi ' + r.anno,         r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
-      ['↑ In crescita',             r.crescita.length, EURsignPdf(totDeltaCrescita)],
-      ['↓ In calo',                 r.calo.length,     EURsignPdf(totDeltaCalo)],
-      ['✗ Persi (non att. ' + r.anno + ')', r.persi.length, EURsignPdf(totDeltaPersi)],
+      ['Nuovi ' + r.anno,              r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
+      ['In crescita',                  r.crescita.length, EURsignPdf(totDeltaCrescita)],
+      ['In calo',                      r.calo.length,     EURsignPdf(totDeltaCalo)],
+      ['Persi (non att. ' + r.anno + ')', r.persi.length, EURsignPdf(totDeltaPersi)],
     ],
     startY: y,
     theme: 'striped',
@@ -3278,10 +3283,58 @@ function exportReportPdf() {
     if (chartImg) {
       drawSectionTitle(doc, 'Andamento mensile fatturato', margin, y);
       y += 5;
-      // Calcolo altezza disponibile: pageH - y - margine inferiore
-      var availH = pageH - y - 18;
-      var chartH = Math.min(availH, 70);
+      var availH = pageH - y - 40; // lasciamo spazio per la tabella valori
+      var chartH = Math.min(availH, 58);
       doc.addImage(chartImg, 'PNG', margin, y, pageW - 2*margin, chartH);
+      y += chartH + 2;
+      
+      // Tabella valori mensili sotto il grafico (2 righe: anno / annoP)
+      var mesiDa = r.periodo.da, mesiA = r.periodo.a;
+      var mAbbrArr = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+      
+      // Funzione formato compatto
+      function fmtPdf(v) {
+        if (!v || v === 0) return '—';
+        if (v >= 1000000) return (v/1000000).toFixed(1).replace('.',',') + 'M';
+        if (v >= 1000) return (v/1000).toFixed(1).replace('.',',') + 'k';
+        return Math.round(v).toString();
+      }
+      
+      var headM = [''], row26M = [r.anno + ''], row25M = [r.annoP + ''];
+      for (var m = mesiDa; m <= mesiA; m++) {
+        headM.push(mAbbrArr[m]);
+        row26M.push(fmtPdf(r.trend26[m] || 0));
+        row25M.push(fmtPdf(r.trend25[m] || 0));
+      }
+      
+      // Colstyles: tutte le colonne dati centrate (da 1 in poi)
+      var colStyM = { 0: { fontStyle: 'bold', fillColor: [245, 240, 240] } };
+      for (var m = 1; m <= mesiA - mesiDa + 1; m++) colStyM[m] = { halign: 'center' };
+      
+      doc.autoTable({
+        head: [headM],
+        body: [
+          row26M.map(function(v, i) { return v; }),
+          row25M.map(function(v, i) { return v; })
+        ],
+        startY: y,
+        theme: 'grid',
+        headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 7, halign: 'center' },
+        bodyStyles: { fontSize: 7.5, cellPadding: 1.5 },
+        columnStyles: colStyM,
+        margin: { left: margin, right: margin },
+        didParseCell: function(data) {
+          if (data.section === 'body') {
+            // Riga 2026: testo bordeaux
+            if (data.row.index === 0) data.cell.styles.textColor = [114, 47, 55];
+            // Riga 2025: testo oro
+            if (data.row.index === 1) data.cell.styles.textColor = [160, 120, 30];
+            // Prima colonna (etichetta anno): bold
+            if (data.column.index === 0) data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 2;
     }
     
     // ============ PAGINA 2: REFERENZE (DONUT + TABELLA AFFIANCATI) ============
