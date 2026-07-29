@@ -242,7 +242,22 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
       <label>Periodo</label>
       <select id="periodo" onchange="togglePeriodo()">
         <option value="YTD">YTD (dall'inizio)</option>
-        <option value="RANGE">Da - A</option>
+        <option value="MESE">Mese singolo</option>
+        <option value="TRIMESTRE">Trimestre</option>
+        <option value="RANGE">Personalizzato (Da - A)</option>
+      </select>
+    </div>
+    <div class="filter-group" id="mese-singolo-group" style="display:none">
+      <label>Mese</label>
+      <select id="mese-singolo"><option value="1">Gennaio</option><option value="2">Febbraio</option><option value="3">Marzo</option><option value="4">Aprile</option><option value="5">Maggio</option><option value="6">Giugno</option><option value="7">Luglio</option><option value="8">Agosto</option><option value="9">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select>
+    </div>
+    <div class="filter-group" id="trimestre-group" style="display:none">
+      <label>Trimestre</label>
+      <select id="trimestre-sel">
+        <option value="1">Q1 - Gennaio/Marzo</option>
+        <option value="2">Q2 - Aprile/Giugno</option>
+        <option value="3">Q3 - Luglio/Settembre</option>
+        <option value="4">Q4 - Ottobre/Dicembre</option>
       </select>
     </div>
     <div class="filter-group" id="from-group" style="display:none">
@@ -472,6 +487,16 @@ function cleanData(raw) {
     if (stato && stato !== '_Italia') continue;
     if (anno !== 2025 && anno !== 2026) continue;
     
+    // Fix: escludi A.C. Marketing & Trade (canale estero, non HORECA Italia)
+    if (agente.toUpperCase().indexOf('A.C. MARKETING') !== -1 ||
+        agente.toUpperCase().indexOf('AC MARKETING') !== -1) continue;
+    
+    // Fix: normalizza Show Wine → Avvina (stessa agenzia, cambio ragione sociale)
+    // "SHOW WINE SRL - BS" (2025) viene unificato a "AVVINA..." (2026)
+    if (agente.toUpperCase().indexOf('SHOW WINE') !== -1) {
+      agente = 'AVVINA DI PEDERSINI M. E BERTAZZOLI F. SNC - BS';
+    }
+    
     // Escludi merceologica FONTECOLO (non è bottiglia da conteggiare nelle vendite)
     var merceoCheck = String(r.Descr_Merceologica || '').toUpperCase().trim();
     if (merceoCheck === 'FONTECOLO') continue;
@@ -509,7 +534,14 @@ function cleanData(raw) {
       giorno: giorno,
       dataISO: dataISO,
       agente: agente,
-      cliente: String(r.Ragione_Sociale || '').trim(),
+      cliente: (function() {
+        var c = String(r.Ragione_Sociale || '').trim();
+        // Normalizza Show Wine → Avvina anche nel campo cliente (stessa azienda)
+        if (c.toUpperCase().indexOf('SHOW WINE') !== -1) {
+          c = 'AVVINA DI PEDERSINI MATTEO E BERTAZZOLI FABIO SNC';
+        }
+        return c;
+      })(),
       citta: citta,
       prov: prov,
       pezzi: pezzi,
@@ -645,6 +677,8 @@ function updateDataInfoBanner() {
 
 function togglePeriodo() {
   var p = document.getElementById('periodo').value;
+  document.getElementById('mese-singolo-group').style.display = p === 'MESE' ? 'flex' : 'none';
+  document.getElementById('trimestre-group').style.display = p === 'TRIMESTRE' ? 'flex' : 'none';
   document.getElementById('from-group').style.display = p === 'RANGE' ? 'flex' : 'none';
   document.getElementById('to-group').style.display = p === 'RANGE' ? 'flex' : 'none';
 }
@@ -669,6 +703,28 @@ function getPeriodoFilter() {
       a: maxMese,
       giornoMax: maxGiorno || 31,
       label: 'YTD (1 gen - ' + (maxGiorno || '') + ' ' + meseNome(maxMese).toLowerCase() + ')'
+    };
+  }
+  if (p === 'MESE') {
+    var m = parseInt(document.getElementById('mese-singolo').value);
+    return {
+      mode: 'MESE',
+      da: m,
+      a: m,
+      giornoMax: 31,
+      label: meseNome(m)
+    };
+  }
+  if (p === 'TRIMESTRE') {
+    var q = parseInt(document.getElementById('trimestre-sel').value);
+    var da = (q - 1) * 3 + 1;
+    var a = da + 2;
+    return {
+      mode: 'TRIMESTRE',
+      da: da,
+      a: a,
+      giornoMax: 31,
+      label: 'Q' + q + ' (' + meseNome(da) + ' - ' + meseNome(a) + ')'
     };
   }
   var da = parseInt(document.getElementById('mese-da').value);
@@ -985,7 +1041,7 @@ function renderReport() {
   
   var html = '';
   html += '<div class="report-header"><div><h1>' + escapeHTML(r.vista) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div>';
-  html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button></div></div>';
+  html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button><button onclick="exportMultiPeriodoPdf()" title="Esporta un PDF con due sezioni: periodo selezionato + YTD">PDF Multi-periodo</button></div></div>';
   
   // KPI principali — uso bottiglie equivalenti
   html += '<div class="kpi-row">';
@@ -2849,6 +2905,220 @@ function svgToPng(svgEl, width, height) {
       reject(e); 
     }
   });
+}
+
+// Esporta un PDF unico con due sezioni:
+// Sezione A: il periodo attualmente selezionato (es. Luglio, Q3, ecc.)
+// Sezione B: YTD (dall'inizio anno) come avanzamento complessivo
+function exportMultiPeriodoPdf() {
+  if (!lastReport) return;
+  var r = lastReport;
+  
+  // Se il periodo corrente è già YTD, non ha senso — avvisa l'utente
+  if (r.periodo.mode === 'YTD') {
+    alert('Il periodo corrente è già YTD.\nSeleziona un mese o trimestre specifico, poi clicca "PDF Multi-periodo" per ottenere il PDF con quel periodo + YTD affiancati.');
+    return;
+  }
+  
+  // Calcola i dati per entrambi i periodi
+  var dati = r.dati; // già filtrati per agente (o tutti per Italia)
+  var anno = r.anno;
+  var annoP = r.annoP;
+  
+  // Periodo A: quello corrente (mese/trimestre selezionato)
+  var periodoA = r.periodo;
+  
+  // Periodo B: YTD (ricalcola il giornoMax dal dataset)
+  var maxMese = 0, maxGiorno = 0;
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].anno === anno) {
+      if (D[i].mese > maxMese || (D[i].mese === maxMese && D[i].giorno > maxGiorno)) {
+        maxMese = D[i].mese; maxGiorno = D[i].giorno;
+      }
+    }
+  }
+  if (maxMese === 0) maxMese = 12;
+  var periodoB = {
+    mode: 'YTD', da: 1, a: maxMese, giornoMax: maxGiorno || 31,
+    label: 'YTD (1 gen - ' + maxGiorno + ' ' + meseNome(maxMese).toLowerCase() + ')'
+  };
+  
+  // Calcola i 4 dataset (2 periodi × 2 anni)
+  var dA26 = calcolaDati(dati, anno, periodoA);
+  var dA25 = calcolaDati(dati, annoP, periodoA);
+  var dB26 = calcolaDati(dati, anno, periodoB);
+  var dB25 = calcolaDati(dati, annoP, periodoB);
+  
+  var refsA26 = calcolaReferenze(dA26.vendite), refsA25 = calcolaReferenze(dA25.vendite);
+  var refsB26 = calcolaReferenze(dB26.vendite), refsB25 = calcolaReferenze(dB25.vendite);
+  
+  // Prepara lista items per entrambi i periodi
+  function buildItems(d26, d25) {
+    var isItalia = r.isItalia;
+    if (isItalia) {
+      var ag26 = {}, ag25 = {};
+      for (var i = 0; i < d26.vendite.length; i++) {
+        var v = d26.vendite[i]; if (!v.agente || !isRigaFatturato(v)) continue;
+        if (!ag26[v.agente]) ag26[v.agente] = { fatt: 0, btlEq: 0, clienti: {} };
+        ag26[v.agente].fatt += v.importo;
+        if (isRigaBottiglia(v)) ag26[v.agente].btlEq += v.pezziEq;
+        ag26[v.agente].clienti[v.cliente] = true;
+      }
+      for (var i = 0; i < d25.vendite.length; i++) {
+        var v = d25.vendite[i]; if (!v.agente || !isRigaFatturato(v)) continue;
+        if (!ag25[v.agente]) ag25[v.agente] = { fatt: 0, btlEq: 0, clienti: {} };
+        ag25[v.agente].fatt += v.importo;
+        if (isRigaBottiglia(v)) ag25[v.agente].btlEq += v.pezziEq;
+        ag25[v.agente].clienti[v.cliente] = true;
+      }
+      var all = {}; Object.keys(ag26).forEach(function(k){all[k]=1;}); Object.keys(ag25).forEach(function(k){all[k]=1;});
+      return Object.keys(all).sort().map(function(a) {
+        var a6 = ag26[a] || {fatt:0,btlEq:0,clienti:{}}; var a5 = ag25[a] || {fatt:0,btlEq:0,clienti:{}};
+        return { nome: a, f26: a6.fatt, f25: a5.fatt, b26Eq: a6.btlEq, b25Eq: a5.btlEq,
+                 pm26: PM(a6.fatt, a6.btlEq), nClienti26: Object.keys(a6.clienti).length };
+      });
+    } else {
+      var all = {}; Object.keys(d26.clienti).forEach(function(k){all[k]=1;}); Object.keys(d25.clienti).forEach(function(k){all[k]=1;});
+      return Object.keys(all).sort().map(function(c) {
+        var c6 = d26.clienti[c] || {fatt:0,btl:0,btlEq:0}; var c5 = d25.clienti[c] || {fatt:0,btl:0,btlEq:0};
+        return { nome: c, f26: c6.fatt, f25: c5.fatt, b26Eq: c6.btlEq, b25Eq: c5.btlEq, pm26: PM(c6.fatt, c6.btlEq), agente: c6.agente || '', citta: c6.citta || '' };
+      });
+    }
+  }
+  
+  var itemsA = buildItems(dA26, dA25);
+  var itemsB = buildItems(dB26, dB25);
+  
+  // ============ COSTRUZIONE PDF ============
+  var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var pageW = 297, pageH = 210, margin = 14;
+  var isItalia = r.isItalia;
+  var entityLbl = isItalia ? 'agenti' : 'clienti';
+  
+  // Helper: disegna una sezione (KPI + tabella clienti) per un dato periodo
+  function disegnaSezione(doc, d26, d25, items, refs26, refs25, periodo, yStart, isFirstPage) {
+    var y = yStart;
+    
+    drawSectionTitle(doc, periodo.label, margin, y);
+    y += 6;
+    
+    // KPI compatte
+    var dF = d25.fatturato > 0 ? ((d26.fatturato-d25.fatturato)/d25.fatturato)*100 : 0;
+    var dB = d25.bottiglieEq > 0 ? ((d26.bottiglieEq-d25.bottiglieEq)/d25.bottiglieEq)*100 : 0;
+    var dPM = d25.pm > 0 ? ((d26.pm-d25.pm)/d25.pm)*100 : 0;
+    
+    doc.autoTable({
+      head: [['', anno.toString(), annoP.toString(), 'Var', 'Var %']],
+      body: [
+        ['Fatturato', EURpdf(d26.fatturato), EURpdf(d25.fatturato), EURsignPdf(d26.fatturato-d25.fatturato), PCTsign(dF)],
+        ['Bottiglie', NUM(d26.bottiglieEq), NUM(d25.bottiglieEq), NUMsign(d26.bottiglieEq-d25.bottiglieEq), PCTsign(dB)],
+        ['Prezzo Medio', EURpdf(d26.pm), EURpdf(d25.pm), EURsignPdf(d26.pm-d25.pm), PCTsign(dPM)]
+      ],
+      startY: y,
+      theme: 'striped',
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} },
+      margin: { left: margin, right: margin },
+      didParseCell: colorNegativesCallback
+    });
+    y = doc.lastAutoTable.finalY + 5;
+    
+    // Referenze
+    drawSectionTitle(doc, 'Rotazione referenze', margin, y);
+    y += 4;
+    var refRows = [];
+    REFERENZE_NAMES.forEach(function(name) {
+      var r26ref = refs26[name] || {fatt:0,btlEq:0}; var r25ref = refs25[name] || {fatt:0,btlEq:0};
+      if (r26ref.btlEq === 0 && r25ref.btlEq === 0) return;
+      var dRef = r25ref.btlEq > 0 ? ((r26ref.btlEq-r25ref.btlEq)/r25ref.btlEq)*100 : 0;
+      var pct = d26.bottiglieEq > 0 ? (r26ref.btlEq/d26.bottiglieEq)*100 : 0;
+      refRows.push([name, NUM(r26ref.btlEq), NUM(r25ref.btlEq), EURpdf(r26ref.fatt), pct.toFixed(1).replace('.',',')+' %', PCTsign(dRef)]);
+    });
+    doc.autoTable({
+      head: [['Referenza', 'Bott.'+anno, 'Bott.'+annoP, 'Fatturato', '% tot', 'Var%']],
+      body: refRows, startY: y,
+      theme: 'striped',
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 7 },
+      bodyStyles: { fontSize: 7 },
+      columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'}, 5:{halign:'right'} },
+      margin: { left: margin, right: margin },
+      didParseCell: colorNegativesCallback
+    });
+    y = doc.lastAutoTable.finalY + 5;
+    
+    // Tabella clienti/agenti
+    if (y > 140) { doc.addPage('a4','landscape'); drawHeader(doc, {vista: r.vista, anno:anno, annoP:annoP, periodo:periodo}, pageW); y = 32; }
+    drawSectionTitle(doc, 'Elenco ' + entityLbl, margin, y);
+    y += 4;
+    
+    var totF26=0, totF25=0, totB26=0, totB25=0;
+    var body = items.map(function(c) {
+      var varP = c.f25>0 ? ((c.f26-c.f25)/c.f25)*100 : (c.f26>0?100:-100);
+      totF26+=c.f26; totF25+=c.f25; totB26+=c.b26Eq||0; totB25+=c.b25Eq||0;
+      if (isItalia) return [c.nome, c.nClienti26||0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq||0), NUM(c.b25Eq||0), EURpdf(c.pm26)];
+      return [c.nome, c.citta||'', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq||0), NUM(c.b25Eq||0), EURpdf(c.pm26)];
+    });
+    var totDF = totF25>0 ? ((totF26-totF25)/totF25)*100 : 0;
+    if (isItalia) body.push(['TOTALE','',EURpdf(totF26),EURpdf(totF25),EURsignPdf(totF26-totF25),PCTsign(totDF),NUM(totB26),NUM(totB25),EURpdf(PM(totF26,totB26))]);
+    else body.push(['TOTALE','','',EURpdf(totF26),EURpdf(totF25),EURsignPdf(totF26-totF25),PCTsign(totDF),NUM(totB26),NUM(totB25),EURpdf(PM(totF26,totB26))]);
+    
+    var heads = isItalia
+      ? [['Agente','Clienti','Fatt.'+anno,'Fatt.'+annoP,'Var EUR','Var %','Bott.'+anno,'Bott.'+annoP,'PM']]
+      : [['Cliente','Citta','Agente','Fatt.'+anno,'Fatt.'+annoP,'Var EUR','Var %','Bott.'+anno,'Bott.'+annoP,'PM']];
+    var cS = isItalia
+      ? {1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right'},8:{halign:'right'}}
+      : {3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right'},8:{halign:'right'},9:{halign:'right'}};
+    
+    doc.autoTable({
+      head: heads, body: body, startY: y,
+      theme: 'striped',
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 7 },
+      bodyStyles: { fontSize: 6.5 },
+      columnStyles: cS,
+      styles: { cellPadding: 1.2 },
+      margin: { left: margin, right: margin },
+      didParseCell: function(data) {
+        colorNegativesCallback(data);
+        if (data.section==='body' && data.row.index===body.length-1) {
+          data.cell.styles.fontStyle='bold'; data.cell.styles.fillColor=[240,230,230];
+        }
+      },
+      didDrawPage: function() {
+        drawHeader(doc, {vista:r.vista, anno:anno, annoP:annoP, periodo:periodo}, pageW);
+      }
+    });
+  }
+  
+  // ============ PAGINA 1+: SEZIONE A — PERIODO SELEZIONATO ============
+  var rFakeA = { vista: r.vista, anno: anno, annoP: annoP, periodo: periodoA };
+  drawHeader(doc, rFakeA, pageW);
+  
+  // Sovra-titolo per identificare la sezione
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(201, 168, 76);
+  doc.text('SEZIONE 1 — ' + periodoA.label.toUpperCase(), margin, 29);
+  
+  disegnaSezione(doc, dA26, dA25, itemsA, refsA26, refsA25, periodoA, 34, true);
+  
+  // ============ NUOVA PAGINA: SEZIONE B — YTD ============
+  doc.addPage('a4', 'landscape');
+  var rFakeB = { vista: r.vista, anno: anno, annoP: annoP, periodo: periodoB };
+  drawHeader(doc, rFakeB, pageW);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(201, 168, 76);
+  doc.text('SEZIONE 2 — AVANZAMENTO ' + periodoB.label.toUpperCase(), margin, 29);
+  
+  disegnaSezione(doc, dB26, dB25, itemsB, refsB26, refsB25, periodoB, 34, false);
+  
+  // ============ FOOTER PAGINATO ============
+  addPageNumbers(doc, pageW, pageH);
+  
+  var nomeFile = 'Mosnel_' + r.vista.replace(/\s+/g,'_') + '_' + periodoA.label.replace(/\s+/g,'_') + '+YTD_' + anno + '.pdf';
+  doc.save(nomeFile);
 }
 
 function exportReportPdf() {
