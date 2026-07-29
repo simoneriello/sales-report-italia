@@ -95,13 +95,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .section{margin-bottom:24px}
 .section-title{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--wine);margin-bottom:12px;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
 
-.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
-@media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+.summary-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px}
+@media(max-width:1100px){.summary-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
 .summ-block{border-radius:10px;padding:16px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent}
 .summ-block.blue{background:#eff6ff;border-color:#bfdbfe}
 .summ-block.green{background:#f0fdf4;border-color:#dcfce7}
 .summ-block.red{background:#fef2f2;border-color:#fee2e2}
 .summ-block.amber{background:#fffbeb;border-color:#fcd34d}
+.summ-block.teal{background:#f0fdfa;border-color:#5eead4}
+.summ-block.gray{background:#f8fafc;border-color:#e2e8f0}
 .summ-block:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.08)}
 .summ-block.disabled{cursor:default;opacity:0.7}
 .summ-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
@@ -1008,15 +1011,17 @@ function generaReport() {
       }
     }
     
-    var attivi = [], calo = [], assenti = [];
+    var nuovi = [], crescita = [], calo = [], persi = [];
     for (var i = 0; i < listaItems.length; i++) {
       var c = listaItems[i];
-      if (c.f26 > 0 && c.f25 === 0) attivi.push(c);
+      if (c.f26 > 0 && c.f25 === 0)       nuovi.push(c);    // nuovi: comprano in 2026, non in 2025
       else if (c.f26 > 0 && c.f25 > 0) {
-        if (c.f26 < c.f25) calo.push(c);
-        else attivi.push(c);
-      } else if (c.f26 === 0 && c.f25 > 0) assenti.push(c);
+        if (c.f26 < c.f25) calo.push(c);                    // in calo: attivi entrambi gli anni, 2026 < 2025
+        else crescita.push(c);                               // in crescita: attivi entrambi gli anni, 2026 >= 2025
+      } else if (c.f26 === 0 && c.f25 > 0) persi.push(c);   // persi: hanno comprato in 2025, non ancora in 2026
     }
+    var attivi = nuovi.concat(crescita); // retrocompatibilità con PDF/Excel
+    var assenti = persi;                 // retrocompatibilità
     
     listaItems.sort(function(a, b) { return b.f26 - a.f26; });
     
@@ -1026,6 +1031,7 @@ function generaReport() {
       fmt26: fmt26, fmt25: fmt25,
       trend26: trend26, trend25: trend25,
       tutti: listaItems, attivi: attivi, calo: calo, assenti: assenti,
+      nuovi: nuovi, crescita: crescita, persi: persi,
       isItalia: vista === 'ITALIA'
     };
     
@@ -1058,7 +1064,6 @@ function renderReport() {
   // Grafico andamento mensile
   html += '<div class="chart-wrap">';
   html += '<div class="chart-title">Andamento mensile fatturato — ' + escapeHTML(r.periodo.label) + '</div>';
-  html += '<div class="chart-legend"><div class="legend-item"><span class="legend-dot" style="background:var(--wine)"></span>' + r.anno + '</div><div class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span>' + r.annoP + '</div></div>';
   html += buildChart(r.trend26, r.trend25, r.anno, r.annoP, r.periodo);
   html += '</div>';
   
@@ -1066,22 +1071,26 @@ function renderReport() {
   var entityLabel = r.isItalia ? 'agenti' : 'clienti';
   var entityLabelCap = r.isItalia ? 'Agenti' : 'Clienti';
   
-  // 4 blocchi riepilogo
+  // 6 blocchi riepilogo
   html += '<div class="section"><div class="section-title">Riepilogo ' + entityLabel + '</div><div class="summary-grid">';
   
   var totDeltaTutti = 0;
   for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
-  var totDeltaAttivi = 0;
-  for (var i = 0; i < r.attivi.length; i++) totDeltaAttivi += (r.attivi[i].f26 - r.attivi[i].f25);
+  var totDeltaCrescita = 0;
+  for (var i = 0; i < r.crescita.length; i++) totDeltaCrescita += (r.crescita[i].f26 - r.crescita[i].f25);
   var totDeltaCalo = 0;
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
-  var totDeltaAssenti = 0;
-  for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
+  var totDeltaNuovi = 0;
+  for (var i = 0; i < r.nuovi.length; i++) totDeltaNuovi += r.nuovi[i].f26;
+  var totDeltaPersi = 0;
+  for (var i = 0; i < r.persi.length; i++) totDeltaPersi -= r.persi[i].f25;
   
-  html += buildSummBlock('blue', '≡ Tutti i ' + entityLabel, r.tutti.length, totDeltaTutti, 'tutti', true);
-  html += buildSummBlock('green', '✓ ' + entityLabelCap + ' attivi', r.attivi.length, totDeltaAttivi, 'attivi', true);
-  html += buildSummBlock(r.calo.length?'red':'green', '↓ ' + entityLabelCap + ' in calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
-  html += buildSummBlock(r.assenti.length?'amber':'green', '⚠ Non ancora attivi', r.assenti.length, totDeltaAssenti, 'assenti', r.assenti.length > 0);
+  html += buildSummBlock('blue',  '≡ Tutti i ' + entityLabel, r.tutti.length, totDeltaTutti, 'tutti', true);
+  html += buildSummBlock('green', '↑ In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
+  html += buildSummBlock(r.calo.length ? 'red' : 'green', '↓ In calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
+  html += buildSummBlock('teal',  '★ Nuovi ' + r.anno, r.nuovi.length, totDeltaNuovi, 'nuovi', r.nuovi.length > 0);
+  html += buildSummBlock(r.persi.length ? 'amber' : 'green', '✗ Persi', r.persi.length, totDeltaPersi, 'persi', r.persi.length > 0);
+  html += buildSummBlock('gray',  '○ Non att. ' + r.anno, r.assenti.length, 0, 'assenti', r.assenti.length > 0);
   
   html += '</div></div>';
   
@@ -1641,127 +1650,111 @@ function buildChart(t26, t25, anno, annoP, periodo) {
   }
   if (maxV === 0) return '<p style="color:var(--muted);font-size:12px;padding:20px;text-align:center">Nessun dato nel periodo selezionato</p>';
   
-  // Formato compatto per etichette valori sul grafico
+  // Formato compatto per valori nelle righe sotto il grafico
   function fmtV(v) {
-    if (!v || v === 0) return '';
+    if (!v || v === 0) return '—';
     if (v >= 1000000) return (v/1000000).toFixed(1).replace('.', ',') + 'M';
     if (v >= 1000) return (v/1000).toFixed(1).replace('.', ',') + 'k';
     return Math.round(v).toString();
   }
   
-  var w = 760, h = 270, padL = 60, padR = 20, padT = 42, padB = 40;
+  // Grafico SVG (solo le linee, senza etichette valore)
+  var w = 760, h = 210, padL = 60, padR = 20, padT = 22, padB = 36;
   var cw = w - padL - padR;
   var ch = h - padT - padB;
   var step = nMesi > 1 ? cw / (nMesi - 1) : cw / 2;
   
-  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:340px" font-family="Arial, sans-serif">';
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;display:block" font-family="Arial, sans-serif">';
   
   // Gridlines orizzontali
   for (var i = 0; i <= 4; i++) {
     var gy = padT + (ch * i / 4);
     var val = maxV * (4 - i) / 4;
-    svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (w - padR) + '" y2="' + gy + '" stroke="#e8dede" stroke-width="1"/>';
-    var lbl = val >= 1000000 ? (val/1000000).toFixed(1) + 'M' : (val >= 1000 ? Math.round(val/1000) + 'k' : Math.round(val));
-    svg += '<text x="' + (padL - 8) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="10" fill="#7a6b6c">' + lbl + '</text>';
+    svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (w-padR) + '" y2="' + gy + '" stroke="#e8dede" stroke-width="1"/>';
+    var lbl = val >= 1000000 ? (val/1000000).toFixed(1)+'M' : (val >= 1000 ? Math.round(val/1000)+'k' : Math.round(val));
+    svg += '<text x="' + (padL-8) + '" y="' + (gy+3) + '" text-anchor="end" font-size="10" fill="#7a6b6c">' + lbl + '</text>';
   }
   
-  // Funzione xCoord per mese
   function xc(m) {
-    if (nMesi === 1) return padL + cw / 2;
-    return padL + (m - mesiDa) * step;
+    return nMesi === 1 ? padL + cw / 2 : padL + (m - mesiDa) * step;
   }
   
-  // Asse X labels (mesi)
+  // Asse X — solo mese abbreviato
   for (var m = mesiDa; m <= mesiA; m++) {
-    svg += '<text x="' + xc(m) + '" y="' + (h - 18) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
+    svg += '<text x="' + xc(m) + '" y="' + (h-12) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
   }
   
   // Indicatore "aggiornato al" per YTD
   if (periodo && periodo.mode === 'YTD' && periodo.giornoMax > 0 && periodo.giornoMax < 28) {
-    svg += '<text x="' + (w - padR) + '" y="14" text-anchor="end" font-size="9" fill="#7a6b6c" font-style="italic">aggiornato al ' + periodo.giornoMax + ' ' + meseAbbr(periodo.a).toLowerCase() + '</text>';
+    svg += '<text x="' + (w-padR) + '" y="14" text-anchor="end" font-size="9" fill="#7a6b6c" font-style="italic">aggiornato al ' + periodo.giornoMax + ' ' + meseAbbr(periodo.a).toLowerCase() + '</text>';
   }
   
   // Linea 2025 (oro tratteggiata)
   if (nMesi > 1) {
     var pts25 = [];
-    for (var m = mesiDa; m <= mesiA; m++) {
-      var y25 = padT + ch - ((t25[m] / maxV) * ch);
-      pts25.push(xc(m) + ',' + y25);
-    }
+    for (var m = mesiDa; m <= mesiA; m++) pts25.push(xc(m) + ',' + (padT + ch - ((t25[m]/maxV)*ch)));
     svg += '<polyline points="' + pts25.join(' ') + '" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-dasharray="6,4"/>';
   }
-  
-  // Punti + valori 2025
+  // Punti 2025
   for (var m = mesiDa; m <= mesiA; m++) {
-    if (t25[m] === 0) continue;
-    var y25 = padT + ch - ((t25[m] / maxV) * ch);
+    if (!t25[m]) continue;
+    var y25 = padT + ch - ((t25[m]/maxV)*ch);
     svg += '<circle cx="' + xc(m) + '" cy="' + y25 + '" r="3.5" fill="#C9A84C" stroke="white" stroke-width="1.5"/>';
-    
-    // Etichetta valore 2025: di default sotto il punto; se il punto è in basso (< 20px dal fondo area), vai sopra
-    var lbl25 = fmtV(t25[m]);
-    if (lbl25) {
-      var lblY25, anchor25 = 'middle';
-      if (y25 + 22 > padT + ch) {
-        // Punto in basso: etichetta sopra
-        lblY25 = y25 - 7;
-      } else {
-        // Etichetta sotto
-        lblY25 = y25 + 17;
-      }
-      svg += '<text x="' + xc(m) + '" y="' + lblY25 + '" text-anchor="' + anchor25 + '" font-size="9" font-weight="600" fill="#b8922c">' + lbl25 + '</text>';
-    }
   }
   
   // Linea 2026 (bordeaux piena)
   if (nMesi > 1) {
     var pts26 = [];
     for (var m = mesiDa; m <= mesiA; m++) {
-      if (t26[m] > 0 || pts26.length > 0) {
-        var y26 = padT + ch - ((t26[m] / maxV) * ch);
-        pts26.push(xc(m) + ',' + y26);
-      }
+      if (t26[m] > 0 || pts26.length > 0) pts26.push(xc(m) + ',' + (padT + ch - ((t26[m]/maxV)*ch)));
     }
-    if (pts26.length > 1) {
-      svg += '<polyline points="' + pts26.join(' ') + '" fill="none" stroke="#722F37" stroke-width="3"/>';
-    }
+    if (pts26.length > 1) svg += '<polyline points="' + pts26.join(' ') + '" fill="none" stroke="#722F37" stroke-width="3"/>';
   }
-  
-  // Punti + valori 2026
+  // Punti 2026
   for (var m = mesiDa; m <= mesiA; m++) {
-    if (t26[m] === 0) continue;
-    var y26 = padT + ch - ((t26[m] / maxV) * ch);
+    if (!t26[m]) continue;
+    var y26 = padT + ch - ((t26[m]/maxV)*ch);
     svg += '<circle cx="' + xc(m) + '" cy="' + y26 + '" r="4" fill="#722F37" stroke="white" stroke-width="2"/>';
-    
-    // Etichetta valore 2026: di default sopra il punto; se il punto è in cima (< 14px dal top), vai sotto
-    var lbl26 = fmtV(t26[m]);
-    if (lbl26) {
-      var lblY26;
-      if (y26 - 14 < padT) {
-        // Punto in alto: etichetta sotto il punto
-        lblY26 = y26 + 14;
-      } else {
-        // Etichetta sopra
-        lblY26 = y26 - 7;
-      }
-      // Sfondo bianco semi-trasparente per leggibilità (rect + text)
-      var lblW = lbl26.length * 5.5 + 6;
-      svg += '<rect x="' + (xc(m) - lblW/2) + '" y="' + (lblY26 - 10) + '" width="' + lblW + '" height="12" rx="2" fill="white" fill-opacity="0.75"/>';
-      svg += '<text x="' + xc(m) + '" y="' + lblY26 + '" text-anchor="middle" font-size="10" font-weight="700" fill="#722F37">' + lbl26 + '</text>';
-    }
   }
   
   svg += '</svg>';
-  return svg;
+  
+  // Tabella valori sotto il grafico: riga 2026 + riga 2025
+  // Usa una grid CSS per allineare perfettamente con i mesi del grafico SVG
+  // padL/w in percentuale: padL=60/760, padR=20/760
+  var pctL = (60/760*100).toFixed(2) + '%';
+  var pctR = (20/760*100).toFixed(2) + '%';
+  
+  var tbl = '<div style="display:flex;padding-left:' + pctL + ';padding-right:' + pctR + ';gap:0;border-top:1px solid #e8dede;margin-top:0">';
+  for (var m = mesiDa; m <= mesiA; m++) {
+    var isLast = (m === mesiA);
+    tbl += '<div style="flex:1;text-align:center;padding:4px 2px 2px 2px' + (isLast ? '' : ';border-right:1px solid #f0e8e8') + '">';
+    tbl += '<div style="font-size:10px;font-weight:700;color:#722F37;line-height:1.4">' + fmtV(t26[m]) + '</div>';
+    tbl += '<div style="font-size:10px;font-weight:500;color:#b8922c;line-height:1.4">' + fmtV(t25[m]) + '</div>';
+    tbl += '</div>';
+  }
+  tbl += '</div>';
+  
+  // Legenda miniatura fianco ai valori
+  var legend = '<div style="display:flex;gap:16px;padding:2px ' + pctR + ' 4px ' + pctL + ';font-size:10px">';
+  legend += '<span style="color:#722F37;font-weight:700">● ' + anno + '</span>';
+  legend += '<span style="color:#b8922c;font-weight:600">● ' + annoP + '</span>';
+  legend += '</div>';
+  
+  return '<div style="position:relative">' + svg + tbl + legend + '</div>';
 }
 
 function openFV(tipo) {
   var data, title;
   var entity = lastReport.isItalia ? 'agenti' : 'clienti';
   var entityCap = lastReport.isItalia ? 'Agenti' : 'Clienti';
-  if (tipo === 'tutti') { data = lastReport.tutti; title = 'Tutti i ' + entity; }
-  else if (tipo === 'attivi') { data = lastReport.attivi; title = entityCap + ' attivi'; }
-  else if (tipo === 'calo') { data = lastReport.calo; title = entityCap + ' in calo'; }
-  else if (tipo === 'assenti') { data = lastReport.assenti; title = 'Non ancora attivi'; }
+  if (tipo === 'tutti')    { data = lastReport.tutti;    title = 'Tutti i ' + entity; }
+  else if (tipo === 'attivi')   { data = lastReport.attivi;   title = entityCap + ' attivi'; }
+  else if (tipo === 'crescita') { data = lastReport.crescita; title = entityCap + ' in crescita'; }
+  else if (tipo === 'calo')     { data = lastReport.calo;     title = entityCap + ' in calo'; }
+  else if (tipo === 'nuovi')    { data = lastReport.nuovi;    title = entityCap + ' nuovi ' + lastReport.anno; }
+  else if (tipo === 'persi')    { data = lastReport.persi;    title = entityCap + ' persi (non attivi ' + lastReport.anno + ')'; }
+  else if (tipo === 'assenti')  { data = lastReport.assenti;  title = 'Non ancora attivi'; }
   
   // Salva snapshot della vista corrente prima di aprire FV
   window._mainSnapshot = {
@@ -3179,11 +3172,9 @@ function exportReportPdf() {
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
   
   // Calcolo blocchi
-  var totDeltaTutti = 0, totDeltaAttivi = 0, totDeltaCalo = 0, totDeltaAssenti = 0;
+  var totDeltaTutti = 0, totDeltaCalo = 0;
   for (var i = 0; i < r.tutti.length; i++) totDeltaTutti += (r.tutti[i].f26 - r.tutti[i].f25);
-  for (var i = 0; i < r.attivi.length; i++) totDeltaAttivi += (r.attivi[i].f26 - r.attivi[i].f25);
   for (var i = 0; i < r.calo.length; i++) totDeltaCalo += (r.calo[i].f26 - r.calo[i].f25);
-  for (var i = 0; i < r.assenti.length; i++) totDeltaAssenti += (r.assenti[i].f26 - r.assenti[i].f25);
   
   var entityLbl = r.isItalia ? 'agenti' : 'clienti';
   var entityCap = r.isItalia ? 'Agenti' : 'Clienti';
@@ -3217,14 +3208,23 @@ function exportReportPdf() {
   });
   var yKpiEnd = doc.lastAutoTable.finalY;
   
-  // Tabella blocchi (destra)
+  // Calcola delta per nuovi e persi
+  var totDeltaNuovi = 0;
+  for (var i = 0; i < r.nuovi.length; i++) totDeltaNuovi += r.nuovi[i].f26;
+  var totDeltaPersi = 0;
+  for (var i = 0; i < r.persi.length; i++) totDeltaPersi -= r.persi[i].f25;
+  var totDeltaCrescita = 0;
+  for (var i = 0; i < r.crescita.length; i++) totDeltaCrescita += (r.crescita[i].f26 - r.crescita[i].f25);
+  
+  // Tabella blocchi (destra) — 6 categorie
   doc.autoTable({
-    head: [['Categoria', 'N.', 'Var EUR totale']],
+    head: [['Categoria', 'N.', 'Var EUR']],
     body: [
-      ['Tutti i ' + entityLbl, r.tutti.length, EURsignPdf(totDeltaTutti)],
-      [entityCap + ' attivi', r.attivi.length, EURsignPdf(totDeltaAttivi)],
-      [entityCap + ' in calo', r.calo.length, EURsignPdf(totDeltaCalo)],
-      ['Non ancora attivi', r.assenti.length, EURsignPdf(totDeltaAssenti)]
+      ['Tutti i ' + entityLbl,      r.tutti.length,    EURsignPdf(totDeltaTutti)],
+      ['★ Nuovi ' + r.anno,         r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
+      ['↑ In crescita',             r.crescita.length, EURsignPdf(totDeltaCrescita)],
+      ['↓ In calo',                 r.calo.length,     EURsignPdf(totDeltaCalo)],
+      ['✗ Persi (non att. ' + r.anno + ')', r.persi.length, EURsignPdf(totDeltaPersi)],
     ],
     startY: y,
     theme: 'striped',
