@@ -95,7 +95,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .section{margin-bottom:24px}
 .section-title{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--wine);margin-bottom:12px;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
 
-.summary-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px}
+.summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
 @media(max-width:1100px){.summary-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
 .summ-block{border-radius:10px;padding:16px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent}
@@ -1014,14 +1014,56 @@ function generaReport() {
     var nuovi = [], crescita = [], calo = [], persi = [];
     for (var i = 0; i < listaItems.length; i++) {
       var c = listaItems[i];
-      if (c.f26 > 0 && c.f25 === 0)       nuovi.push(c);    // nuovi: comprano in 2026, non in 2025
+      if (c.f26 > 0 && c.f25 === 0)       nuovi.push(c);
       else if (c.f26 > 0 && c.f25 > 0) {
-        if (c.f26 < c.f25) calo.push(c);                    // in calo: attivi entrambi gli anni, 2026 < 2025
-        else crescita.push(c);                               // in crescita: attivi entrambi gli anni, 2026 >= 2025
-      } else if (c.f26 === 0 && c.f25 > 0) persi.push(c);   // persi: hanno comprato in 2025, non ancora in 2026
+        if (c.f26 < c.f25) calo.push(c);
+        else crescita.push(c);
+      } else if (c.f26 === 0 && c.f25 > 0) persi.push(c);
     }
-    var attivi = nuovi.concat(crescita); // retrocompatibilità con PDF/Excel
-    var assenti = persi;                 // retrocompatibilità
+    var attivi = nuovi.concat(crescita);
+    var assenti = persi;
+    
+    // Calcolo clienti attivi YTD (sempre, indipendentemente dal periodo selezionato)
+    var ytdClienti26 = 0, ytdClienti25 = 0;
+    var ytdNuoviClienti = 0, ytdPersiClienti = 0;
+    var cli26YTD = {}, cli25YTD = {};
+    for (var i = 0; i < dati.length; i++) {
+      var row = dati[i];
+      if (!isRigaFatturato(row)) continue;
+      if (row.anno === anno && row.mese >= 1) {
+        if (!cli26YTD[row.cliente]) cli26YTD[row.cliente] = 0;
+        cli26YTD[row.cliente] += row.importo;
+      }
+      if (row.anno === annoP && row.mese >= 1) {
+        if (!cli25YTD[row.cliente]) cli25YTD[row.cliente] = 0;
+        cli25YTD[row.cliente] += row.importo;
+      }
+    }
+    // Limita al giornoMax se YTD (non conta mesi futuri)
+    var maxMeseYTD = 0, maxGiornoYTD = 0;
+    for (var i = 0; i < D.length; i++) {
+      if (D[i].anno === anno && D[i].mese > maxMeseYTD) { maxMeseYTD = D[i].mese; maxGiornoYTD = D[i].giorno; }
+      else if (D[i].anno === anno && D[i].mese === maxMeseYTD && D[i].giorno > maxGiornoYTD) maxGiornoYTD = D[i].giorno;
+    }
+    for (var k in cli26YTD) { if (cli26YTD[k] > 0) ytdClienti26++; }
+    for (var k in cli25YTD) { if (cli25YTD[k] > 0) ytdClienti25++; }
+    for (var k in cli26YTD) { if (cli26YTD[k] > 0 && (!cli25YTD[k] || cli25YTD[k] === 0)) ytdNuoviClienti++; }
+    for (var k in cli25YTD) { if (cli25YTD[k] > 0 && (!cli26YTD[k] || cli26YTD[k] === 0)) ytdPersiClienti++; }
+    
+    // Calcolo clienti (non agenti) per la vista Italia
+    var nClientiNuovi = 0, nClientiPersi = 0, nClientiCrescita = 0, nClientiCalo = 0, nClientiAttivi26 = 0;
+    var allClienti = {};
+    for (var k in d26.clienti) { allClienti[k] = 1; }
+    for (var k in d25.clienti) { allClienti[k] = 1; }
+    for (var k in allClienti) {
+      var f26c = (d26.clienti[k] && d26.clienti[k].fatt) || 0;
+      var f25c = (d25.clienti[k] && d25.clienti[k].fatt) || 0;
+      if (f26c > 0) nClientiAttivi26++;
+      if (f26c > 0 && f25c === 0) nClientiNuovi++;
+      else if (f26c > 0 && f25c > 0 && f26c >= f25c) nClientiCrescita++;
+      else if (f26c > 0 && f25c > 0 && f26c < f25c) nClientiCalo++;
+      else if (f26c === 0 && f25c > 0) nClientiPersi++;
+    }
     
     listaItems.sort(function(a, b) { return b.f26 - a.f26; });
     
@@ -1032,7 +1074,13 @@ function generaReport() {
       trend26: trend26, trend25: trend25,
       tutti: listaItems, attivi: attivi, calo: calo, assenti: assenti,
       nuovi: nuovi, crescita: crescita, persi: persi,
-      isItalia: vista === 'ITALIA'
+      isItalia: vista === 'ITALIA',
+      // Statistiche clienti (livello cliente, non agente)
+      ytdClienti26: ytdClienti26, ytdClienti25: ytdClienti25,
+      ytdNuoviClienti: ytdNuoviClienti, ytdPersiClienti: ytdPersiClienti,
+      nClientiNuovi: nClientiNuovi, nClientiPersi: nClientiPersi,
+      nClientiCrescita: nClientiCrescita, nClientiCalo: nClientiCalo,
+      nClientiAttivi26: nClientiAttivi26
     };
     
     renderReport();
@@ -1049,11 +1097,17 @@ function renderReport() {
   html += '<div class="report-header"><div><h1>' + escapeHTML(r.vista) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div>';
   html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button><button onclick="exportMultiPeriodoPdf()" title="Esporta un PDF con due sezioni: periodo selezionato + YTD">PDF Multi-periodo</button></div></div>';
   
-  // KPI principali — uso bottiglie equivalenti
+  // KPI principali
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + '</div><div class="kpi-sub"><span class="' + (r.d26.fatturato-r.d25.fatturato>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.fatturato-r.d25.fatturato) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglieEq) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglieEq) + '</div><div class="kpi-sub"><span class="' + (r.d26.bottiglieEq-r.d25.bottiglieEq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
+  // KPI clienti attivi YTD (sempre visibile, sia per agente che per Italia)
+  var ytdLabel = r.periodo.mode === 'YTD' ? 'Clienti attivi ' + r.anno : 'Clienti attivi YTD';
+  html += '<div class="kpi-card" style="border-color:#5eead4"><div class="kpi-label">' + ytdLabel + '</div><div class="kpi-value">' + r.ytdClienti26 + '</div>';
+  html += '<div class="kpi-sub">vs ' + r.ytdClienti25 + ' nel ' + r.annoP + '</div>';
+  html += '<div class="kpi-sub" style="margin-top:4px;font-size:11px"><span style="color:#0d9488;font-weight:700">+' + r.ytdNuoviClienti + ' nuovi</span> &nbsp; <span style="color:#b45309;font-weight:700">−' + r.ytdPersiClienti + ' persi</span></div>';
+  html += '</div>';
   if (r.isItalia) {
     html += '<div class="kpi-card"><div class="kpi-label">Agenti attivi</div><div class="kpi-value">' + r.attivi.length + '</div><div class="kpi-sub">' + r.tutti.length + ' totali nel periodo</div></div>';
   } else {
@@ -1071,7 +1125,7 @@ function renderReport() {
   var entityLabel = r.isItalia ? 'agenti' : 'clienti';
   var entityLabelCap = r.isItalia ? 'Agenti' : 'Clienti';
   
-  // 6 blocchi riepilogo
+  // 5 blocchi riepilogo (rimosso "Non att." che duplicava "Persi")
   html += '<div class="section"><div class="section-title">Riepilogo ' + entityLabel + '</div><div class="summary-grid">';
   
   var totDeltaTutti = 0;
@@ -1085,14 +1139,29 @@ function renderReport() {
   var totDeltaPersi = 0;
   for (var i = 0; i < r.persi.length; i++) totDeltaPersi -= r.persi[i].f25;
   
-  html += buildSummBlock('blue',  '≡ Tutti i ' + entityLabel, r.tutti.length, totDeltaTutti, 'tutti', true);
-  html += buildSummBlock('green', '↑ In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
-  html += buildSummBlock(r.calo.length ? 'red' : 'green', '↓ In calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
-  html += buildSummBlock('teal',  '★ Nuovi ' + r.anno, r.nuovi.length, totDeltaNuovi, 'nuovi', r.nuovi.length > 0);
-  html += buildSummBlock(r.persi.length ? 'amber' : 'green', '✗ Persi', r.persi.length, totDeltaPersi, 'persi', r.persi.length > 0);
-  html += buildSummBlock('gray',  '○ Non att. ' + r.anno, r.assenti.length, 0, 'assenti', r.assenti.length > 0);
+  html += buildSummBlock('blue',  'Tutti i ' + entityLabel, r.tutti.length, totDeltaTutti, 'tutti', true);
+  html += buildSummBlock('green', 'In crescita', r.crescita.length, totDeltaCrescita, 'crescita', r.crescita.length > 0);
+  html += buildSummBlock(r.calo.length ? 'red' : 'green', 'In calo', r.calo.length, totDeltaCalo, 'calo', r.calo.length > 0);
+  html += buildSummBlock('teal',  'Nuovi ' + r.anno, r.nuovi.length, totDeltaNuovi, 'nuovi', r.nuovi.length > 0);
+  html += buildSummBlock(r.persi.length ? 'amber' : 'green', 'Persi', r.persi.length, totDeltaPersi, 'persi', r.persi.length > 0);
   
-  html += '</div></div>';
+  html += '</div>';
+  
+  // Per vista Italia: aggiunge anche i blocchi a livello CLIENTE (non agente)
+  if (r.isItalia) {
+    html += '<div style="margin-top:10px">';
+    html += '<div class="section-title" style="font-size:11px;margin-bottom:6px">Riepilogo clienti (livello cliente)</div>';
+    html += '<div class="summary-grid">';
+    html += buildSummBlock('blue', 'Clienti attivi', r.nClientiAttivi26, 0, null, false);
+    html += buildSummBlock('green', 'In crescita', r.nClientiCrescita, 0, null, false);
+    html += buildSummBlock('red', 'In calo', r.nClientiCalo, 0, null, false);
+    html += buildSummBlock('teal', 'Nuovi ' + r.anno, r.nClientiNuovi, 0, null, false);
+    html += buildSummBlock('amber', 'Persi', r.nClientiPersi, 0, null, false);
+    html += '</div>';
+    html += '</div>';
+  }
+  
+  html += '</div>';
   
   // Tabella inline (sempre visibile per scheda agente, opzionale per Italia)
   html += '<div class="section"><div class="section-title">' + entityLabelCap + ' — dettaglio (' + r.tutti.length + ')</div>';
@@ -3245,23 +3314,45 @@ function exportReportPdf() {
   var totDeltaCrescita = 0;
   for (var i = 0; i < r.crescita.length; i++) totDeltaCrescita += (r.crescita[i].f26 - r.crescita[i].f25);
   
-  // Tabella blocchi (destra) — 6 categorie
+  // Tabella blocchi (destra): 5 categorie (rimosso duplicato "Non att.")
+  var ytdLabelPdf = r.periodo.mode === 'YTD' ? 'Clienti attivi ' + r.anno : 'Clienti attivi YTD';
+  var blocksBody = [
+    ['Tutti i ' + entityLbl,   r.tutti.length,    EURsignPdf(totDeltaTutti)],
+    ['In crescita',            r.crescita.length, EURsignPdf(totDeltaCrescita)],
+    ['In calo',                r.calo.length,     EURsignPdf(totDeltaCalo)],
+    ['Nuovi ' + r.anno,        r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
+    ['Persi',                  r.persi.length,    EURsignPdf(totDeltaPersi)],
+    [ytdLabelPdf,              r.ytdClienti26,    '+' + r.ytdNuoviClienti + ' nuovi / -' + r.ytdPersiClienti + ' persi']
+  ];
+  // Per vista Italia aggiungo anche riga clienti
+  if (r.isItalia) {
+    blocksBody.push(['---Clienti---', '', '']);
+    blocksBody.push(['Clienti attivi', r.nClientiAttivi26, '']);
+    blocksBody.push(['Clienti nuovi ' + r.anno, r.nClientiNuovi, '']);
+    blocksBody.push(['Clienti persi', r.nClientiPersi, '']);
+    blocksBody.push(['Clienti crescita', r.nClientiCrescita, '']);
+    blocksBody.push(['Clienti calo', r.nClientiCalo, '']);
+  }
+  
   doc.autoTable({
-    head: [['Categoria', 'N.', 'Var EUR']],
-    body: [
-      ['Tutti i ' + entityLbl,      r.tutti.length,    EURsignPdf(totDeltaTutti)],
-      ['Nuovi ' + r.anno,              r.nuovi.length,    EURsignPdf(totDeltaNuovi)],
-      ['In crescita',                  r.crescita.length, EURsignPdf(totDeltaCrescita)],
-      ['In calo',                      r.calo.length,     EURsignPdf(totDeltaCalo)],
-      ['Persi (non att. ' + r.anno + ')', r.persi.length, EURsignPdf(totDeltaPersi)],
-    ],
+    head: [['Categoria', 'N.', 'Var EUR / Note']],
+    body: blocksBody,
     startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 9 },
+    bodyStyles: { fontSize: 8.5 },
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' } },
     margin: { left: margin + halfW + 4, right: margin },
-    didParseCell: colorNegativesCallback,
+    didParseCell: function(data) {
+      colorNegativesCallback(data);
+      // Riga separatore "---Clienti---"
+      if (data.section === 'body' && data.cell.raw === '---Clienti---') {
+        data.cell.styles.fillColor = [114, 47, 55];
+        data.cell.styles.textColor = [255, 255, 255];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.text = ['Dettaglio clienti'];
+      }
+    },
     tableWidth: pageW - 2*margin - halfW - 4
   });
   var yBlocksEnd = doc.lastAutoTable.finalY;
