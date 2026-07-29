@@ -1641,20 +1641,28 @@ function buildChart(t26, t25, anno, annoP, periodo) {
   }
   if (maxV === 0) return '<p style="color:var(--muted);font-size:12px;padding:20px;text-align:center">Nessun dato nel periodo selezionato</p>';
   
-  var w = 760, h = 240, padL = 60, padR = 20, padT = 20, padB = 40;
+  // Formato compatto per etichette valori sul grafico
+  function fmtV(v) {
+    if (!v || v === 0) return '';
+    if (v >= 1000000) return (v/1000000).toFixed(1).replace('.', ',') + 'M';
+    if (v >= 1000) return (v/1000).toFixed(1).replace('.', ',') + 'k';
+    return Math.round(v).toString();
+  }
+  
+  var w = 760, h = 270, padL = 60, padR = 20, padT = 42, padB = 40;
   var cw = w - padL - padR;
   var ch = h - padT - padB;
   var step = nMesi > 1 ? cw / (nMesi - 1) : cw / 2;
   
-  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:320px">';
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;max-height:340px" font-family="Arial, sans-serif">';
   
-  // gridlines orizzontali
+  // Gridlines orizzontali
   for (var i = 0; i <= 4; i++) {
-    var y = padT + (ch * i / 4);
+    var gy = padT + (ch * i / 4);
     var val = maxV * (4 - i) / 4;
-    svg += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="#e8dede" stroke-width="1"/>';
+    svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (w - padR) + '" y2="' + gy + '" stroke="#e8dede" stroke-width="1"/>';
     var lbl = val >= 1000000 ? (val/1000000).toFixed(1) + 'M' : (val >= 1000 ? Math.round(val/1000) + 'k' : Math.round(val));
-    svg += '<text x="' + (padL - 8) + '" y="' + (y + 3) + '" text-anchor="end" font-size="10" fill="#7a6b6c">' + lbl + '</text>';
+    svg += '<text x="' + (padL - 8) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="10" fill="#7a6b6c">' + lbl + '</text>';
   }
   
   // Funzione xCoord per mese
@@ -1663,12 +1671,12 @@ function buildChart(t26, t25, anno, annoP, periodo) {
     return padL + (m - mesiDa) * step;
   }
   
-  // Asse X labels
+  // Asse X labels (mesi)
   for (var m = mesiDa; m <= mesiA; m++) {
     svg += '<text x="' + xc(m) + '" y="' + (h - 18) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
   }
   
-  // Indicatore "ultimo aggiornamento" per YTD
+  // Indicatore "aggiornato al" per YTD
   if (periodo && periodo.mode === 'YTD' && periodo.giornoMax > 0 && periodo.giornoMax < 28) {
     svg += '<text x="' + (w - padR) + '" y="14" text-anchor="end" font-size="9" fill="#7a6b6c" font-style="italic">aggiornato al ' + periodo.giornoMax + ' ' + meseAbbr(periodo.a).toLowerCase() + '</text>';
   }
@@ -1683,11 +1691,25 @@ function buildChart(t26, t25, anno, annoP, periodo) {
     svg += '<polyline points="' + pts25.join(' ') + '" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-dasharray="6,4"/>';
   }
   
-  // Punti 2025
+  // Punti + valori 2025
   for (var m = mesiDa; m <= mesiA; m++) {
     if (t25[m] === 0) continue;
     var y25 = padT + ch - ((t25[m] / maxV) * ch);
     svg += '<circle cx="' + xc(m) + '" cy="' + y25 + '" r="3.5" fill="#C9A84C" stroke="white" stroke-width="1.5"/>';
+    
+    // Etichetta valore 2025: di default sotto il punto; se il punto è in basso (< 20px dal fondo area), vai sopra
+    var lbl25 = fmtV(t25[m]);
+    if (lbl25) {
+      var lblY25, anchor25 = 'middle';
+      if (y25 + 22 > padT + ch) {
+        // Punto in basso: etichetta sopra
+        lblY25 = y25 - 7;
+      } else {
+        // Etichetta sotto
+        lblY25 = y25 + 17;
+      }
+      svg += '<text x="' + xc(m) + '" y="' + lblY25 + '" text-anchor="' + anchor25 + '" font-size="9" font-weight="600" fill="#b8922c">' + lbl25 + '</text>';
+    }
   }
   
   // Linea 2026 (bordeaux piena)
@@ -1704,11 +1726,28 @@ function buildChart(t26, t25, anno, annoP, periodo) {
     }
   }
   
-  // Punti 2026
+  // Punti + valori 2026
   for (var m = mesiDa; m <= mesiA; m++) {
     if (t26[m] === 0) continue;
     var y26 = padT + ch - ((t26[m] / maxV) * ch);
     svg += '<circle cx="' + xc(m) + '" cy="' + y26 + '" r="4" fill="#722F37" stroke="white" stroke-width="2"/>';
+    
+    // Etichetta valore 2026: di default sopra il punto; se il punto è in cima (< 14px dal top), vai sotto
+    var lbl26 = fmtV(t26[m]);
+    if (lbl26) {
+      var lblY26;
+      if (y26 - 14 < padT) {
+        // Punto in alto: etichetta sotto il punto
+        lblY26 = y26 + 14;
+      } else {
+        // Etichetta sopra
+        lblY26 = y26 - 7;
+      }
+      // Sfondo bianco semi-trasparente per leggibilità (rect + text)
+      var lblW = lbl26.length * 5.5 + 6;
+      svg += '<rect x="' + (xc(m) - lblW/2) + '" y="' + (lblY26 - 10) + '" width="' + lblW + '" height="12" rx="2" fill="white" fill-opacity="0.75"/>';
+      svg += '<text x="' + xc(m) + '" y="' + lblY26 + '" text-anchor="middle" font-size="10" font-weight="700" fill="#722F37">' + lbl26 + '</text>';
+    }
   }
   
   svg += '</svg>';
