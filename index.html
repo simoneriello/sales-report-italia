@@ -1111,22 +1111,13 @@ function renderReport() {
   html += '<div class="report-header"><div><h1>' + escapeHTML(r.vista) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div>';
   html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button><button onclick="exportMultiPeriodoPdf()" title="Esporta un PDF con due sezioni: periodo selezionato + YTD">PDF Multi-periodo</button></div></div>';
   
-  // KPI principali
+  // KPI principali: 4 card simmetriche — Fatturato · Bottiglie · Prezzo Medio · Ordini
+  var dOrd = r.d25.ordini > 0 ? ((r.d26.ordini - r.d25.ordini) / r.d25.ordini) * 100 : 0;
   html += '<div class="kpi-row">';
   html += '<div class="kpi-card"><div class="kpi-label">Fatturato ' + r.anno + '</div><div class="kpi-value">' + EUR(r.d26.fatturato) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.fatturato) + '</div><div class="kpi-sub"><span class="' + (r.d26.fatturato-r.d25.fatturato>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.fatturato-r.d25.fatturato) + '</span> <span class="badge ' + (dF>=0?'badge-up':'badge-down') + '">' + PCTsign(dF) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Bottiglie ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.bottiglieEq) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.bottiglieEq) + '</div><div class="kpi-sub"><span class="' + (r.d26.bottiglieEq-r.d25.bottiglieEq>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.bottiglieEq-r.d25.bottiglieEq) + '</span> <span class="badge ' + (dB>=0?'badge-up':'badge-down') + '">' + PCTsign(dB) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(r.d26.pm) + '</div><div class="kpi-sub">vs ' + EUR(r.d25.pm) + '</div><div class="kpi-sub"><span class="' + (r.d26.pm-r.d25.pm>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(r.d26.pm-r.d25.pm) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
-  // KPI clienti attivi YTD (sempre visibile, sia per agente che per Italia)
-  var ytdLabel = r.periodo.mode === 'YTD' ? 'Clienti attivi ' + r.anno : 'Clienti attivi YTD';
-  html += '<div class="kpi-card" style="border-color:#5eead4"><div class="kpi-label">' + ytdLabel + '</div><div class="kpi-value">' + r.ytdClienti26 + '</div>';
-  html += '<div class="kpi-sub">vs ' + r.ytdClienti25 + ' nel ' + r.annoP + '</div>';
-  html += '<div class="kpi-sub" style="margin-top:4px;font-size:11px"><span style="color:#0d9488;font-weight:700">+' + r.ytdNuoviClienti + ' nuovi</span> &nbsp; <span style="color:#b45309;font-weight:700">−' + r.ytdPersiClienti + ' persi</span></div>';
-  html += '</div>';
-  if (r.isItalia) {
-    html += '<div class="kpi-card"><div class="kpi-label">Agenti attivi</div><div class="kpi-value">' + r.attivi.length + '</div><div class="kpi-sub">' + r.tutti.length + ' totali nel periodo</div></div>';
-  } else {
-    html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + '</div><div class="kpi-sub"><span class="' + (r.d26.ordini-r.d25.ordini>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.ordini-r.d25.ordini) + '</span></div></div>';
-  }
+  html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + '</div><div class="kpi-sub"><span class="' + (r.d26.ordini-r.d25.ordini>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.ordini-r.d25.ordini) + '</span> <span class="badge ' + (dOrd>=0?'badge-up':'badge-down') + '">' + PCTsign(dOrd) + '</span></div></div>';
   html += '</div>';
   
   // Grafico andamento mensile
@@ -2834,13 +2825,27 @@ function _exportClientePdfBody(nome, donutImg) {
   drawSectionTitle(doc, 'Statistiche cliente', margin + halfW + 6, y);
   y += 5;
   
+  // Calcola ordini cliente (n. documenti distinti)
+  var ordini26 = Object.keys((function() {
+    var docs = {};
+    for (var i=0;i<v26.length;i++) if (v26[i].numDoc) docs[v26[i].numDoc]=1;
+    return docs;
+  })()).length;
+  var ordini25 = Object.keys((function() {
+    var docs = {};
+    for (var i=0;i<v25.length;i++) if (v25[i].numDoc) docs[v25[i].numDoc]=1;
+    return docs;
+  })()).length;
+  var dOrdC = ordini25 > 0 ? ((ordini26-ordini25)/ordini25)*100 : 0;
+  
   // KPI (sinistra)
   doc.autoTable({
     head: [['Indicatore', anno.toString(), annoP.toString(), 'Var', 'Var %']],
     body: [
-      ['Fatturato', EURpdf(f26), EURpdf(f25), EURsignPdf(f26-f25), PCTsign(dF)],
-      ['Bottiglie', NUM(b26Eq), NUM(b25Eq), NUMsign(b26Eq-b25Eq), PCTsign(dB)],
-      ['Prezzo Medio', EURpdf(pm26), EURpdf(pm25), EURsignPdf(pm26-pm25), PCTsign(dPM)]
+      ['Fatturato',    EURpdf(f26),    EURpdf(f25),    EURsignPdf(f26-f25),    PCTsign(dF)],
+      ['Bottiglie',    NUM(b26Eq),     NUM(b25Eq),     NUMsign(b26Eq-b25Eq),   PCTsign(dB)],
+      ['Prezzo Medio', EURpdf(pm26),   EURpdf(pm25),   EURsignPdf(pm26-pm25),  PCTsign(dPM)],
+      ['Ordini',       ordini26,       ordini25,        NUMsign(ordini26-ordini25), PCTsign(dOrdC)]
     ],
     startY: y, theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 9 },
@@ -3149,61 +3154,164 @@ function exportMultiPeriodoPdf() {
   var isItalia = r.isItalia;
   var entityLbl = isItalia ? 'agenti' : 'clienti';
   
-  // Helper: disegna una sezione (KPI + tabella clienti) per un dato periodo
-  function disegnaSezione(doc, d26, d25, items, refs26, refs25, periodo, yStart, isFirstPage) {
+  // Helper: disegna una sezione completa nel multi-periodo PDF
+  // trendData: { t26, t25, da, a } oppure null (non mostra tabella mensile)
+  function disegnaSezione(doc, d26, d25, items, refs26, refs25, periodo, yStart, trendData) {
     var y = yStart;
     
     drawSectionTitle(doc, periodo.label, margin, y);
     y += 6;
     
-    // KPI compatte
-    var dF = d25.fatturato > 0 ? ((d26.fatturato-d25.fatturato)/d25.fatturato)*100 : 0;
-    var dB = d25.bottiglieEq > 0 ? ((d26.bottiglieEq-d25.bottiglieEq)/d25.bottiglieEq)*100 : 0;
-    var dPM = d25.pm > 0 ? ((d26.pm-d25.pm)/d25.pm)*100 : 0;
+    // KPI + tabella riassuntiva clienti (layout affiancato, come main PDF)
+    var halfW = 148;
+    var dF  = d25.fatturato   > 0 ? ((d26.fatturato   - d25.fatturato)   / d25.fatturato)   * 100 : 0;
+    var dB  = d25.bottiglieEq > 0 ? ((d26.bottiglieEq - d25.bottiglieEq) / d25.bottiglieEq) * 100 : 0;
+    var dPM = d25.pm          > 0 ? ((d26.pm           - d25.pm)          / d25.pm)          * 100 : 0;
+    var dOrd = d25.ordini     > 0 ? ((d26.ordini       - d25.ordini)      / d25.ordini)      * 100 : 0;
     
+    // KPI — sinistra
     doc.autoTable({
       head: [['', anno.toString(), annoP.toString(), 'Var', 'Var %']],
       body: [
-        ['Fatturato', EURpdf(d26.fatturato), EURpdf(d25.fatturato), EURsignPdf(d26.fatturato-d25.fatturato), PCTsign(dF)],
-        ['Bottiglie', NUM(d26.bottiglieEq), NUM(d25.bottiglieEq), NUMsign(d26.bottiglieEq-d25.bottiglieEq), PCTsign(dB)],
-        ['Prezzo Medio', EURpdf(d26.pm), EURpdf(d25.pm), EURsignPdf(d26.pm-d25.pm), PCTsign(dPM)]
+        ['Fatturato',    EURpdf(d26.fatturato),   EURpdf(d25.fatturato),   EURsignPdf(d26.fatturato-d25.fatturato),     PCTsign(dF)],
+        ['Bottiglie',    NUM(d26.bottiglieEq),     NUM(d25.bottiglieEq),    NUMsign(d26.bottiglieEq-d25.bottiglieEq),   PCTsign(dB)],
+        ['Prezzo Medio', EURpdf(d26.pm),           EURpdf(d25.pm),          EURsignPdf(d26.pm-d25.pm),                  PCTsign(dPM)],
+        ['Ordini',       NUM(d26.ordini),          NUM(d25.ordini),         NUMsign(d26.ordini-d25.ordini),             PCTsign(dOrd)]
       ],
-      startY: y,
-      theme: 'striped',
+      startY: y, theme: 'striped',
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
       columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} },
-      margin: { top: 32, left: margin, right: margin },
-      didParseCell: colorNegativesCallback
+      margin: { top: 32, left: margin, right: pageW - margin - halfW },
+      didParseCell: colorNegativesCallback,
+      tableWidth: halfW
     });
-    y = doc.lastAutoTable.finalY + 5;
+    var yKpiEnd = doc.lastAutoTable.finalY;
+    
+    // Tabella riassuntiva clienti — destra (affiancata ai KPI)
+    var sNuovi=0, sCrescita=0, sCalo=0, sPersi=0;
+    var sDeltaNuovi=0, sDeltaCrescita=0, sDeltaCalo=0, sDeltaPersi=0;
+    for (var i = 0; i < items.length; i++) {
+      var ci = items[i];
+      if      (ci.f26>0 && ci.f25===0)              { sNuovi++;    sDeltaNuovi    += ci.f26; }
+      else if (ci.f26>0 && ci.f25>0 && ci.f26>=ci.f25){ sCrescita++; sDeltaCrescita += ci.f26-ci.f25; }
+      else if (ci.f26>0 && ci.f25>0 && ci.f26< ci.f25){ sCalo++;    sDeltaCalo     += ci.f26-ci.f25; }
+      else if (ci.f26===0 && ci.f25>0)               { sPersi++;   sDeltaPersi    -= ci.f25; }
+    }
+    doc.autoTable({
+      head: [['Clienti', 'N.', 'Var EUR']],
+      body: [
+        [isItalia ? 'Tutti gli agenti' : 'Tutti i clienti', items.length, EURsignPdf(sDeltaNuovi+sDeltaCrescita+sDeltaCalo+sDeltaPersi)],
+        ['  Nuovi',        sNuovi,    EURsignPdf(sDeltaNuovi)],
+        ['  In crescita',  sCrescita, EURsignPdf(sDeltaCrescita)],
+        ['  In calo',      sCalo,     EURsignPdf(sDeltaCalo)],
+        ['  Senza ordini', sPersi,    EURsignPdf(sDeltaPersi)]
+      ],
+      startY: y, theme: 'striped',
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'} },
+      margin: { top: 32, left: margin + halfW + 4, right: margin },
+      didParseCell: colorNegativesCallback,
+      tableWidth: pageW - 2*margin - halfW - 4
+    });
+    var yBlocksEnd = doc.lastAutoTable.finalY;
+    y = Math.max(yKpiEnd, yBlocksEnd) + 6;
+    
+    // Tabella valori mensili (solo se trendData fornito — tipicamente per sezione YTD)
+    if (trendData) {
+      if (y > 160) { doc.addPage('a4','landscape'); drawHeader(doc, {vista:r.vista,anno:anno,annoP:annoP,periodo:periodo}, pageW); y = 32; }
+      drawSectionTitle(doc, 'Andamento mensile fatturato', margin, y);
+      y += 5;
+      var mAbbrArr = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+      function fmtTrend(v) {
+        if (!v || v===0) return '—';
+        if (v>=1000000) return (v/1000000).toFixed(1).replace('.',',')+' M';
+        if (v>=1000) return (v/1000).toFixed(1).replace('.',',')+' k';
+        return Math.round(v).toString();
+      }
+      var headM = [''], row26M = [anno+''], row25M = [annoP+''];
+      for (var m = trendData.da; m <= trendData.a; m++) {
+        headM.push(mAbbrArr[m]);
+        row26M.push(fmtTrend(trendData.t26[m]||0));
+        row25M.push(fmtTrend(trendData.t25[m]||0));
+      }
+      var colStyT = { 0: { fontStyle:'bold', fillColor:[245,240,240] } };
+      for (var m = 1; m <= trendData.a - trendData.da + 1; m++) colStyT[m] = { halign:'center' };
+      doc.autoTable({
+        head: [headM], body: [row26M, row25M], startY: y,
+        theme: 'grid',
+        headStyles: { fillColor:[114,47,55], textColor:255, fontSize:7, halign:'center' },
+        bodyStyles: { fontSize:8, cellPadding:1.5 },
+        columnStyles: colStyT,
+        margin: { top:32, left:margin, right:margin },
+        didParseCell: function(data) {
+          if (data.section==='body') {
+            if (data.row.index===0) data.cell.styles.textColor=[114,47,55];
+            if (data.row.index===1) data.cell.styles.textColor=[160,120,30];
+            if (data.column.index===0) data.cell.styles.fontStyle='bold';
+          }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    }
     
     // Referenze
+    if (y > 160) { doc.addPage('a4','landscape'); drawHeader(doc, {vista:r.vista,anno:anno,annoP:annoP,periodo:periodo}, pageW); y = 32; }
     drawSectionTitle(doc, 'Rotazione referenze', margin, y);
     y += 4;
     var refRows = [];
     REFERENZE_NAMES.forEach(function(name) {
       var r26ref = refs26[name] || {fatt:0,btlEq:0}; var r25ref = refs25[name] || {fatt:0,btlEq:0};
-      if (r26ref.btlEq === 0 && r25ref.btlEq === 0) return;
-      var dRef = r25ref.btlEq > 0 ? ((r26ref.btlEq-r25ref.btlEq)/r25ref.btlEq)*100 : 0;
-      var pct = d26.bottiglieEq > 0 ? (r26ref.btlEq/d26.bottiglieEq)*100 : 0;
+      if (r26ref.btlEq===0 && r25ref.btlEq===0) return;
+      var dRef = r25ref.btlEq>0 ? ((r26ref.btlEq-r25ref.btlEq)/r25ref.btlEq)*100 : 0;
+      var pct = d26.bottiglieEq>0 ? (r26ref.btlEq/d26.bottiglieEq)*100 : 0;
       refRows.push([name, NUM(r26ref.btlEq), NUM(r25ref.btlEq), EURpdf(r26ref.fatt), pct.toFixed(1).replace('.',',')+' %', PCTsign(dRef)]);
     });
     doc.autoTable({
       head: [['Referenza', 'Bott.'+anno, 'Bott.'+annoP, 'Fatturato', '% tot', 'Var%']],
-      body: refRows, startY: y,
-      theme: 'striped',
-      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 7 },
-      bodyStyles: { fontSize: 7 },
+      body: refRows, startY: y, theme: 'striped',
+      headStyles: { fillColor:[114,47,55], textColor:255, fontSize:7 },
+      bodyStyles: { fontSize:7 },
       columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'}, 5:{halign:'right'} },
-      margin: { top: 32, left: margin, right: margin },
+      margin: { top:32, left:margin, right:margin },
       didParseCell: colorNegativesCallback
     });
-    y = doc.lastAutoTable.finalY + 5;
+    y = doc.lastAutoTable.finalY + 6;
+    
+    // Formato sintetico
+    var fmtD = calcolaFormati(d26.vendite);
+    var fmtD25 = calcolaFormati(d25.vendite);
+    var totBtlEq26f = 0;
+    for (var i = 0; i < FORMATI_NAMES.length; i++) totBtlEq26f += fmtD.totali[FORMATI_NAMES[i]].btlEq;
+    var fmtRows = [];
+    for (var i = 0; i < FORMATI_NAMES.length; i++) {
+      var fn = FORMATI_NAMES[i];
+      var f6 = fmtD.totali[fn], f5 = fmtD25.totali[fn];
+      if (f6.btl===0 && f5.btl===0) continue;
+      var pctF = totBtlEq26f>0 ? (f6.btlEq/totBtlEq26f*100) : 0;
+      var vF = f5.btlEq>0 ? ((f6.btlEq-f5.btlEq)/f5.btlEq*100) : 0;
+      fmtRows.push([fn, NUM(f6.btl), pctF.toFixed(1).replace('.',',')+' %', NUM(f5.btl), PCTsign(vF)]);
+    }
+    if (fmtRows.length) {
+      if (y > 160) { doc.addPage('a4','landscape'); drawHeader(doc, {vista:r.vista,anno:anno,annoP:annoP,periodo:periodo}, pageW); y = 32; }
+      drawSectionTitle(doc, 'Vendite per formato', margin, y);
+      y += 4;
+      doc.autoTable({
+        head: [['Formato', 'Bott. '+anno, '% tot', 'Bott. '+annoP, 'Var%']],
+        body: fmtRows, startY: y, theme: 'striped',
+        headStyles: { fillColor:[114,47,55], textColor:255, fontSize:7 },
+        bodyStyles: { fontSize:7 },
+        columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} },
+        margin: { top:32, left:margin, right:margin },
+        didParseCell: colorNegativesCallback
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    }
     
     // Tabella clienti/agenti
-    if (y > 140) { doc.addPage('a4','landscape'); drawHeader(doc, {vista: r.vista, anno:anno, annoP:annoP, periodo:periodo}, pageW); y = 32; }
-    drawSectionTitle(doc, 'Elenco ' + entityLbl, margin, y);
+    if (y > 150) { doc.addPage('a4','landscape'); drawHeader(doc, {vista:r.vista,anno:anno,annoP:annoP,periodo:periodo}, pageW); y = 32; }
+    drawSectionTitle(doc, 'Elenco ' + entityLbl + ' (' + items.length + ')', margin, y);
     y += 4;
     
     var totF26=0, totF25=0, totB26=0, totB25=0;
@@ -3253,29 +3361,31 @@ function exportMultiPeriodoPdf() {
     });
   }
   
+  // Calcola trend YTD per la tabella mensile della sezione 2
+  var ytdTrend26 = calcolaTrendMensile(r.dati, anno, periodoB);
+  var ytdTrend25 = calcolaTrendMensile(r.dati, annoP, periodoB);
+  
   // ============ PAGINA 1+: SEZIONE A — PERIODO SELEZIONATO ============
   var rFakeA = { vista: r.vista, anno: anno, annoP: annoP, periodo: periodoA };
   drawHeader(doc, rFakeA, pageW);
-  
-  // Sovra-titolo per identificare la sezione
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(201, 168, 76);
   doc.text('SEZIONE 1 — ' + periodoA.label.toUpperCase(), margin, 29);
-  
-  disegnaSezione(doc, dA26, dA25, itemsA, refsA26, refsA25, periodoA, 34, true);
+  // Sezione A: nessuna tabella trend (singolo mese non ha senso come grafico)
+  disegnaSezione(doc, dA26, dA25, itemsA, refsA26, refsA25, periodoA, 34, null);
   
   // ============ NUOVA PAGINA: SEZIONE B — YTD ============
   doc.addPage('a4', 'landscape');
   var rFakeB = { vista: r.vista, anno: anno, annoP: annoP, periodo: periodoB };
   drawHeader(doc, rFakeB, pageW);
-  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(201, 168, 76);
   doc.text('SEZIONE 2 — AVANZAMENTO ' + periodoB.label.toUpperCase(), margin, 29);
-  
-  disegnaSezione(doc, dB26, dB25, itemsB, refsB26, refsB25, periodoB, 34, false);
+  // Sezione B (YTD): passa la tabella mensile
+  disegnaSezione(doc, dB26, dB25, itemsB, refsB26, refsB25, periodoB, 34,
+    { t26: ytdTrend26, t25: ytdTrend25, da: periodoB.da, a: periodoB.a });
   
   // ============ FOOTER PAGINATO ============
   addPageNumbers(doc, pageW, pageH);
