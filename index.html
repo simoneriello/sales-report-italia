@@ -3021,6 +3021,21 @@ function exportMultiPeriodoPdf() {
   var itemsA = buildItems(dA26, dA25);
   var itemsB = buildItems(dB26, dB25);
   
+  // Fix 2 — Ordine clienti:
+  // itemsA: usa l'ordine DOM (l'utente l'ha impostato cliccando le colonne nella schermata principale)
+  var domOrdinati = readTableOrder('main-tbl', lastReport.tutti);
+  var domNomi = domOrdinati.map(function(x) { return x.nome; });
+  itemsA.sort(function(a, b) {
+    var ia = domNomi.indexOf(a.nome);
+    var ib = domNomi.indexOf(b.nome);
+    if (ia === -1 && ib === -1) return b.f26 - a.f26; // entrambi non in DOM → per fatturato desc
+    if (ia === -1) return 1;  // a non in DOM → va in fondo
+    if (ib === -1) return -1; // b non in DOM → va in fondo
+    return ia - ib; // rispetta ordine DOM
+  });
+  // itemsB: ordine per fatturato 2026 decrescente (YTD ha logica propria)
+  itemsB.sort(function(a, b) { return b.f26 - a.f26; });
+  
   // ============ COSTRUZIONE PDF ============
   var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   var pageW = 297, pageH = 210, margin = 14;
@@ -3051,7 +3066,7 @@ function exportMultiPeriodoPdf() {
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
       columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} },
-      margin: { left: margin, right: margin },
+      margin: { top: 32, left: margin, right: margin },
       didParseCell: colorNegativesCallback
     });
     y = doc.lastAutoTable.finalY + 5;
@@ -3074,7 +3089,7 @@ function exportMultiPeriodoPdf() {
       headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 7 },
       bodyStyles: { fontSize: 7 },
       columnStyles: { 0:{fontStyle:'bold'}, 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'}, 5:{halign:'right'} },
-      margin: { left: margin, right: margin },
+      margin: { top: 32, left: margin, right: margin },
       didParseCell: colorNegativesCallback
     });
     y = doc.lastAutoTable.finalY + 5;
@@ -3109,15 +3124,24 @@ function exportMultiPeriodoPdf() {
       bodyStyles: { fontSize: 6.5 },
       columnStyles: cS,
       styles: { cellPadding: 1.2 },
-      margin: { left: margin, right: margin },
+      margin: { top: 32, left: margin, right: margin },
       didParseCell: function(data) {
         colorNegativesCallback(data);
         if (data.section==='body' && data.row.index===body.length-1) {
           data.cell.styles.fontStyle='bold'; data.cell.styles.fillColor=[240,230,230];
         }
       },
-      didDrawPage: function() {
+      didDrawPage: function(data) {
+        // Ridisegna l'header bordeaux su ogni pagina di overflow
+        // data.pageNumber > 1 significa che siamo su una pagina aggiuntiva
         drawHeader(doc, {vista:r.vista, anno:anno, annoP:annoP, periodo:periodo}, pageW);
+        // Su pagine di overflow aggiungi anche il titolo sezione in piccolo
+        if (data.pageNumber > 1) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(201, 168, 76);
+          doc.text('(continua) ' + periodo.label, margin, 29);
+        }
       }
     });
   }
